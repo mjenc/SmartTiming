@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls,
-  Registry, SmartTiming.Consts, SmartTiming.Tools, Data.DB, Vcl.Grids,
+  Registry, SmartTiming.Consts, SmartTiming.Tools, Data.DB, Vcl.Grids, Themes,
   Vcl.DBGrids, Data.FMTBcd, Data.SqlExpr, Datasnap.Provider, Datasnap.DBClient,
   uDataModule;
 
@@ -27,12 +27,11 @@ type
     DataSetProviderDictionary: TDataSetProvider;
     SQLQueryDictionary: TSQLQuery;
     DataSourceDictionary: TDataSource;
+    ComboBoxStyle: TComboBox;
+    Label2: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure ButtonOKClick(Sender: TObject);
-  private
-    { Private-Deklarationen }
-  public
-    { Public-Deklarationen }
+    procedure ComboBoxStyleChange(Sender: TObject);
   end;
 
 var
@@ -43,15 +42,29 @@ implementation
 {$R *.dfm}
 
 {==============================================================================}
-procedure TFormSettings.ButtonOKClick(Sender: TObject);
+procedure TFormSettings.FormCreate(Sender: TObject);
+var
+  lStylename: string;
 begin
-  SmartTimingTools.RegistryWriteBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'BeepOnPassing', CheckBoxPassingBeep.Checked);
+  CheckBoxPassingBeep.Checked := SmartTimingTools.RegistryReadBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'BeepOnPassing', false);
+
+  for lStylename in TStyleManager.StyleNames do
+    ComboBoxStyle.Items.Add(lStylename);
+
+  ComboBoxStyle.Text := TStyleManager.ActiveStyle.Name;
 end;
 
 {==============================================================================}
-procedure TFormSettings.FormCreate(Sender: TObject);
+procedure TFormSettings.ButtonOKClick(Sender: TObject);
 begin
-  CheckBoxPassingBeep.Checked := SmartTimingTools.RegistryReadBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'BeepOnPassing', false);
+  SmartTimingTools.RegistryWriteBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'BeepOnPassing', CheckBoxPassingBeep.Checked);
+  SmartTimingTools.RegistryWriteString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'Theme', ComboBoxStyle.Text);
+end;
+
+{==============================================================================}
+procedure TFormSettings.ComboBoxStyleChange(Sender: TObject);
+begin
+  TStyleManager.SetStyle(ComboBoxStyle.Items[ComboBoxStyle.ItemIndex]);
 end;
 
 end.

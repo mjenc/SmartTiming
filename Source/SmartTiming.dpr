@@ -4,6 +4,7 @@ program SmartTiming;
 
 uses
   Vcl.Forms,
+  Windows,
   uFormMain in 'uFormMain.pas' {FormMain},
   SmartTiming.DecoderEngine in 'SmartTiming.DecoderEngine.pas',
   SmartTiming.DecoderInterface in 'SmartTiming.DecoderInterface.pas',
@@ -20,13 +21,21 @@ uses
   uFormPassingSimulator in 'uFormPassingSimulator.pas' {FormPassingSimulator},
   uPassingCustomProtocol in 'uPassingCustomProtocol.pas',
   RaceEngine.Custom in 'RaceEngine.Custom.pas',
-  RaceEngine.TimeTrial in 'RaceEngine.TimeTrial.pas';
+  RaceEngine.TimeTrial in 'RaceEngine.TimeTrial.pas',
+  Vcl.Themes,
+  Vcl.Styles,
+  SmartTiming.MainController in 'SmartTiming.MainController.pas';
 
 {$R *.res}
 
+var
+  lStylename: string;
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
+  lStylename := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'Theme');
+  if (lStylename <> '') then
+    TStyleManager.SetStyle(lStylename);
   Application.CreateForm(TMainDataModule, MainDataModule);
   Application.CreateForm(TFormMain, FormMain);
   Application.Run;

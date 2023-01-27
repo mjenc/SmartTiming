@@ -227,21 +227,6 @@
             "tablename": "RANKING",
             "columns": [
                 {
-                    "columnname": "COMPETITORID",
-                    "position": 15,
-                    "invisible": true
-                },
-                {
-                    "columnname": "RACEID",
-                    "position": 16,
-                    "invisible": true
-                },
-                {
-                    "columnname": "COMPETITORID_1",
-                    "position": 17,
-                    "invisible": true
-                },
-                {
                     "columnname": "CLASS",
                     "caption": "Klasse",
                     "align": "taLeftJustify",
@@ -249,42 +234,35 @@
                     "position": 0
                 },
                 {
-                    "columnname": "CURRENTRANKING",
+                    "columnname": "Column0",
                     "caption": "Platz",
-                    "width": 50,
+                    "width": 35,
                     "position": 1
                 },
                 {
                     "columnname": "BIB",
                     "caption": "Start#",
-                    "width": 50,
+                    "width": 35,
                     "position": 2
                 },
                 {
-                    "columnname": "LASTNAME",
-                    "caption": "Nachname",
+                    "columnname": "Column3",
+                    "caption": "Name, Vorname",
                     "align": "taLeftJustify",
                     "width": 150,
                     "position": 3
                 },
                 {
-                    "columnname": "FIRSTNAME",
-                    "caption": "Vorname",
-                    "align": "taLeftJustify",
-                    "width": 150,
-                    "position": 4
-                },
-                {
                     "columnname": "LAPS",
                     "caption": "Runden",
                     "width": 45,
-                    "position": 5
+                    "position": 4
                 },
                 {
                     "columnname": "POINTS",
                     "caption": "Punkte",
                     "width": 45,
-                    "position": 6
+                    "position": 5
                 },
                 {
                     "columnname": "RANKINGTIME",
@@ -293,7 +271,7 @@
                     "ongettext": "OnGetTimeFromValue",
                     "fieldtype": "ftDatetime",
                     "align": "taLeftJustify",
-                    "position": 7
+                    "position": 6
                 },
                 {
                     "columnname": "FINISHTIME",
@@ -302,100 +280,115 @@
                     "ongettext": "OnGetTimeFromValue",
                     "fieldtype": "ftDatetime",
                     "align": "taLeftJustify",
-                    "position": 8
+                    "position": 7
                 },
                 {
                     "columnname": "TRANSPONDERID",
                     "caption": "Tx-Id",
                     "align": "taLeftJustify",
                     "width": 50,
-                    "position": 9
+                    "position": 8
                 },
                 {
                     "columnname": "DNS",
                     "caption": "DNS",
                     "width": 30,
-                    "position": 10
+                    "position": 9
                 },
                 {
                     "columnname": "DNF",
                     "caption": "DNF",
                     "width": 30,
-                    "position": 11
+                    "position": 10
                 },
                 {
                     "columnname": "DSQ",
                     "caption": "DSQ",
                     "width": 30,
-                    "position": 12
+                    "position": 11
                 },
                 {
                     "columnname": "CLUB",
                     "caption": "Verein",
                     "align": "taLeftJustify",
                     "width": 200,
-                    "position": 13
+                    "position": 12
                 },
                 {
                     "columnname": "TEAM",
                     "caption": "Team",
                     "align": "taLeftJustify",
                     "width": 200,
-                    "position": 14
+                    "position": 13
+                },
+                {
+                    "columnname": "COMPETITORID",
+                    "position": 14,
+                    "invisible": true
+                },
+                {
+                    "columnname": "RACEID",
+                    "position": 15,
+                    "invisible": true
+                },
+                {
+                    "columnname": "COMPETITORID_1",
+                    "position": 16,
+                    "invisible": true
                 },
                 {
                     "columnname": "NATIONALITY",
-                    "position": 18,
+                    "position": 17,
                     "invisible": true
                 },
                 {
                     "columnname": "NATIONALITYISO",
-                    "position": 19,
+                    "position": 18,
                     "invisible": true
                 },
                 {
                     "columnname": "UCIID",
-                    "position": 20,
+                    "position": 19,
                     "invisible": true
                 },
                 {
                     "columnname": "HANDICAPFACTOR",
-                    "position": 21,
+                    "position": 20,
                     "invisible": true
                 },
                 {
                     "columnname": "ADDITIONAL1",
-                    "position": 22,
+                    "position": 21,
                     "invisible": true
                 },
                 {
                     "columnname": "ADDITIONAL2",
-                    "position": 23,
+                    "position": 22,
                     "invisible": true
                 },
                 {
                     "columnname": "ADDITIONAL3",
-                    "position": 24,
+                    "position": 23,
                     "invisible": true
                 },
                 {
                     "columnname": "CRITRANKINGVALUE",
-                    "position": 25,
+                    "position": 24,
                     "invisible": true
                 },
                 {
                     "columnname": "PARTICIPATIONID",
-                    "position": 26,
+                    "position": 25,
                     "invisible": true
                 },
                 {
                     "columnname": "PENALTIES",
-                    "position": 27,
+                    "position": 26,
                     "invisible": true
                 },
                 {
                     "columnname": "STARTTIME",
-                    "position": 28,
+                    "position": 27,
                     "invisible": true
                 }
             ]

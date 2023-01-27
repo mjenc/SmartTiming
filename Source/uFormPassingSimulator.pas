@@ -56,7 +56,6 @@ end;
 procedure TFormPassingSimulator.SetupCompetitorsInRaceGrid;
 var
   i: integer;
-  lColumn: TColumn;
 begin
   ClientDataSetCompetitorsInRace.Active := false;
   SQLDataSetCompetitorsInRace.Active := false;

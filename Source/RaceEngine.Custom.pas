@@ -3,8 +3,8 @@ unit RaceEngine.Custom;
 interface
 
 uses
-  Controls, StdCtrls, SysUtils,
-  DB, SQLExpr, Provider, DBClient, DBGrids,
+  Controls, StdCtrls, ComCtrls, SysUtils, Graphics, Types, UITypes, Classes,
+  DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs,
   SmartTiming.Consts, SmartTiming.DecoderInterface;
 
 type
@@ -25,10 +25,12 @@ type
 
   TCustomRaceEngine = class
   protected
+    FOwner: TComponent;
     FParent: TWinControl;
     FRaceItem: TRaceItem;
     FPassingDisplay: TWinControl;
     FRankingGrid: TDBGrid;
+    FAvailableRaceStates: TRaceStates;
 
     FSQLDataSetRankings: TSQLDataSet;
     FDataSetProviderRankings: TDataSetProvider;
@@ -36,6 +38,10 @@ type
     FDataSourceRankings: TDataSource;
 
     function GetPassingDisplay: TWinControl; virtual;
+    procedure OnDrawListItem(ASender: TCustomListView; AItem: TListItem; AState: TCustomDrawState; var ADefaultDraw: Boolean);
+
+    procedure AddColumnToDisplay(const ACaption: string);
+
     function GetRankingGrid: TDBGrid; virtual;
   public
     constructor Create(AParent: TWinControl; ARaceItem: TRaceItem); virtual;
@@ -47,8 +53,10 @@ type
     procedure ClearPassingNumber(APassingNumber: integer); virtual;
 
     property PassingDisplay: TWinControl read GetPassingDisplay;
+    property AvailableRaceStates: TRaceStates read FAvailableRaceStates;
 
     // ranking
+    procedure RefreshRankingDisplay;
     property RankingDisplay: TDBGrid read GetRankingGrid;
 
     // corrections
@@ -59,27 +67,29 @@ type
 implementation
 
 uses
-  Math,
+  SmartTiming.Tools, Math,
   uDataModule;
 
 {==============================================================================}
 constructor TCustomRaceEngine.Create(AParent: TWinControl; ARaceItem: TRaceItem);
 begin
   FPassingDisplay := nil;
+  FOwner := TComponent.Create(nil);
   FParent := AParent;
   FRaceItem := ARaceItem;
+  FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped];
 
-  FSQLDataSetRankings := TSQLDataSet.Create(nil);
+  FSQLDataSetRankings := TSQLDataSet.Create(FOwner);
   FSQLDataSetRankings.SQLConnection := MainDataModule.SQLConnection;
 
-  FDataSetProviderRankings := TDataSetProvider.Create(nil);
+  FDataSetProviderRankings := TDataSetProvider.Create(FOwner);
   FDataSetProviderRankings.DataSet := FSQLDataSetRankings;
-  FDataSetProviderRankings.Name := 'DataSetProviderRankings';
+  FDataSetProviderRankings.Name := 'FDataSetProviderRankings';
 
-  FClientDataSetRankings := TClientDataSet.Create(nil);
+  FClientDataSetRankings := TClientDataSet.Create(FOwner);
   FClientDataSetRankings.ProviderName := FDataSetProviderRankings.Name;
 
-  FDataSourceRankings := TDataSource.Create(nil);
+  FDataSourceRankings := TDataSource.Create(FOwner);
   FDataSourceRankings.DataSet := FClientDataSetRankings;
 
   FSQLDataSetRankings.DataSource := FDataSourceRankings;
@@ -94,6 +104,7 @@ begin
     FreeAndNil(FClientDataSetRankings);
     FreeAndNil(FDataSetProviderRankings);
     FreeAndNil(FSQLDataSetRankings);
+    FreeAndNil(FOwner);
   finally
     inherited Destroy;
   end;
@@ -105,10 +116,73 @@ begin
   if FPassingDisplay <> nil then
     Exit(FPassingDisplay);
 
-  FPassingDisplay := TMemo.CreateParented(FParent.Handle);
+  FPassingDisplay := TListView.CreateParented(FParent.Handle);
   FPassingDisplay.Visible := false;
   FPassingDisplay.Align := alNone;
+  TListView(FPassingDisplay).DragMode := TDragMode.dmAutomatic;
+  TListView(FPassingDisplay).OnCustomDrawItem := OnDrawListItem;
+  TListView(FPassingDisplay).ViewStyle := vsReport;
+
+  AddColumnToDisplay(cFieldTitleBib);
+  AddColumnToDisplay(cFieldTitleLastName + ', ' + cFieldTitleFirstName);
+  AddColumnToDisplay(cFieldTitlePassingTime);
+  AddColumnToDisplay(cFieldTitleTransponder);
+  AddColumnToDisplay(cFieldTitleChipID);
+
   result := FPassingDisplay;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.AddColumnToDisplay(const ACaption: string);
+var
+  lColumn: TListColumn;
+begin
+  lColumn := TListView(FPassingDisplay).Columns.Add;
+  lColumn.Caption := ACaption;
+  lColumn.AutoSize := true;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnDrawListItem(ASender: TCustomListView; AItem: TListItem; AState: TCustomDrawState; var ADefaultDraw: Boolean);
+var
+  lBgColor: TColor;
+  lFGColor: TColor;
+  rt, r: TRect;
+  s: String;
+  i: Integer;
+
+  // Fit the rect used for TextRect
+  Procedure PrepareTextRect;
+  begin
+    rt := r;
+    rt.Left := rt.Left + 5;
+    rt.Top := rt.Top + 1;
+  end;
+begin
+  SmartTimingTools.GetColorsForRaceStatus(TRaceStatus(AItem.Data), true, lBgColor, lFgColor);
+
+  TListView(ASender).Canvas.Brush.Color := lBgColor;
+  TListView(ASender).Canvas.Font.Color := lFgColor;
+
+  r := AItem.DisplayRect(drBounds);
+  ASender.Canvas.FillRect(r);
+
+  r.Right := r.Left + TListView(ASender).Columns[0].Width;
+  s := AItem.Caption;
+  PrepareTextRect;
+  TListView(ASender).Canvas.TextRect(rt, s, [tfSingleLine, tfEndEllipsis]);
+  if TListView(ASender).ViewStyle = vsReport then
+  begin // Paint the Subitems if ViewStyle = vsReport
+    for i := 0 to AItem.SubItems.Count - 1 do
+    begin
+      r.Left := r.Left + TListView(ASender).Columns.Items[i].Width;
+      r.Right := r.Left + TListView(ASender).Columns.Items[i + 1].Width;
+      PrepareTextRect;
+      s := AItem.SubItems[i];
+      TListView(ASender).Canvas.TextRect(rt, s, [tfSingleLine, tfEndEllipsis]);
+    end;
+  end;
+  ADefaultDraw := false;
 end;
 
 {==============================================================================}
@@ -120,7 +194,29 @@ begin
   FRankingGrid := TDBGrid.CreateParented(FParent.Handle);
   FRankingGrid.Visible := false;
   FRankingGrid.Align := alNone;
+  FRankingGrid.DataSource := FDataSourceRankings;
   result := FRankingGrid;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.RefreshRankingDisplay;
+var
+  i: integer;
+  lColumn: TColumn;
+  s: string;
+begin
+  FClientDataSetRankings.Active := false;
+  FSQLDataSetRankings.Active := false;
+
+  FSQLDataSetRankings.Active := true;
+  FClientDataSetRankings.Active := True;
+
+  for i := 0 to FRankingGrid.Columns.Count - 1 do
+  begin
+    lColumn := FRankingGrid.Columns[i];
+    SmartTimingTools.SetColumnProperties('RANKING', lColumn);
+  end;
+// TODO SmartTimingTools.SortGridColumns(FRankingGrid, 'RANKING');
 end;
 
 {==============================================================================}

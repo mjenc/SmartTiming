@@ -503,8 +503,6 @@ begin
         end;
       TOR_VERSION_DECODER:
         P3VersionDecoder := ParseRecordTypeVersionDecoder(MidStr(Msg, 21, length(Msg) - 21 - 1));
-      else
-        Flags := 0;
       end;
     end;
 
@@ -571,7 +569,7 @@ begin
   result := result + DecoderId[7] + DecoderId[8];
   result := result + DecoderId[10] + DecoderId[11];
   result := result + '8F';
-  crc := CalcCrc16(result);
+  crc := CalcCrc16(AnsiString(result));
   s := IntToHex(crc, 4);
   result[9] := s[3];
   result[10] := s[4];
@@ -614,7 +612,7 @@ begin
   result[5] := s[1];
   result[6] := s[2];
 
-  lCRC := CalcCrc16(result);
+  lCRC := CalcCrc16(AnsiString(result));
   s := IntToHex(lCRC, 4);
   result[9] := s[3];
   result[10] := s[4];
@@ -632,7 +630,7 @@ begin
   // 8E.00.1900.A539.0000.0300.0100.0200.0300.0400.0800.0A00.0C00.8F (decoder search)
   // 8E.02.1700.xxxx.0000.2400.0100.0200.0300.0400.0800.0A00.0C00.8F (get RTC)
   result := '8E021700000000002400010002000300040008000A000C008F';
-  crc := CalcCrc16(result);
+  crc := CalcCrc16(AnsiString(result));
   s := IntToHex(crc, 4);
   result[9] := s[3];
   result[10] := s[4];
@@ -689,7 +687,7 @@ begin
   l := length(Msg) div 2;
   for i:=0 to l-1 do
   begin
-    b := StrToInt('$'+MidStr(Msg, 2*i+1, 2));
+    b := StrToInt('$'+MidStr(String(Msg), 2*i+1, 2));
     crc := (FCrcTable[(crc shr 8) and 255] xor (crc shl 8)) xor b;
   end;
   result := crc;

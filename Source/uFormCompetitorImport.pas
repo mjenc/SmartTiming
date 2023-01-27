@@ -41,13 +41,15 @@ type
     procedure RefreshPreview;
     function GetFileFieldIndex(const ATitle: string): integer;
     function GetFileFieldIndexFromColumn(const AColumn: string): integer;
-    function GetIntegerValueFromFileLines(const AColumnName: string; ARow: integer): integer;
-    function GetStringValueFromFileLines(const AColumnName: string; ARow: integer): string;
-    function GetStarttimeValueFromFileLines(const AColumnName: string; ARow: integer): TDatetime;
+    function GetIntegerValueFromFileLines(ACol, ARow: integer): Variant;
+    function GetStringValueFromFileLines(ACol, ARow: integer): Variant;
+    function GetStarttimeValueFromFileLines(ACol, ARow: integer): Variant;
     function GetMaxCompetitorId: integer;
   public
     { Public-Deklarationen }
   end;
+
+  TFnReadFunction = function(ACol, ARow: integer): Variant of object;
 
 var
   FormCompetitorImport: TFormCompetitorImport;
@@ -171,40 +173,34 @@ begin
 end;
 
 {==============================================================================}
-function TFormCompetitorImport.GetIntegerValueFromFileLines(const AColumnName: string; ARow: integer): integer;
+function TFormCompetitorImport.GetIntegerValueFromFileLines(ACol, ARow: integer): Variant;
 var
-  lCol: integer;
   lStringValue: string;
 begin
-  lCol := GetFileFieldIndexFromColumn(AColumnName);
-  if lCol < 0 then
+  if ACol < 0 then
     Exit(0);
-  lStringValue := StringGridPreview.Cells[lCol, ARow];
+  lStringValue := StringGridPreview.Cells[ACol, ARow];
   if lStringValue.IsEmpty then
     Exit(0);
   result := lStringValue.ToInteger;
 end;
 
 {==============================================================================}
-function TFormCompetitorImport.GetStringValueFromFileLines(const AColumnName: string; ARow: integer): string;
-var
-  lCol: integer;
+function TFormCompetitorImport.GetStringValueFromFileLines(ACol, ARow: integer): Variant;
 begin
-  lCol := GetFileFieldIndexFromColumn(AColumnName);
-  Exit(StringGridPreview.Cells[lCol, ARow]);
+  Exit(StringGridPreview.Cells[ACol, ARow]);
 end;
 
 {==============================================================================}
-function TFormCompetitorImport.GetStarttimeValueFromFileLines(const AColumnName: string; ARow: integer): TDatetime;
+function TFormCompetitorImport.GetStarttimeValueFromFileLines(ACol, ARow: integer): Variant;
 var
-  lCol: integer;
   lHour, lMin, lSec, lMSec: Word;
+  lDatetime: TDatetime;
 begin
-  lCol := GetFileFieldIndexFromColumn(AColumnName);
-  if not TryStrToDatetime(StringGridPreview.Cells[lCol, ARow], result) then
-    result := StrToTime(StringGridPreview.Cells[lCol, ARow]);
+  if not TryStrToDatetime(StringGridPreview.Cells[ACol, ARow], lDatetime) then
+    result := StrToTime(StringGridPreview.Cells[ACol, ARow]);
 
-  DecodeTime(result, lHour, lMin, lSec, lMSec);
+  DecodeTime(lDatetime, lHour, lMin, lSec, lMSec);
   result := 0.0;
   result := EncodeTime(lHour, lMin, lSec, 0);
 end;
@@ -302,6 +298,20 @@ const
 var
   i: integer;
   lCompetitorId: integer;
+
+  procedure FillValue(const AFieldName, AFieldTitle: string; AReadFunction: TFnReadFunction);
+  var
+    lCol: integer;
+  begin
+    lCol := GetFileFieldIndexFromColumn(AFieldTitle);
+    if StringGridPreview.Cells[lCol, i].IsEmpty then
+    begin
+      MainDataModule.ClientDataSetCompetitors.FieldByName(AFieldName).Value := Null;
+      Exit;
+    end;
+    MainDataModule.ClientDataSetCompetitors.FieldByName(AFieldName).Value := AReadFunction(lCol, i);
+  end;
+
 begin
   ProgressBar.Visible := true;
   ProgressBar.Max := FFileLines.Count;
@@ -312,16 +322,16 @@ begin
   begin
     MainDataModule.ClientDataSetCompetitors.Append;
     MainDataModule.ClientDataSetCompetitors.FieldByName('COMPETITORID').Value := lCompetitorId + i;
-    MainDataModule.ClientDataSetCompetitors.FieldByName('CLASS').Value := GetStringValueFromFileLines(cFieldTitleClass, i);
-    MainDataModule.ClientDataSetCompetitors.FieldByName('BIB').Value := GetIntegerValueFromFileLines(cFieldTitleBib, i);
-    MainDataModule.ClientDataSetCompetitors.FieldByName('FIRSTNAME').Value := GetStringValueFromFileLines(cFieldTitleFirstName, i);
-    MainDataModule.ClientDataSetCompetitors.FieldByName('LASTNAME').Value := GetStringValueFromFileLines(cFieldTitleLastName, i);
-    MainDataModule.ClientDataSetCompetitors.FieldByName('CLUB').Value := GetStringValueFromFileLines(cFieldTitleClub, i);
-    MainDataModule.ClientDataSetCompetitors.FieldByName('TEAM').Value := GetStringValueFromFileLines(cFieldTitleTeam, i);
-    MainDataModule.ClientDataSetCompetitors.FieldByName('NATIONALITY').Value := GetStringValueFromFileLines(cFieldTitleNationality, i);
-    MainDataModule.ClientDataSetCompetitors.FieldByName('UCIID').Value := GetStringValueFromFileLines(cFieldTitleUCIID, i);
-    MainDataModule.ClientDataSetCompetitors.FieldByName('STARTTIME').Value := GetStarttimeValueFromFileLines(cFieldTitleStarttime, i);
-    MainDataModule.ClientDataSetCompetitors.FieldByName('TRANSPONDERID').Value := GetIntegerValueFromFileLines(cFieldTitleTransponder, i);
+    FillValue('CLASS', cFieldTitleClass, GetStringValueFromFileLines);
+    FillValue('BIB', cFieldTitleBib, GetIntegerValueFromFileLines);
+    FillValue('FIRSTNAME', cFieldTitleFirstName, GetStringValueFromFileLines);
+    FillValue('LASTNAME', cFieldTitleLastName, GetStringValueFromFileLines);
+    FillValue('CLUB', cFieldTitleClub, GetStringValueFromFileLines);
+    FillValue('TEAM', cFieldTitleTeam, GetStringValueFromFileLines);
+    FillValue('NATIONALITY', cFieldTitleNationality, GetStringValueFromFileLines);
+    FillValue('UCIID', cFieldTitleUCIID, GetStringValueFromFileLines);
+    FillValue('STARTTIME',cFieldTitleStarttime, GetStarttimeValueFromFileLines);
+    FillValue('TRANSPONDERID', cFieldTitleTransponder, GetIntegerValueFromFileLines);
     MainDataModule.ClientDataSetCompetitors.Post;
     LabelProgress.Caption := Format('%d von %d importiert', [i, FFileLines.Count]);
     ProgressBar.StepIt;

@@ -133,7 +133,6 @@ end;
 {==============================================================================}
 procedure TFormGenerateTransponderMappings.FindFirstGap;
 var
-  lListId: integer;
   lSearchIndex: integer;
   lMappingCache: TTransponderMappingStore;
   lShortIdList: TDictionary<integer, string>;

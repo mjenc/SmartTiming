@@ -2,7 +2,7 @@ object FormBatteryCheck: TFormBatteryCheck
   Left = 0
   Top = 0
   Caption = 'FormBatteryCheck'
-  ClientHeight = 441
+  ClientHeight = 498
   ClientWidth = 837
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,13 +15,12 @@ object FormBatteryCheck: TFormBatteryCheck
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 400
+    Top = 457
     Width = 837
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 360
     DesignSize = (
       837
       41)
@@ -34,7 +33,6 @@ object FormBatteryCheck: TFormBatteryCheck
       Caption = 'OK'
       ModalResult = 1
       TabOrder = 0
-      ExplicitLeft = 186
     end
     object ButtonCancel: TButton
       Left = 751
@@ -46,18 +44,16 @@ object FormBatteryCheck: TFormBatteryCheck
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
-      ExplicitLeft = 274
     end
   end
   object PanelMain: TPanel
     Left = 0
     Top = 0
     Width = 837
-    Height = 400
+    Height = 457
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 360
     object LabelReadCount: TLabel
       Left = 16
       Top = 105
@@ -88,7 +84,7 @@ object FormBatteryCheck: TFormBatteryCheck
       Left = 151
       Top = 10
       Width = 676
-      Height = 387
+      Height = 444
       Margins.Top = 10
       Margins.Right = 10
       Align = alRight
@@ -132,6 +128,61 @@ object FormBatteryCheck: TFormBatteryCheck
       Caption = 'L'#252'cken finden'
       TabOrder = 3
       OnClick = ButtonFillGapsClick
+    end
+    object RadioGroup1: TRadioGroup
+      Left = 16
+      Top = 184
+      Width = 129
+      Height = 129
+      Caption = 'Anzeigen'
+      TabOrder = 4
+    end
+    object RadioButtonAll: TRadioButton
+      Left = 32
+      Top = 208
+      Width = 113
+      Height = 17
+      Caption = 'Alle'
+      Checked = True
+      TabOrder = 5
+      TabStop = True
+      OnClick = RadioButtonAllClick
+    end
+    object RadioButtonCriticals: TRadioButton
+      Left = 32
+      Top = 231
+      Width = 113
+      Height = 17
+      Caption = 'Kritische'
+      TabOrder = 6
+      OnClick = RadioButtonAllClick
+    end
+    object RadioButtonGaps: TRadioButton
+      Left = 32
+      Top = 254
+      Width = 113
+      Height = 17
+      Caption = 'L'#252'cken'
+      TabOrder = 7
+      OnClick = RadioButtonAllClick
+    end
+    object RadioButtonWeaks: TRadioButton
+      Left = 32
+      Top = 277
+      Width = 113
+      Height = 17
+      Caption = 'Schwache'
+      TabOrder = 8
+      OnClick = RadioButtonAllClick
+    end
+    object ButtonCopyListToClipboard: TButton
+      Left = 16
+      Top = 344
+      Width = 129
+      Height = 25
+      Caption = 'Liste kopieren'
+      TabOrder = 9
+      OnClick = ButtonCopyListToClipboardClick
     end
   end
   object ImageListIcons: TImageList
