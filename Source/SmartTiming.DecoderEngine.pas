@@ -8,35 +8,34 @@ uses
   IdTCPConnection, IdTCPClient, IdBaseComponent, IdComponent,
   IdCustomTCPServer, IdTCPServer, IdUdpServer,
   IdGlobal, IdSocketHandle,
-  SmartTiming.DecoderInterface, SmartTiming.Cache, SmartTiming.Tools;
+  DecoderInterface, SmartTiming.Cache, SmartTiming.Tools;
 
 type
-  TMyLapsDecoderEngine = class
+  TDecoderEngine = class
   private
-    FDecoder: TMyLapsP3Decoder;
-    FListener: TMyLapsP3Listener;
-    FMessageParser: TMyLapsP3MessageParser;
+    FDecoder: TDecoder;
+    FListener: TDecoderListener;
     FTimingBias: integer;
-    FDecoderFinder: TMyLapsDecoderFinder;
+    FDecoderFinder: TDecoderFinder;
     FDecoderFoundCount: integer;
     FNewStatusReceived: TDecoderStatusReceivedEvent;
     FNewPassingReceived: TDecoderPassingReceivedEvent;
 
   protected
-    procedure OnStatusReceived(AStatus: TMyLapsP3Status);
-    procedure OnPassingReceived(APassing: TMyLapsP3Passing);
-    procedure OnDecoderFound(ADecoder: TMyLapsP3Decoder);
+    procedure OnStatusReceived(AStatus: TDecoderStatus);
+    procedure OnPassingReceived(APassing: TPassing);
+    procedure OnDecoderFound(ADecoder: TDecoder);
     function GetIsConnected: boolean;
-    procedure SetActiveDecoder(ADecoder: TMyLapsP3Decoder);
+    procedure SetActiveDecoder(ADecoder: TDecoder);
     constructor Create(const ADatabaseName: string); reintroduce;
 
   public
-    class function GetSingleton: TMyLapsDecoderEngine;
+    class function GetSingleton: TDecoderEngine;
     destructor Destroy; override;
     procedure RefreshDecoderList;
-    procedure SendSimulatedPassing(APassing: TMyLapsP3Passing);
+    procedure SendSimulatedPassing(APassing: TPassing);
     property Connected: boolean read GetIsConnected;
-    property ActiveDecoder: TMyLapsP3Decoder read FDecoder write SetActiveDecoder;
+    property ActiveDecoder: TDecoder read FDecoder write SetActiveDecoder;
     property NewStatusReceived: TDecoderStatusReceivedEvent read FNewStatusReceived write FNewStatusReceived;
     property NewPassingReceived: TDecoderPassingReceivedEvent read FNewPassingReceived write FNewPassingReceived;
   end;
@@ -45,10 +44,10 @@ implementation
 
 var
   gCriticalSection: TCriticalSection;
-  gTheDecoderEngine: TMyLapsDecoderEngine;
+  gTheDecoderEngine: TDecoderEngine;
 
 {==============================================================================}
-class function TMyLapsDecoderEngine.GetSingleton: TMyLapsDecoderEngine;
+class function TDecoderEngine.GetSingleton: TDecoderEngine;
 begin
   gCriticalSection.Enter;
   try
@@ -62,24 +61,20 @@ begin
 end;
 
 {==============================================================================}
-constructor TMyLapsDecoderEngine.Create(const ADatabaseName: string);
+constructor TDecoderEngine.Create(const ADatabaseName: string);
 begin
-  FMessageParser := TMyLapsP3MessageParser.Create;
-  FMessageParser.OnStatusReceived := OnStatusReceived;
-  FMessageParser.OnPassingReceived := OnPassingReceived;
-
   FTimingBias := SmartTimingTools.ReadTimingBiasFromRegistry;
 
   FListener := nil;
   FDecoderFoundCount := 0;
-  FDecoderFinder := TMyLapsDecoderFinder.Create;
+  FDecoderFinder := TDecoderFinder.Create;
   FDecoderFinder.OnDecoderFound := OnDecoderFound;
   RefreshDecoderList;
 end;
 
 
 {==============================================================================}
-destructor TMyLapsDecoderEngine.Destroy;
+destructor TDecoderEngine.Destroy;
 begin
   try
     FreeAndNil(FDecoderFinder);
@@ -88,21 +83,20 @@ begin
       FListener.Terminate;
       FreeAndNil(FListener);
     end;
-    FreeAndNil(FMessageParser);
   finally
     inherited Destroy;
   end;
 end;
 
 {==============================================================================}
-procedure TMyLapsDecoderEngine.RefreshDecoderList;
+procedure TDecoderEngine.RefreshDecoderList;
 begin
-  FDecoderFinder.Update;
+  FDecoderFinder.Refresh;
   Sleep(500);
 end;
 
 {==============================================================================}
-procedure TMyLapsDecoderEngine.SetActiveDecoder(ADecoder: TMyLapsP3Decoder);
+procedure TDecoderEngine.SetActiveDecoder(ADecoder: TDecoder);
 begin
   if FListener <> nil then
   begin
@@ -113,13 +107,15 @@ begin
   end;
 
   FDecoder := ADecoder;
-  FListener := TMyLapsP3Listener.Create(FDecoder,5403);
-  Flistener.MyLapsP3MessageParser := FMessageParser;
+
+  FListener := TDecoderListener.GetListenerForDecoder(FDecoder);
+  FListener.OnStatusReceived := OnStatusReceived;
+  FListener.OnPassingReceived := OnPassingReceived;
   FListener.Start;
 end;
 
 {==============================================================================}
-function TMyLapsDecoderEngine.GetIsConnected: boolean;
+function TDecoderEngine.GetIsConnected: boolean;
 begin
   if FListener = nil then
     Exit(false);
@@ -127,7 +123,7 @@ begin
 end;
 
 {==============================================================================}
-procedure TMyLapsDecoderEngine.OnStatusReceived(AStatus: TMyLapsP3Status);
+procedure TDecoderEngine.OnStatusReceived(AStatus: TDecoderStatus);
 begin
   TStatusStore.GetSingleton.AddStatus(AStatus);
   if Assigned(FNewStatusReceived) then
@@ -135,9 +131,9 @@ begin
 end;
 
 {==============================================================================}
-procedure TMyLapsDecoderEngine.OnPassingReceived(APassing: TMyLapsP3Passing);
+procedure TDecoderEngine.OnPassingReceived(APassing: TPassing);
 begin
-  APassing.TransponderShortId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(APassing.ChipId);
+  APassing.TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(APassing.ChipId);
   APassing.PassingTime.AddSecond(FTimingBias);
   TPassingStore.GetSingleton.AddPassing(APassing);
   if Assigned(FNewPassingReceived) then
@@ -145,13 +141,13 @@ begin
 end;
 
 {==============================================================================}
-procedure TMyLapsDecoderEngine.SendSimulatedPassing(APassing: TMyLapsP3Passing);
+procedure TDecoderEngine.SendSimulatedPassing(APassing: TPassing);
 begin
   OnPassingReceived(APassing);
 end;
 
 {==============================================================================}
-procedure TMyLapsDecoderEngine.OnDecoderFound(ADecoder: TMyLapsP3Decoder);
+procedure TDecoderEngine.OnDecoderFound(ADecoder: TDecoder);
 begin
   FDecoderFoundCount := TDecoderStore.GetSingleton.AddDecoder(ADecoder);
   SetActiveDecoder(ADecoder);

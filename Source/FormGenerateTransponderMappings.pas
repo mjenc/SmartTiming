@@ -1,4 +1,4 @@
-unit uFormGenerateTransponderMappings;
+unit FormGenerateTransponderMappings;
 
 interface
 
@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Data.DB, Generics.Collections,
   Vcl.Grids, Vcl.DBGrids, Vcl.ComCtrls, MMSystem, SmartTiming.Cache, SmartTiming.DecoderEngine,
-  SmartTiming.DecoderInterface;
+  DecoderInterface;
 
 type
   TFormGenerateTransponderMappings = class(TForm)
@@ -32,7 +32,7 @@ type
 
     procedure FindFirstGap;
     procedure FindLastEntry;
-    procedure OnReceivePassing(APassing: TMyLapsP3Passing);
+    procedure OnReceivePassing(APassing: TPassing);
     procedure CreateNewMappingFor(const AChipCode: string);
   public
     { Public-Deklarationen }
@@ -47,15 +47,15 @@ procedure TFormGenerateTransponderMappings.ButtonStartReceivingClick(Sender: TOb
 begin
   if FRunning then
   begin
-    TMyLapsDecoderEngine.GetSingleton.NewPassingReceived := FSavedPassingReceiveEvent;
+    TDecoderEngine.GetSingleton.NewPassingReceived := FSavedPassingReceiveEvent;
     FRunning := false;
     ButtonStartReceiving.Caption := 'Starten';
     Exit;
   end
   else
   begin
-    FSavedPassingReceiveEvent := TMyLapsDecoderEngine.GetSingleton.NewPassingReceived;
-    TMyLapsDecoderEngine.GetSingleton.NewPassingReceived := OnReceivePassing;
+    FSavedPassingReceiveEvent := TDecoderEngine.GetSingleton.NewPassingReceived;
+    TDecoderEngine.GetSingleton.NewPassingReceived := OnReceivePassing;
     TTransponderMappingStore.GetSingleton.Clear;
     FRunning := true;
     ButtonStartReceiving.Caption := 'Beenden';
@@ -83,7 +83,7 @@ begin
 end;
 
 {==============================================================================}
-procedure TFormGenerateTransponderMappings.OnReceivePassing(APassing: TMyLapsP3Passing);
+procedure TFormGenerateTransponderMappings.OnReceivePassing(APassing: TPassing);
 begin
   PlaySound('PassingBeep', 0, SND_NOSTOP or SND_NOWAIT or SND_RESOURCE or SND_ASYNC or SND_NODEFAULT);
   CreateNewMappingFor(APassing.ChipId);
@@ -118,7 +118,7 @@ end;
 procedure TFormGenerateTransponderMappings.FormDestroy(Sender: TObject);
 begin
   if FRunning then
-    TMyLapsDecoderEngine.GetSingleton.NewPassingReceived := FSavedPassingReceiveEvent;
+    TDecoderEngine.GetSingleton.NewPassingReceived := FSavedPassingReceiveEvent;
 end;
 
 {==============================================================================}
@@ -133,7 +133,6 @@ end;
 {==============================================================================}
 procedure TFormGenerateTransponderMappings.FindFirstGap;
 var
-  lListId: integer;
   lSearchIndex: integer;
   lMappingCache: TTransponderMappingStore;
   lShortIdList: TDictionary<integer, string>;

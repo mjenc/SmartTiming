@@ -2,8 +2,8 @@ object FormCompetitorDetails: TFormCompetitorDetails
   Left = 0
   Top = 0
   Caption = 'Fahrer Details'
-  ClientHeight = 485
-  ClientWidth = 525
+  ClientHeight = 493
+  ClientWidth = 527
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,16 +16,14 @@ object FormCompetitorDetails: TFormCompetitorDetails
   object PanelMain: TPanel
     Left = 0
     Top = 0
-    Width = 525
-    Height = 444
+    Width = 527
+    Height = 452
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 523
-    ExplicitHeight = 436
     DesignSize = (
-      525
-      444)
+      527
+      452)
     object Label1: TLabel
       Left = 32
       Top = 24
@@ -34,7 +32,7 @@ object FormCompetitorDetails: TFormCompetitorDetails
       Caption = 'Klasse'
     end
     object DBCompetitorID: TDBText
-      Left = 444
+      Left = 446
       Top = 24
       Width = 65
       Height = 17
@@ -49,7 +47,7 @@ object FormCompetitorDetails: TFormCompetitorDetails
       Caption = 'Startnummer'
     end
     object Label3: TLabel
-      Left = 300
+      Left = 302
       Top = 53
       Width = 27
       Height = 15
@@ -65,7 +63,7 @@ object FormCompetitorDetails: TFormCompetitorDetails
       Caption = 'Vorname'
     end
     object Label5: TLabel
-      Left = 300
+      Left = 302
       Top = 99
       Width = 58
       Height = 15
@@ -95,7 +93,7 @@ object FormCompetitorDetails: TFormCompetitorDetails
       Caption = 'Nation'
     end
     object Label9: TLabel
-      Left = 300
+      Left = 302
       Top = 227
       Width = 23
       Height = 15
@@ -141,11 +139,10 @@ object FormCompetitorDetails: TFormCompetitorDetails
     object DBComboBoxClass: TDBComboBox
       Left = 128
       Top = 21
-      Width = 149
+      Width = 151
       Height = 23
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 0
-      ExplicitWidth = 147
     end
     object DBEditBib: TDBEdit
       Left = 128
@@ -157,14 +154,14 @@ object FormCompetitorDetails: TFormCompetitorDetails
     object DBEditFirstName: TDBEdit
       Left = 128
       Top = 96
-      Width = 149
+      Width = 151
       Height = 23
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 3
       ExplicitWidth = 145
     end
     object DBEditLastName: TDBEdit
-      Left = 364
+      Left = 366
       Top = 96
       Width = 145
       Height = 23
@@ -175,20 +172,18 @@ object FormCompetitorDetails: TFormCompetitorDetails
     object DBComboBoxClub: TDBComboBox
       Left = 128
       Top = 154
-      Width = 381
+      Width = 383
       Height = 23
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 6
-      ExplicitWidth = 379
     end
     object DBComboBoxTeam: TDBComboBox
       Left = 128
       Top = 183
-      Width = 381
+      Width = 383
       Height = 23
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 7
-      ExplicitWidth = 379
     end
     object DBComboBoxNationality: TDBComboBox
       Left = 128
@@ -198,13 +193,12 @@ object FormCompetitorDetails: TFormCompetitorDetails
       TabOrder = 8
     end
     object DBComboBoxNationalityISO: TDBComboBox
-      Left = 364
+      Left = 366
       Top = 224
       Width = 145
       Height = 23
       Anchors = [akTop, akRight]
       TabOrder = 9
-      ExplicitLeft = 362
     end
     object DBEditUCIID: TDBEdit
       Left = 128
@@ -221,7 +215,7 @@ object FormCompetitorDetails: TFormCompetitorDetails
       TabOrder = 10
     end
     object DBEditTxId: TDBEdit
-      Left = 364
+      Left = 366
       Top = 50
       Width = 145
       Height = 23
@@ -232,7 +226,7 @@ object FormCompetitorDetails: TFormCompetitorDetails
     object DBEditAddtional1: TDBEdit
       Left = 128
       Top = 320
-      Width = 381
+      Width = 383
       Height = 23
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 11
@@ -241,7 +235,7 @@ object FormCompetitorDetails: TFormCompetitorDetails
     object DBEditAdditional2: TDBEdit
       Left = 128
       Top = 349
-      Width = 381
+      Width = 383
       Height = 23
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 12
@@ -250,7 +244,7 @@ object FormCompetitorDetails: TFormCompetitorDetails
     object DBEditAdditional3: TDBEdit
       Left = 128
       Top = 378
-      Width = 381
+      Width = 383
       Height = 23
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 13
@@ -259,19 +253,19 @@ object FormCompetitorDetails: TFormCompetitorDetails
   end
   object PanelButtons: TPanel
     Left = 0
-    Top = 444
-    Width = 525
+    Top = 452
+    Width = 527
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitTop = 436
-    ExplicitWidth = 523
+    ExplicitTop = 444
+    ExplicitWidth = 525
     DesignSize = (
-      525
+      527
       41)
     object ButtonOK: TButton
-      Left = 351
+      Left = 353
       Top = 8
       Width = 75
       Height = 25
@@ -284,7 +278,7 @@ object FormCompetitorDetails: TFormCompetitorDetails
       ExplicitLeft = 347
     end
     object ButtonCancel: TButton
-      Left = 439
+      Left = 441
       Top = 8
       Width = 75
       Height = 25

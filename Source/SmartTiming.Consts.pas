@@ -3,7 +3,7 @@ unit SmartTiming.Consts;
 interface
 
 uses
-  Generics.Collections, SysUtils;
+  Generics.Collections, SysUtils, Graphics, DB;
 
 const
   // Database
@@ -13,6 +13,23 @@ const
 
   cNotFound = '<notfound>';
 
+  sSportsIdCycling = 4;
+
+  cColorWarmup     = TColor($FF96FF);
+  cColorWarmupDark = TColor($960096);
+
+  cColorStarted     = TColor($96FF96);
+  cColorStartedDark = TColor($009600);
+
+  cColorNeutralized     = TColor($FFFF96);
+  cColorNeutralizedDark = TColor($FFFF00);
+
+  cColorStopped     = TColor($FF8080);
+  cColorStoppedDark = TColor($C80000);
+
+  cColorInactive     = TColor($C8C8C8);
+  cColorInactiveDark = TColor($404040);
+
 resourcestring
   cRaceTypeNameUnknown = 'Unbestimmt';
   cRaceTypeNameITT = 'Einzelzeitfahren';
@@ -21,7 +38,16 @@ resourcestring
   cRaceStatusWarmUp = 'Vorbereitung';
   cRaceStatusStarted = 'Gestartet';
   cRaceStatusNeutralized = 'Neutralisiert';
-  cRaceStatusFinished = 'Beendet';
+  cRaceStatusFinished = 'Ziel';
+  cRaceStatusStopped = 'Gestoppt';
+  cRaceStatusAborted = 'Abgebrochen';
+
+  cFlagNameWarmUp = 'Flagge Vorbereitung';
+  cFlagNameStart  = 'Flagge Start';
+  cFlagNameNeutralize = 'Flagge Neutralisation';
+  cFlagNameFinish = 'Flagge Ziel';
+  cFlagNameAbort = 'Flagge Abbruch';
+  cFlagNameStop = 'Flagge Stopp';
 
   cFieldTitleBib = 'Start#';
   cFieldTitleClass = 'Klasse';
@@ -43,8 +69,10 @@ resourcestring
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
   TRaceTypes = set of TRaceType;
-  TRaceStatus = (rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished);
+  TRaceStatus = (rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped);
+  TRaceStates = set of TRaceStatus;
 
+  TNOnGetColumnText = procedure (ASender: TField; var AText: string; ADisplayText: Boolean) of object;
 
 implementation
 

@@ -5,7 +5,7 @@ interface
 uses
   Classes, Generics.Collections, SysUtils, Math, Variants, SyncObjs,
   Windows,
-  SmartTiming.DecoderInterface, SmartTiming.Consts;
+  DecoderInterface, SmartTiming.Consts;
 
 type
   TSynchronizedObject = class
@@ -19,7 +19,7 @@ type
 
   TPassingStore = class(TSynchronizedObject)
   private
-    FPassingList: TDictionary<integer, TMyLapsP3Passing>;
+    FPassingList: TDictionary<integer, TPassing>;
     FMaxPassingNumber: integer;
   protected
     constructor Create; override;
@@ -27,26 +27,26 @@ type
     class function GetSingleton : TPassingStore;
     destructor Destroy; override;
 
-    procedure AddPassing(APassing: TMyLapsP3Passing);
-    procedure FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TMyLapsP3Passing>; AFilterOnTransponderIDs: TList<integer> = nil);
+    procedure AddPassing(APassing: TPassing);
+    procedure FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TPassing>; AFilterOnTransponderIDs: TList<integer> = nil);
     property MaxPassingNumber: integer read FMaxPassingNumber;
   end;
 
   TStatusStore = class(TSynchronizedObject)
   private
-    FStatusList: TList<TMyLapsP3Status>;
+    FStatusList: TList<TDecoderStatus>;
   protected
     constructor Create; override;
   public
     class function GetSingleton : TStatusStore;
     destructor Destroy; override;
 
-    procedure AddStatus(AStatus: TMyLapsP3Status);
+    procedure AddStatus(AStatus: TDecoderStatus);
   end;
 
   TDecoderStore = class(TSynchronizedObject)
   private
-    FDecoderList: TDictionary<string,TMyLapsP3Decoder>;
+    FDecoderList: TDictionary<string,TDecoder>;
   protected
     constructor Create; override;
     function GetCount: integer;
@@ -54,9 +54,9 @@ type
     class function GetSingleton : TDecoderStore;
     destructor Destroy; override;
 
-    function AddDecoder(ADecoder: TMyLapsP3Decoder): integer;
-    procedure FillDecoderList(AList: TList<TMyLapsP3Decoder>);
-    function GetFirstDecoder: TMyLapsP3Decoder;
+    function AddDecoder(ADecoder: TDecoder): integer;
+    procedure FillDecoderList(AList: TList<TDecoder>);
+    function GetFirstDecoder: TDecoder;
 
     property Count: integer read GetCount;
   end;
@@ -120,7 +120,7 @@ end;
 constructor TPassingStore.Create;
 begin
   inherited Create;
-  FPassingList := TDictionary<integer, TMyLapsP3Passing>.Create;
+  FPassingList := TDictionary<integer, TPassing>.Create;
   FMaxPassingNumber := 0;
 end;
 
@@ -151,7 +151,7 @@ begin
 end;
 
 {==============================================================================}
-procedure TPassingStore.AddPassing(APassing: TMyLapsP3Passing);
+procedure TPassingStore.AddPassing(APassing: TPassing);
 begin
   Synchronizer.BeginWrite;
   try
@@ -163,10 +163,10 @@ begin
 end;
 
 {==============================================================================}
-procedure TPassingStore.FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TMyLapsP3Passing>; AFilterOnTransponderIDs: TList<integer> = nil);
+procedure TPassingStore.FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TPassing>; AFilterOnTransponderIDs: TList<integer> = nil);
 var
   lPassingNumber: integer;
-  lPassing: TMyLapsP3Passing;
+  lPassing: TPassing;
 begin
   lPassingNumber := AStartPassingNumber;
 
@@ -176,7 +176,7 @@ begin
     begin
       if FPassingList.TryGetValue(lPassingNumber, lPassing) then
       begin
-        if (AFilterOnTransponderIDs = nil) or AFilterOnTransponderIDs.Contains(lPassing.TransponderShortId) then
+        if (AFilterOnTransponderIDs = nil) or AFilterOnTransponderIDs.Contains(lPassing.TxId) then
           AList.Add(lPassingNumber, lPassing);
       end;
 // TODO Durchgänge wurden nicht gespeichert
@@ -193,7 +193,7 @@ end;
 constructor TStatusStore.Create;
 begin
   inherited Create;
-  FStatusList := TList<TMyLapsP3Status>.Create;
+  FStatusList := TList<TDecoderStatus>.Create;
 end;
 
 {==============================================================================}
@@ -220,7 +220,7 @@ begin
 end;
 
 {==============================================================================}
-procedure TStatusStore.AddStatus(AStatus: TMyLapsP3Status);
+procedure TStatusStore.AddStatus(AStatus: TDecoderStatus);
 begin
   Synchronizer.BeginWrite;
   try
@@ -234,7 +234,7 @@ end;
 constructor TDecoderStore.Create;
 begin
   inherited Create;
-  FDecoderList := TDictionary<string,TMyLapsP3Decoder>.Create;
+  FDecoderList := TDictionary<string,TDecoder>.Create;
 end;
 
 {==============================================================================}
@@ -261,7 +261,7 @@ begin
 end;
 
 {==============================================================================}
-function TDecoderStore.AddDecoder(ADecoder: TMyLapsP3Decoder): integer;
+function TDecoderStore.AddDecoder(ADecoder: TDecoder): integer;
 begin
   Synchronizer.BeginWrite;
   try
@@ -287,9 +287,9 @@ begin
 end;
 
 {==============================================================================}
-function TDecoderStore.GetFirstDecoder: TMyLapsP3Decoder;
+function TDecoderStore.GetFirstDecoder: TDecoder;
 var
-  lDecoder: TMyLapsP3Decoder;
+  lDecoder: TDecoder;
 begin
   Synchronizer.BeginRead;
   try
@@ -304,9 +304,9 @@ begin
 end;
 
 {==============================================================================}
-procedure TDecoderStore.FillDecoderList(AList: TList<TMyLapsP3Decoder>);
+procedure TDecoderStore.FillDecoderList(AList: TList<TDecoder>);
 var
-  lDecoder: TMyLapsP3Decoder;
+  lDecoder: TDecoder;
 begin
   Synchronizer.BeginRead;
   try

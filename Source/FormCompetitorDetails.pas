@@ -1,11 +1,11 @@
-unit uFormCompetitorDetails;
+unit FormCompetitorDetails;
 
 interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Mask,
-  Vcl.DBCtrls, DB,  DBClient, uDataModule;
+  Vcl.DBCtrls, DB,  DBClient, DataModule;
 
 type
   TFormCompetitorDetails = class(TForm)

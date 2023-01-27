@@ -1,4 +1,4 @@
-unit uDataModule;
+unit DataModule;
 
 interface
 
@@ -6,7 +6,7 @@ uses
   System.SysUtils, System.Classes, Data.DbxSqlite, Data.FMTBcd, DBGrids,
   Datasnap.DBClient, Datasnap.Provider, Data.DB, Data.SqlExpr, DBCtrls,
   Graphics, Dialogs,
-  SmartTiming.Consts, SmartTiming.Tools, SmartTiming.DecoderInterface;
+  SmartTiming.Consts, SmartTiming.Tools, DecoderInterface;
 
 
 type
@@ -27,12 +27,12 @@ type
     procedure FillWithDistinctValues(const ATableName, AFieldName: string; AStrings: TStrings);
     procedure AssignCompetitorsToRace(AEventId, ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
     function IsCompetitorAssignedToRace(ARaceId, ACompetitorId: Integer): Boolean;
-    function GetRaceIdForPassing(APassing: TMyLapsP3Passing): integer;
+    function GetRaceIdForPassing(APassing: TPassing): integer;
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
     procedure ImportTxMapping(const AFileName: string);
     procedure ExportTxMapping(const AFileName: string);
     procedure FillTransponderMappingCache;
-    procedure AddPassingToDatabase(APassing: TMyLapsP3Passing);
+    procedure AddPassingToDatabase(APassing: TPassing);
   end;
 
 var
@@ -131,13 +131,13 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.GetRaceIdForPassing(APassing: TMyLapsP3Passing): integer;
+function TMainDataModule.GetRaceIdForPassing(APassing: TPassing): integer;
 var
   lResultSet: TDataSet;
 begin
   SQLConnection.Execute(Format(
     'SELECT R.RACEID FROM PARTICIPATION P INNER JOIN RACES R ON P.RACEID = R.RACEID INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID ' +
-    'WHERE STATUS IN (1, 2) AND TRANSPONDERID = %d', [APassing.TransponderShortId]), nil, lResultSet);
+    'WHERE STATUS IN (1, 2) AND TRANSPONDERID = %d', [APassing.TxId]), nil, lResultSet);
   try
     if lResultSet.IsEmpty then
       Exit(-1);
@@ -198,7 +198,7 @@ begin
 end;
 
 {==============================================================================}
-procedure TMainDataModule.AddPassingToDatabase(APassing: TMyLapsP3Passing);
+procedure TMainDataModule.AddPassingToDatabase(APassing: TPassing);
 var
   lCmd: string;
   lTimeStr: string;

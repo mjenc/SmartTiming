@@ -22,13 +22,24 @@ type
     class function GetRaceTypeStringFromEnum(ARaceType: TRaceType): string;
     class function GetRaceStatusEnumFromString(const AValue: string): TRaceStatus;
     class function GetRaceStatusStringFromEnum(ARaceStatus: TRaceStatus): string;
-    class function GetColorForRaceStatus(ARaceStatus: TRaceStatus): TColor;
+    class procedure GetColorsForRaceStatus(ARaceStatus: TRaceStatus; ASelected: boolean; var ABgColor, AFgColor: TColor);
     class procedure FillRaceItemFromDataSet(AParent: TWinControl; ADataSet: TDataSet; ARaceItem: TRaceItem);
+    class function GetFlagNameFromRaceStatus(ARaceStatus: TRaceStatus): string;
+    class procedure SortGridColumns(ADBGrid: TDBGrid; const ATableName: string);
+    class procedure SetColumnProperties(const ATable: string; AColumn: TColumn);
+    class procedure OnGetDefaultColumnText(ASender: TField; var AText: string; ADisplayText: Boolean);
+    class procedure OnGetDateTimeFromValue(ASender: TField; var AText: string; ADisplayText: Boolean);
+    class procedure OnGetTimeFromValue(ASender: TField; var AText: string; ADisplayText: Boolean);
+    class procedure OnGetRaceStatus(ASender: TField; var AText: string; ADisplayText: Boolean);
+    class procedure InitFieldDescriptions;
   end;
 
   TRaceEngineFactory = class
     class function CreateRaceEngineForRaceType(AParent: TWinControl; ARaceItem: TRaceItem): TCustomRaceEngine;
   end;
+
+var
+  GFieldDescriptionsSuperObject: ISuperObject;
 
 implementation
 
@@ -147,6 +158,20 @@ begin
 end;
 
 {==============================================================================}
+class procedure SmartTimingTools.InitFieldDescriptions;
+var
+  lJSON: TStringList;
+begin
+  lJSON := TStringList.Create;
+  try
+    lJSON.LoadFromFile(cStdDataPath + '\TableColumnDescriptions.json');
+    GFieldDescriptionsSuperObject := TSuperObject.ParseString(PChar(lJSON.Text), false);
+  finally
+    FreeAndNil(lJSON);
+  end;
+end;
+
+{==============================================================================}
 class function SmartTimingTools.GetRaceTypeEnumFromString(const AValue: string): TRaceType;
 begin
   if SameText(cRaceTypeNameITT, AValue) then
@@ -175,8 +200,14 @@ begin
     Exit(rsStarted);
   if SameText(cRaceStatusNeutralized, AValue) then
     Exit(rsNeutralized);
+  if SameText(cRaceStatusNeutralized, AValue) then
+    Exit(rsNeutralized);
   if SameText(cRaceStatusFinished, AValue) then
     Exit(rsFinished);
+  if SameText(cRaceStatusStopped, AValue) then
+    Exit(rsStopped);
+  if SameText(cRaceStatusAborted, AValue) then
+    Exit(rsAborted);
 end;
 
 {==============================================================================}
@@ -194,25 +225,79 @@ begin
     Exit(cRaceStatusNeutralized);
   rsFinished:
     Exit(cRaceStatusFinished);
+  rsStopped:
+    Exit(cRaceStatusStopped);
+  rsAborted:
+    Exit(cRaceStatusAborted);
   end;
 end;
 
 {==============================================================================}
-class function SmartTimingTools.GetColorForRaceStatus(ARaceStatus: TRaceStatus): TColor;
+class function SmartTimingTools.GetFlagNameFromRaceStatus(ARaceStatus: TRaceStatus): string;
 begin
-  result := clWindow;
+  result := '';
+  case ARaceStatus of
+  rsWarmUp:
+    Exit(cFlagNameWarmUp);
+  rsStarted:
+    Exit(cFlagNameStart);
+  rsNeutralized:
+    Exit(cFlagNameNeutralize);
+  rsFinished:
+    Exit(cFlagNameFinish);
+  rsStopped:
+    Exit(cFlagNameStop);
+  rsAborted:
+    Exit(cFlagNameAbort);
+  end;
+end;
+
+{==============================================================================}
+class procedure SmartTimingTools.GetColorsForRaceStatus(ARaceStatus: TRaceStatus; ASelected: boolean; var ABgColor, AFgColor: TColor);
+begin
+  ABgColor := clWindow;
+  AFgColor := clWindowText;
+
+  if ASelected then
+  begin
+    case ARaceStatus of
+    rsNotStarted:
+      Exit;
+    rsWarmUp:
+      ABgColor := cColorWarmupDark;
+    rsStarted:
+      ABgColor := cColorStartedDark;
+    rsNeutralized:
+      ABgColor := cColorNeutralizedDark;
+    rsFinished, rsStopped:
+      ABgColor := cColorInactiveDark;
+    end;
+    AFgColor := clWhite;
+    Exit;
+  end;
+
   case ARaceStatus of
   rsNotStarted:
     Exit;
   rsWarmUp:
-    Exit($D7A6D7);
+    begin
+      ABgColor := cColorWarmup;
+      AFgColor := clBlack;
+    end;
   rsStarted:
-    Exit($87E061);
+    begin
+      ABgColor := cColorStarted;
+      AFgColor := clBlack;
+    end;
   rsNeutralized:
-    Exit($91E4FF);
-  rsFinished:
-    Exit(TColors.Lightgrey);
+    begin
+      ABgColor := cColorNeutralized;
+      AFgColor := clBlack;
+    end;
+  rsFinished, rsStopped:
+    ABgColor := cColorInactive;
   end;
+  AFgColor := clBlack;
 end;
 
 {==============================================================================}
@@ -231,6 +316,140 @@ begin
     ARaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(AParent, ARaceItem);
 end;
 
+{==============================================================================}
+class procedure SmartTimingTools.SortGridColumns(ADBGrid: TDBGrid; const ATableName: string);
+var
+  lTables: TSuperArray;
+  lColumns: TSuperArray;
+  i: integer;
+  j: integer;
+  k: integer;
+  lGridColumn: TColumn;
+  lPosition: integer;
+begin
+  lTables := GFieldDescriptionsSuperObject.A['tables'];
+  if lTables = nil then
+    Exit;
+
+  for i := 0 to lTables.Length - 1 do
+  begin
+    if lTables.O[i].S['tablename'] <> ATableName then
+      Continue;
+
+    lColumns := lTables.O[i].A['columns'];
+    if lColumns = nil then
+      Exit;
+
+    for j := ADBGrid.Columns.Count - 1 downto 0 do
+    begin
+      lGridColumn := ADBGrid.Columns[j];
+      for k := 0 to lColumns.Length - 1 do
+      begin
+        if SameText(lColumns.O[k].S['columnname'], lGridColumn.FieldName) then
+        begin
+          lPosition := lColumns.O[k].I['position'];
+          lGridColumn.Index := lPosition;
+          break;
+        end;
+      end;
+    end;
+  end;
+end;
+
+{==============================================================================}
+class procedure SmartTimingTools.SetColumnProperties(const ATable: string; AColumn: TColumn);
+  function GetAlignmentFromString(const AString: string): TAlignment;
+  begin
+    if SameText(AString, 'taLeftJustify') then
+      Exit(taLeftJustify);
+    if SameText(AString, 'taRightJustify') then
+      Exit(taRightJustify);
+    if SameText(AString, 'taCenter') then
+      Exit(taCenter);
+    result := taRightJustify;
+  end;
+
+  function GetFieldTypeFromString(const AString: string): TFieldType;
+  begin
+    if SameText(AString, 'ftString') then
+      Exit(ftString);
+    Exit(ftUnknown);
+  end;
+
+var
+  lTables: TSuperArray;
+  i: integer;
+  lColumns: TSuperArray;
+  j: integer;
+  lColumn: ISuperObject;
+  lFieldType: TFieldType;
+  lMethodName: string;
+begin
+  if AColumn.Field.DataType = ftWideMemo then
+    AColumn.Field.OnGetText := OnGetDefaultColumnText;
+  lTables := gFieldDescriptionsSuperObject.A['tables'];
+  for i := 0 to lTables.Length - 1 do
+  begin
+    if lTables.O[i].S['tablename'] <> ATable then
+      Continue;
+
+    lColumns := lTables.O[i].A['columns'];
+    for j := 0 to lColumns.Length - 1 do
+    begin
+      if lColumns.O[j].S['columnname'] <> AColumn.FieldName then
+        Continue;
+
+      lColumn := lColumns.O[j];
+      AColumn.Visible := not lColumn.B['invisible'];
+      AColumn.Title.Caption := lColumn.S['caption'];
+      if Length(AColumn.Title.Caption) = 0 then
+        AColumn.Title.Caption := AColumn.FieldName;
+      AColumn.Width := lColumn.I['width'];
+      AColumn.Alignment := GetAlignmentFromString(lColumn.S['align']);
+      lFieldType := GetFieldTypeFromString('fieldtype');
+      if lFieldType <> ftUnknown then
+        AColumn.Field.SetFieldType(lFieldType);
+
+      lMethodName := lColumn.S['ongettext'];
+      if not lMethodName.IsEmpty then
+      begin
+        if SameText(lMethodName, 'OnGetDateTimeFromValue') then
+          AColumn.Field.OnGetText := OnGetDateTimeFromValue
+        else if SameText(lMethodName, 'OnGetTimeFromValue') then
+          AColumn.Field.OnGetText := OnGetTimeFromValue
+        else if SameText(lMethodName, 'OnGetRaceStatus') then
+          AColumn.Field.OnGetText := OnGetRaceStatus;
+      end;
+    end;
+  end;
+end;
+
+{==============================================================================}
+class procedure SmartTimingTools.OnGetDefaultColumnText(ASender: TField; var AText: string; ADisplayText: Boolean);
+begin
+  AText := ASender.AsString;
+end;
+
+{==============================================================================}
+class procedure SmartTimingTools.OnGetDateTimeFromValue(ASender: TField; var AText: string; ADisplayText: Boolean);
+begin
+  AText := DateTimeToStr(ASender.AsFloat);
+end;
+
+{==============================================================================}
+class procedure SmartTimingTools.OnGetTimeFromValue(ASender: TField; var AText: string; ADisplayText: Boolean);
+begin
+  if ASender.IsNull then
+    AText := ''
+  else
+    AText := TimeToStr(ASender.AsFloat);
+end;
+
+{==============================================================================}
+class procedure SmartTimingTools.OnGetRaceStatus(ASender: TField; var AText: string; ADisplayText: Boolean);
+begin
+  AText := SmartTimingTools.GetRaceStatusStringFromEnum(TRaceStatus(ASender.AsInteger));
+end;
 
 {==============================================================================}
 class function TRaceEngineFactory.CreateRaceEngineForRaceType(AParent: TWinControl; ARaceItem: TRaceItem): TCustomRaceEngine;
@@ -244,5 +463,7 @@ begin
     Exit(TCustomRaceEngine.Create(AParent, ARaceItem));
   end;
 end;
+
+
 
 end.

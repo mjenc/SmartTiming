@@ -1,4 +1,4 @@
-unit uFormPassingSimulator;
+unit FormPassingSimulator;
 
 interface
 
@@ -7,7 +7,7 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Data.DB,
   Vcl.Grids, Vcl.DBGrids, Vcl.ComCtrls, Data.FMTBcd, Datasnap.DBClient,
   Datasnap.Provider, Data.SqlExpr,
-  SmartTiming.Consts, SmartTiming.Cache, SmartTiming.DecoderInterface, SmartTiming.DecoderEngine;
+  SmartTiming.Consts, SmartTiming.Cache, DecoderInterface, SmartTiming.DecoderEngine;
 
 type
   TFormPassingSimulator = class(TForm)
@@ -32,7 +32,7 @@ type
   end;
 
 var
-  FormPassingSimulator: TFormPassingSimulator;
+  GFormPassingSimulator: TFormPassingSimulator;
 
 implementation
 
@@ -56,7 +56,6 @@ end;
 procedure TFormPassingSimulator.SetupCompetitorsInRaceGrid;
 var
   i: integer;
-  lColumn: TColumn;
 begin
   ClientDataSetCompetitorsInRace.Active := false;
   SQLDataSetCompetitorsInRace.Active := false;
@@ -89,7 +88,7 @@ end;
 {==============================================================================}
 procedure TFormPassingSimulator.StringGridCompetitorsInRaceCellClick(Sender: TObject; ACol, ARow: Integer; var CanSelect: Boolean);
 var
-  lPassing: TMyLapsP3Passing;
+  lPassing: TPassing;
 begin
   CanSelect := true;
 
@@ -104,7 +103,7 @@ begin
   lPassing.Voltage := 9;
   lPassing.Temperature := 20;
   lPassing.DecoderId := 'STSIM';
-  TMyLapsDecoderEngine.GetSingleton.SendSimulatedPassing(lPassing);
+  TDecoderEngine.GetSingleton.SendSimulatedPassing(lPassing);
 end;
 
 

@@ -1,4 +1,4 @@
-unit uFormRaceDetails;
+unit FormRaceDetails;
 
 interface
 
@@ -7,7 +7,8 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls, Vcl.Mask,
   Vcl.ExtCtrls, DB, DateUtils, DBClient,
   SmartTiming.Database, SmartTiming.Consts, SmartTiming.Tools, Vcl.DBCtrls,
-  uDataModule;
+  DataModule;
+
 type
   TFormRaceDetails = class(TForm)
     PanelButtons: TPanel;
@@ -42,14 +43,14 @@ type
   end;
 
 var
-  FormRaceDetails: TFormRaceDetails;
+  GFormRaceDetails: TFormRaceDetails;
 
 implementation
 
 {$R *.dfm}
 
 uses
-  uFormMain;
+  FormMain;
 
 {==============================================================================}
 constructor TFormRaceDetails.Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean; AEventDate: TDatetime);

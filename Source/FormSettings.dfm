@@ -2,8 +2,8 @@ object FormSettings: TFormSettings
   Left = 0
   Top = 0
   Caption = 'Einstellungen'
-  ClientHeight = 449
-  ClientWidth = 626
+  ClientHeight = 457
+  ClientWidth = 628
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,17 +14,19 @@ object FormSettings: TFormSettings
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 408
-    Width = 626
+    Top = 416
+    Width = 628
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitTop = 408
+    ExplicitWidth = 626
     DesignSize = (
-      626
+      628
       41)
     object ButtonOK: TButton
-      Left = 452
+      Left = 454
       Top = 8
       Width = 75
       Height = 25
@@ -33,9 +35,10 @@ object FormSettings: TFormSettings
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonOKClick
+      ExplicitLeft = 452
     end
     object ButtonCancel: TButton
-      Left = 540
+      Left = 542
       Top = 8
       Width = 75
       Height = 25
@@ -44,41 +47,61 @@ object FormSettings: TFormSettings
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
+      ExplicitLeft = 540
     end
   end
   object PanelMain: TPanel
     Left = 0
     Top = 0
-    Width = 626
-    Height = 408
+    Width = 628
+    Height = 416
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitWidth = 626
+    ExplicitHeight = 408
     object PageControlSettings: TPageControl
       AlignWithMargins = True
       Left = 5
       Top = 5
-      Width = 616
-      Height = 398
+      Width = 618
+      Height = 406
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
       Margins.Bottom = 5
-      ActivePage = TabSheetFieldTitles
+      ActivePage = TabSheetCommon
       Align = alClient
       TabOrder = 0
+      ExplicitWidth = 616
+      ExplicitHeight = 398
       object TabSheetCommon: TTabSheet
         Caption = 'Allgemein'
+        object Label2: TLabel
+          Left = 24
+          Top = 59
+          Width = 64
+          Height = 15
+          Caption = 'Farbschema'
+        end
         object CheckBoxPassingBeep: TCheckBox
           Left = 24
           Top = 24
-          Width = 225
+          Width = 193
           Height = 17
           Alignment = taLeftJustify
           Caption = 'Akustisches Signal bei Passage'
           Checked = True
           State = cbChecked
           TabOrder = 0
+        end
+        object ComboBoxStyle: TComboBox
+          Left = 200
+          Top = 47
+          Width = 193
+          Height = 23
+          TabOrder = 1
+          OnChange = ComboBoxStyleChange
         end
       end
       object TabSheetCompetitorImport: TTabSheet
@@ -89,8 +112,8 @@ object FormSettings: TFormSettings
         Caption = 'Spaltentitel'
         ImageIndex = 2
         DesignSize = (
-          608
-          368)
+          610
+          376)
         object Label1: TLabel
           Left = 24
           Top = 16
@@ -117,8 +140,8 @@ object FormSettings: TFormSettings
         object DBGridDictionary: TDBGrid
           Left = 16
           Top = 56
-          Width = 571
-          Height = 289
+          Width = 573
+          Height = 297
           Anchors = [akLeft, akTop, akRight, akBottom]
           DataSource = DataSourceDictionary
           TabOrder = 1

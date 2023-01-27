@@ -4,7 +4,7 @@ interface
 
 uses
   SysUtils, Classes, Data.DB, Data.SqlExpr, Datasnap.Provider, Datasnap.DBClient,
-  SmartTiming.Consts, uDataModule;
+  SmartTiming.Consts, DataModule;
 
 type
   TTableField = record

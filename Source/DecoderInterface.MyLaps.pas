@@ -1,4 +1,4 @@
-unit SmartTiming.DecoderInterface;
+unit DecoderInterface.MyLaps;
 
 interface
 
@@ -6,7 +6,78 @@ uses
 //  DataStructures,
   Classes, SysUtils, StrUtils,
   IdTCPConnection, IdTCPClient, IdBaseComponent, IdComponent, IdCustomTCPServer, IdTCPServer, IdUdpServer,
-  IdGlobal, IdSocketHandle;
+  IdGlobal, IdSocketHandle,
+  DecoderInterface;
+
+const
+  cMyLapsDefaultFinderPort = 5303;
+  cMyLapsDefaultOperatingPort = 5403;
+  // TODO Support non default ports
+
+type
+  TDecoderStatusReceivedEvent = procedure (Status: TDecoderStatus) of object;
+  TDecoderPassingReceivedEvent = procedure (Passing: TPassing) of object;
+  TDecoderFoundEvent = procedure (ADecoder: TDecoder) of object;
+
+  TMyLapsP3MessageParser = class
+   private
+     FOnStatus: TDecoderStatusReceivedEvent;
+     FOnPassing: TDecoderPassingReceivedEvent;
+     FCrcTable: array[0..255] of word;
+     FTimeDeltaDecoderPc: TDateTime;   // time delta between decoder and PC clock
+     class function DecodePassingTime(AmbP3Time: string): TDateTime;
+     class function EncodePassingTime(ADateTime: TDateTime): string;
+     function ParseRecordTypePassing(Body: string): TPassing;
+     function ParseRecordTypeStatus(Body: string): TDecoderStatus;
+     function ParseRecordTypeVersionDecoder(Body: string): TDecoder;
+     function DeEscapeMessage(Msg: string): string;
+     function EscapeMessage(Msg: string): string;
+     procedure InitTable;
+     function CalcCrc16(Msg: AnsiString): word;
+   public
+     constructor Create;
+     procedure AddMessage(Msg: string);
+     function AddMessageDecoderSearch(Msg: string): TDecoder;
+     function GetDecoderSearchPhrase: string;
+     function GetResendPhrase(FromPassingNr, ToPassingNr: FixedUInt; DecoderId: string): string;
+     function GetRtcPhrase: string;
+     function GetPassingPhrase(APassing: TPassing): string;
+     property OnStatusReceived: TDecoderStatusReceivedEvent read FOnStatus write FOnStatus;
+     property OnPassingReceived: TDecoderPassingReceivedEvent read FOnPassing write FOnPassing;
+  end;
+
+  { TMyLapsP3Listener }
+  TMyLapsP3Listener = class (TDecoderListener)
+  private
+    FTcpClient: TIdTCPClient;
+    FServerPort: word;
+    FMessage: string;
+    FNewData: string;
+    FMyLapsParser: TMyLapsP3MessageParser;
+    procedure PostMessage;
+
+  public
+    constructor Create(ADecoder: TDecoder; AServerPort: Word); reintroduce;
+    destructor Destroy; override;
+    procedure Execute; override;
+    property MyLapsP3MessageParser: TMyLapsP3MessageParser read FMyLapsParser write FMyLapsParser;
+    procedure SendQuery(Msg: string);
+  end;
+
+  TMyLapsDecoderFinder = class(TDecoderFinder)
+  private
+    FUdpServer: TIdUdpServer;
+    FParser: TMyLapsP3MessageParser;
+    FOnDecoderFound: TDecoderFoundEvent;
+    procedure OnUdpRead(AThread: TIdUDPListenerThread; const AData: TIdBytes; ABinding: TIdSocketHandle);
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+    property OnDecoderFound: TDecoderFoundEvent read FOnDecoderFound write FOnDecoderFound;
+    procedure Refresh; override;
+  end;
+
+implementation
 
 const
 
@@ -71,108 +142,6 @@ const
   CONTROLLER_ID = $83;
   REQUEST_ID = $85;
 
-type
-  TMyLapsP3Passing = record
-    PassingNumber: integer;
-    ChipId: string;
-    PassingTime: TDateTime;
-    SignalStrength: integer;
-    Hits: integer;
-    Flags: integer;
-    Sport: byte;
-    Voltage: Double;
-    Temperature: integer;
-    DecoderId: string;
-    TransponderShortId: integer;
-    function ToString: string;
-  end;
-
-  TMyLapsP3Status = record
-    Noise: integer;
-    Gps: boolean;
-    Temperature: double;
-    InputVoltage: double;
-    DecoderId: string;
-  end;
-
-  TMyLapsP3Decoder = record
-    Address: string;
-    FirmwareVersion: string;
-    DecoderType: string;
-    DecoderId: string;
-  end;
-
-  TDecoderStatusReceivedEvent = procedure (Status: TMyLapsP3Status) of object;
-  TDecoderPassingReceivedEvent = procedure (Passing: TMyLapsP3Passing) of object;
-  TDecoderFoundEvent = procedure (ADecoder: TMyLapsP3Decoder) of object;
-
-  TMyLapsP3MessageParser = class
-   private
-     FOnStatus: TDecoderStatusReceivedEvent;
-     FOnPassing: TDecoderPassingReceivedEvent;
-     FCrcTable: array[0..255] of word;
-     FTimeDeltaDecoderPc: TDateTime;   // time delta between decoder and PC clock
-     class function DecodePassingTime(AmbP3Time: string): TDateTime;
-     class function EncodePassingTime(ADateTime: TDateTime): string;
-     function ParseRecordTypePassing(Body: string): TMyLapsP3Passing;
-     function ParseRecordTypeStatus(Body: string): TMyLapsP3Status;
-     function ParseRecordTypeVersionDecoder(Body: string): TMyLapsP3Decoder;
-     function DeEscapeMessage(Msg: string): string;
-     function EscapeMessage(Msg: string): string;
-     procedure initTable;
-     function CalcCrc16(Msg: AnsiString): word;
-   public
-     constructor Create;
-     procedure AddMessage(Msg: string);
-     function AddMessageDecoderSearch(Msg: string): TMyLapsP3Decoder;
-     function GetDecoderSearchPhrase: string;
-     function GetResendPhrase(FromPassingNr, ToPassingNr: FixedUInt; DecoderId: string): string;
-     function GetRtcPhrase: string;
-     function GetPassingPhrase(APassing: TMyLapsP3Passing): string;
-     property OnStatusReceived: TDecoderStatusReceivedEvent read FOnStatus write FOnStatus;
-     property OnPassingReceived: TDecoderPassingReceivedEvent read FOnPassing write FOnPassing;
-  end;
-
-  { TMyLapsP3Listener }
-  TMyLapsP3Listener = class (TThread)
-  private
-    FTcpClient: TIdTCPClient;
-    FServerPort: word;
-    FMessage: string;
-    FNewData: string;
-    FMyLapsParser: TMyLapsP3MessageParser;
-    FDecoderData: TMyLapsP3Decoder;
-    procedure PostMessage;
-  public
-    constructor Create (Decoder: TMyLapsP3Decoder; ServerPort: word); reintroduce;
-    destructor Destroy; override;
-    procedure Execute; override;
-    property MyLapsP3MessageParser: TMyLapsP3MessageParser read FMyLapsParser write FMyLapsParser;
-    procedure SendQuery(Msg: string);
-    property DecoderData: TMyLapsP3Decoder read FDecoderData;
-  end;
-
-  TMyLapsDecoderFinder = class
-  private
-    FUdpServer: TIdUdpServer;
-    FParser: TMyLapsP3MessageParser;
-    FOnDecoderFound: TDecoderFoundEvent;
-    procedure OnUdpRead(AThread: TIdUDPListenerThread; const AData: TIdBytes; ABinding: TIdSocketHandle);
-  public
-    constructor Create; virtual;
-    destructor Destroy; override;
-    property OnDecoderFound: TDecoderFoundEvent read FOnDecoderFound write FOnDecoderFound;
-    procedure Update;
-  end;
-
-implementation
-
-{==============================================================================}
-function TMyLapsP3Passing.ToString: string;
-begin
-  result := Format('Passing# %d, TxId: %s, TxShortId: %d, Timestamp: %s, Signal: %d, Hits: %d, Flags: %d, Sport: %d, DecoderId: %s',
-    [PassingNumber, ChipId,TransponderShortId, DatetimeToStr(PassingTime), SignalStrength,Hits,Flags,Sport,DecoderId]);
-end;
 
 {==============================================================================}
 constructor TMyLapsP3MessageParser.Create;
@@ -226,7 +195,7 @@ begin
 end;
 
 {==============================================================================}
-function TMyLapsP3MessageParser.ParseRecordTypePassing(Body: string): TMyLapsP3Passing;
+function TMyLapsP3MessageParser.ParseRecordTypePassing(Body: string): TPassing;
 var i, offset: integer;
     s, d: string;
     FieldOfMessage: integer;
@@ -294,7 +263,7 @@ begin
 end;
 
 {==============================================================================}
-function TMyLapsP3MessageParser.ParseRecordTypeStatus(Body: string): TMyLapsP3Status;
+function TMyLapsP3MessageParser.ParseRecordTypeStatus(Body: string): TDecoderStatus;
 var
   i, offset: integer;
   s: string;
@@ -345,7 +314,7 @@ begin
 end;
 
 {==============================================================================}
-function TMyLapsP3MessageParser.ParseRecordTypeVersionDecoder(Body: string): TMyLapsP3Decoder;
+function TMyLapsP3MessageParser.ParseRecordTypeVersionDecoder(Body: string): TDecoder;
 var
   i, offset: integer;
   s: string;
@@ -452,9 +421,9 @@ var l: integer;
     Checksum: integer;
     Flags: integer;
     TypeOfRecord: integer;
-    P3Passing: TMyLapsP3Passing;
-    P3Status: TMyLapsP3Status;
-    P3VersionDecoder: TMyLapsP3Decoder;
+    P3Passing: TPassing;
+    P3Status: TDecoderStatus;
+    P3VersionDecoder: TDecoder;
     OrigMsg: string;
 begin
   try
@@ -472,7 +441,8 @@ begin
     begin
       // start
       s := '$' + MidStr(Msg, 1, 2);
-      if StrToInt(s) <> $8E then IsValid := false;
+      if StrToInt(s) <> $8E then
+        IsValid := false;
       // Version
       Version := StrToInt('$' + MidStr(Msg, 3, 2));
       // length of message
@@ -503,8 +473,6 @@ begin
         end;
       TOR_VERSION_DECODER:
         P3VersionDecoder := ParseRecordTypeVersionDecoder(MidStr(Msg, 21, length(Msg) - 21 - 1));
-      else
-        Flags := 0;
       end;
     end;
 
@@ -514,7 +482,7 @@ begin
 end;
 
 {==============================================================================}
-function TMyLapsP3MessageParser.AddMessageDecoderSearch(Msg: string): TMyLapsP3Decoder;
+function TMyLapsP3MessageParser.AddMessageDecoderSearch(Msg: string): TDecoder;
 var l: integer;
     s: string;
     TypeOfRecord: integer;
@@ -571,7 +539,7 @@ begin
   result := result + DecoderId[7] + DecoderId[8];
   result := result + DecoderId[10] + DecoderId[11];
   result := result + '8F';
-  crc := CalcCrc16(result);
+  crc := CalcCrc16(AnsiString(result));
   s := IntToHex(crc, 4);
   result[9] := s[3];
   result[10] := s[4];
@@ -581,7 +549,7 @@ begin
 end;
 
 {==============================================================================}
-function TMyLapsP3MessageParser.GetPassingPhrase(APassing: TMyLapsP3Passing): string;
+function TMyLapsP3MessageParser.GetPassingPhrase(APassing: TPassing): string;
 var
   lCRC: Word;
   s: string;
@@ -614,7 +582,7 @@ begin
   result[5] := s[1];
   result[6] := s[2];
 
-  lCRC := CalcCrc16(result);
+  lCRC := CalcCrc16(AnsiString(result));
   s := IntToHex(lCRC, 4);
   result[9] := s[3];
   result[10] := s[4];
@@ -632,7 +600,7 @@ begin
   // 8E.00.1900.A539.0000.0300.0100.0200.0300.0400.0800.0A00.0C00.8F (decoder search)
   // 8E.02.1700.xxxx.0000.2400.0100.0200.0300.0400.0800.0A00.0C00.8F (get RTC)
   result := '8E021700000000002400010002000300040008000A000C008F';
-  crc := CalcCrc16(result);
+  crc := CalcCrc16(AnsiString(result));
   s := IntToHex(crc, 4);
   result[9] := s[3];
   result[10] := s[4];
@@ -649,7 +617,7 @@ end;
   {$UNDEF RANGEON}
 {$ENDIF}
 {==============================================================================}
-procedure TMyLapsP3MessageParser.initTable;
+procedure TMyLapsP3MessageParser.InitTable;
 var i, j: integer;
     crc: word;
 begin
@@ -689,7 +657,7 @@ begin
   l := length(Msg) div 2;
   for i:=0 to l-1 do
   begin
-    b := StrToInt('$'+MidStr(Msg, 2*i+1, 2));
+    b := StrToInt('$'+MidStr(String(Msg), 2*i+1, 2));
     crc := (FCrcTable[(crc shr 8) and 255] xor (crc shl 8)) xor b;
   end;
   result := crc;
@@ -700,12 +668,11 @@ end;
 {$ENDIF}
 
 {==============================================================================}
-constructor TMyLapsP3Listener.Create(Decoder: TMyLapsP3Decoder; ServerPort: word);
+constructor TMyLapsP3Listener.Create(ADecoder: TDecoder; AServerPort: Word);
 begin
-  inherited Create(true);
+  inherited Create(ADecoder, AServerPort);
+  FMyLapsParser := TMyLapsP3MessageParser.Create;
   FTcpClient := TIdTCPClient.Create(nil);
-  FDecoderData := Decoder;
-  FServerPort := ServerPort;
 end;
 
 {==============================================================================}
@@ -724,7 +691,7 @@ begin
   repeat
     try
       if not FTcpClient.Connected then
-        FTcpClient.Connect(FDecoderData.Address, FServerPort);
+        FTcpClient.Connect(FDecoder.Address, FServerPort);
 
       InByte := FTcpClient.IOHandler.ReadByte;
       FNewData := FNewData + IntToHex(InByte, 2);
@@ -760,40 +727,36 @@ var i, l: integer;
     ABuffer: TIdBytes;
     s: string;
 begin
-  if FTcpClient.Connected then
+  if not FTcpClient.Connected then
+    Exit;
+
+  l := length(Msg) div 2;
+  setlength(ABuffer, l);
+  for i:=0 to l-1 do
   begin
-    l := length(Msg) div 2;
-    setlength(ABuffer, l);
-    for i:=0 to l-1 do
-    begin
-      s := MidStr(Msg, 2*i+1, 2);
-      ABuffer[i] := StrToInt('$'+s);
-    end;
-    FTcpClient.IOHandler.Write(ABuffer, l);
+    s := MidStr(Msg, 2*i+1, 2);
+    ABuffer[i] := StrToInt('$'+s);
   end;
+  FTcpClient.IOHandler.Write(ABuffer, l);
 end;
 
 {==============================================================================}
 procedure TMyLapsP3Listener.PostMessage;
 begin
-  if assigned(FMyLapsParser) then
-  begin
-    FMyLapsParser.AddMessage(FMessage);
-    FMessage := '';
-  end;
+  if FMyLapsParser = nil then
+    Exit;
+  FMyLapsParser.AddMessage(FMessage);
+  FMessage := '';
 end;
-
-{ TMyLapsDecoderSearcher }
 
 {==============================================================================}
 constructor TMyLapsDecoderFinder.Create;
 begin
-  inherited;
   FOnDecoderFound := nil;
   FParser := TMyLapsP3MessageParser.Create;
   FUdpServer := TIdUDPServer.Create(nil);
   FUdpServer.ReuseSocket := rsTrue;
-  FUdpServer.DefaultPort := 5303;
+  FUdpServer.DefaultPort := cMyLapsDefaultFinderPort;
   FUdpServer.BroadcastEnabled := true;
   FUdpServer.OnUDPRead := OnUdpRead;
   FUdpServer.Active := true;
@@ -821,7 +784,7 @@ end;
 {==============================================================================}
 procedure TMyLapsDecoderFinder.OnUdpRead(AThread: TIdUDPListenerThread; const AData: TIdBytes; ABinding: TIdSocketHandle);
 var
-  lDecoder: TMyLapsP3Decoder;
+  lDecoder: TDecoder;
   lMsg: string;
 begin
   lDecoder := FParser.AddMessageDecoderSearch(lMsg);
@@ -831,7 +794,7 @@ begin
 end;
 
 {==============================================================================}
-procedure TMyLapsDecoderFinder.Update;
+procedure TMyLapsDecoderFinder.Refresh;
 var i: integer;
     sReq: string;
     s: string;
@@ -844,7 +807,7 @@ begin
     s := MidStr(sReq, 2*i+1, 2);
     ReqBuf[i] := StrToInt('$' + s);
   end;
-  FUdpServer.SendBuffer('255.255.255.255', 5403, ReqBuf);
+  FUdpServer.SendBuffer('255.255.255.255', cMyLapsDefaultOperatingPort, ReqBuf);
 end;
 
 end.

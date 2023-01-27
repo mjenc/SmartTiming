@@ -2,8 +2,8 @@ object FormCompetitorImport: TFormCompetitorImport
   Left = 0
   Top = 0
   Caption = 'Teilnehmer importieren'
-  ClientHeight = 496
-  ClientWidth = 821
+  ClientHeight = 488
+  ClientWidth = 819
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,15 +15,14 @@ object FormCompetitorImport: TFormCompetitorImport
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 455
-    Width = 821
+    Top = 447
+    Width = 819
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 461
     DesignSize = (
-      821
+      819
       41)
     object LabelProgress: TLabel
       Left = 348
@@ -32,7 +31,7 @@ object FormCompetitorImport: TFormCompetitorImport
       Height = 15
     end
     object ButtonOK: TButton
-      Left = 647
+      Left = 645
       Top = 8
       Width = 75
       Height = 25
@@ -44,7 +43,7 @@ object FormCompetitorImport: TFormCompetitorImport
       OnClick = ButtonOKClick
     end
     object ButtonCancel: TButton
-      Left = 735
+      Left = 733
       Top = 8
       Width = 75
       Height = 25
@@ -67,13 +66,13 @@ object FormCompetitorImport: TFormCompetitorImport
     Left = 0
     Top = 0
     Width = 249
-    Height = 455
+    Height = 447
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
     DesignSize = (
       249
-      455)
+      447)
     object Label1: TLabel
       Left = 16
       Top = 11
@@ -85,7 +84,7 @@ object FormCompetitorImport: TFormCompetitorImport
       Left = 13
       Top = 32
       Width = 230
-      Height = 409
+      Height = 401
       Anchors = [akLeft, akTop, akRight, akBottom]
       BorderStyle = bsNone
       ColCount = 2
@@ -120,14 +119,14 @@ object FormCompetitorImport: TFormCompetitorImport
   object PanelGrid: TPanel
     Left = 249
     Top = 0
-    Width = 572
-    Height = 455
+    Width = 570
+    Height = 447
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 3
     DesignSize = (
-      572
-      455)
+      570
+      447)
     object Label2: TLabel
       Left = 16
       Top = 11
@@ -138,8 +137,8 @@ object FormCompetitorImport: TFormCompetitorImport
     object StringGridPreview: TStringGrid
       Left = 16
       Top = 32
-      Width = 542
-      Height = 409
+      Width = 540
+      Height = 401
       Anchors = [akLeft, akTop, akRight, akBottom]
       ColCount = 8
       FixedCols = 0
