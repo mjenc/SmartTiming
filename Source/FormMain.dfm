@@ -32,7 +32,6 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 0
-    ExplicitWidth = 1475
     DesignSize = (
       1473
       55)
@@ -89,8 +88,6 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 1
-    ExplicitWidth = 1475
-    ExplicitHeight = 796
     object PageControlMain: TPageControl
       AlignWithMargins = True
       Left = 0
@@ -107,14 +104,12 @@ object FormMain: TFormMain
       TabOrder = 0
       StyleElements = [seFont, seClient]
       OnChange = PageControlMainChange
-      ExplicitWidth = 1475
-      ExplicitHeight = 784
       object TabSheetEvent: TTabSheet
         Caption = 'Veranstaltung'
         object PanelEventInfo: TPanel
           Left = 0
           Top = 0
-          Width = 1467
+          Width = 1469
           Height = 121
           Align = alTop
           BevelKind = bkFlat
@@ -186,48 +181,43 @@ object FormMain: TFormMain
             Height = 23
             TabOrder = 1
           end
-          object DatePickerFrom: TDatePicker
-            Left = 572
-            Top = 13
-            Width = 120
-            Date = 44736.000000000000000000
-            DateFormat = 'dd/mm/yyyy'
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clWindowText
-            Font.Height = -16
-            Font.Name = 'Segoe UI'
-            Font.Style = []
-            TabOrder = 2
-            OnChange = DatePickerFromChange
-          end
-          object DatePickerTo: TDatePicker
-            Left = 822
-            Top = 13
-            Width = 120
-            Date = 44736.000000000000000000
-            DateFormat = 'dd/mm/yyyy'
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clWindowText
-            Font.Height = -16
-            Font.Name = 'Segoe UI'
-            Font.Style = []
-            TabOrder = 3
-          end
           object ButtonSaveEvent: TButton
             Left = 32
             Top = 80
             Width = 75
             Height = 25
             Caption = 'Speichern'
-            TabOrder = 4
+            TabOrder = 2
             OnClick = ButtonSaveEventClick
+          end
+          object EditDateTo: TMaskEdit
+            Left = 814
+            Top = 13
+            Width = 72
+            Height = 23
+            Alignment = taCenter
+            EditMask = '!99/99/0000;1;_'
+            MaxLength = 10
+            TabOrder = 3
+            Text = '  .  .    '
+          end
+          object EditDateFrom: TMaskEdit
+            Left = 572
+            Top = 13
+            Width = 72
+            Height = 23
+            Alignment = taCenter
+            EditMask = '!99/99/0000;1;_'
+            MaxLength = 10
+            TabOrder = 4
+            Text = '  .  .    '
           end
         end
         object PanelEventDetails: TPanel
           AlignWithMargins = True
           Left = 0
           Top = 126
-          Width = 1467
+          Width = 1469
           Height = 339
           Margins.Left = 0
           Margins.Top = 5
@@ -254,7 +244,7 @@ object FormMain: TFormMain
             AlignWithMargins = True
             Left = 0
             Top = 39
-            Width = 1463
+            Width = 1465
             Height = 296
             Margins.Left = 0
             Margins.Top = 5
@@ -271,7 +261,7 @@ object FormMain: TFormMain
               Width = 30
               Height = 109
               Margins.Bottom = 180
-              DataSource = DataSourceRaces
+              DataSource = MainDataModule.DataSourceRaces
               VisibleButtons = [nbInsert, nbDelete, nbEdit, nbRefresh]
               Align = alLeft
               Flat = True
@@ -284,10 +274,10 @@ object FormMain: TFormMain
             object DBGridRaces: TDBGrid
               Left = 36
               Top = 0
-              Width = 1423
+              Width = 1425
               Height = 292
               Align = alClient
-              DataSource = DataSourceRaces
+              DataSource = MainDataModule.DataSourceRaces
               DrawingStyle = gdsGradient
               FixedColor = clBtnShadow
               GradientEndColor = cl3DLight
@@ -322,7 +312,6 @@ object FormMain: TFormMain
           Align = alTop
           BevelOuter = bvNone
           TabOrder = 0
-          ExplicitWidth = 1467
           object Label5: TLabel
             Left = 42
             Top = 15
@@ -392,7 +381,6 @@ object FormMain: TFormMain
           ParentCtl3D = False
           TabOrder = 2
           BeforeAction = DBNavigatorCompetitorsBeforeAction
-          ExplicitHeight = 100
         end
       end
       object TabSheetTiming: TTabSheet
@@ -426,7 +414,6 @@ object FormMain: TFormMain
           Align = alLeft
           BevelOuter = bvNone
           TabOrder = 0
-          ExplicitHeight = 744
           object ListBoxRaces: TListBox
             Left = 0
             Top = 0
@@ -458,12 +445,10 @@ object FormMain: TFormMain
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 1
-          ExplicitWidth = 766
-          ExplicitHeight = 744
           object PanelRaceControls: TPanel
             Left = 0
             Top = 0
-            Width = 766
+            Width = 768
             Height = 41
             Align = alTop
             BevelOuter = bvNone
@@ -540,8 +525,8 @@ object FormMain: TFormMain
           object PanelPassingGrid: TPanel
             Left = 0
             Top = 41
-            Width = 766
-            Height = 703
+            Width = 768
+            Height = 716
             Align = alClient
             BevelOuter = bvNone
             TabOrder = 1
@@ -554,8 +539,6 @@ object FormMain: TFormMain
           Height = 757
           Align = alRight
           TabOrder = 2
-          ExplicitLeft = 957
-          ExplicitHeight = 744
         end
       end
       object TabSheetResults: TTabSheet
@@ -580,8 +563,6 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 2
-    ExplicitTop = 855
-    ExplicitWidth = 1475
     object PanelDecoder: TPanel
       Left = 0
       Top = 0
@@ -622,13 +603,17 @@ object FormMain: TFormMain
     end
   end
   object MainMenu: TMainMenu
-    Left = 704
-    Top = 19
+    Left = 184
+    Top = 3
     object MenuItemFile: TMenuItem
       Caption = 'Datei'
       object MenuItemLoadEvent: TMenuItem
         Caption = 'Veranstaltung laden ...'
         OnClick = MenuItemLoadEventClick
+      end
+      object MenuItemBackup: TMenuItem
+        Caption = 'Backup ...'
+        OnClick = MenuItemBackupClick
       end
     end
     object MenuItemCompetitors: TMenuItem
@@ -675,35 +660,6 @@ object FormMain: TFormMain
         OnClick = MenuItemSettingsClick
       end
     end
-  end
-  object SQLDataSetRaces: TSQLDataSet
-    CommandText = 'SELECT * FROM RACES'
-    DataSource = DataSourceRaces
-    MaxBlobSize = -1
-    Params = <>
-    SQLConnection = MainDataModule.SQLConnection
-    Left = 72
-    Top = 316
-  end
-  object DataSourceRaces: TDataSource
-    DataSet = ClientDataSetRaces
-    Left = 75
-    Top = 504
-  end
-  object DataSetProviderRaces: TDataSetProvider
-    DataSet = SQLDataSetRaces
-    Options = [poAutoRefresh, poUseQuoteChar]
-    Left = 73
-    Top = 378
-  end
-  object ClientDataSetRaces: TClientDataSet
-    Aggregates = <>
-    DisableStringTrim = True
-    Params = <>
-    ProviderName = 'DataSetProviderRaces'
-    BeforeRefresh = ClientDataSetRacesBeforeRefresh
-    Left = 70
-    Top = 442
   end
   object SQLDataSetCompetitors: TSQLDataSet
     CommandText = 'SELECT * FROM COMPETITORS'
@@ -1959,7 +1915,7 @@ object FormMain: TFormMain
   object FileOpenDialog: TFileOpenDialog
     FavoriteLinks = <>
     FileTypes = <>
-    Options = []
+    Options = [fdoOverWritePrompt, fdoDefaultNoMiniMode]
     Left = 792
     Top = 16
   end

@@ -33,6 +33,7 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
       Caption = 'OK'
       ModalResult = 1
       TabOrder = 0
+      OnClick = ButtonOKClick
     end
     object ButtonCancel: TButton
       Left = 274

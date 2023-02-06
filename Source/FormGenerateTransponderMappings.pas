@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Data.DB, Generics.Collections,
   Vcl.Grids, Vcl.DBGrids, Vcl.ComCtrls, MMSystem, SmartTiming.Cache, SmartTiming.DecoderEngine,
-  DecoderInterface;
+  DecoderInterface, SmartTiming.Consts;
 
 type
   TFormGenerateTransponderMappings = class(TForm)
@@ -25,6 +25,7 @@ type
     procedure CheckBoxFillGapsClick(Sender: TObject);
     procedure ButtonStartReceivingClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure ButtonOKClick(Sender: TObject);
   private
     FRunning: boolean;
     FFirstGap: Integer;
@@ -42,6 +43,21 @@ implementation
 
 {$R *.dfm}
 
+uses
+  FormMain, DataModule;
+
+{==============================================================================}
+procedure TFormGenerateTransponderMappings.ButtonOKClick(Sender: TObject);
+begin
+  MainDataModule.SaveTransponderMappingCache;
+
+  gFormMain.FileOpenDialog.DefaultExtension := 'txt';
+  gFormMain.FileOpenDialog.OkButtonLabel := cButtonCaptionExport;
+  if not gFormMain.FileOpenDialog.Execute then
+    Exit;
+  MainDataModule.ExportTxMapping(gFormMain.FileOpenDialog.FileName);
+end;
+
 {==============================================================================}
 procedure TFormGenerateTransponderMappings.ButtonStartReceivingClick(Sender: TObject);
 begin
@@ -56,7 +72,8 @@ begin
   begin
     FSavedPassingReceiveEvent := TDecoderEngine.GetSingleton.NewPassingReceived;
     TDecoderEngine.GetSingleton.NewPassingReceived := OnReceivePassing;
-    TTransponderMappingStore.GetSingleton.Clear;
+    if CheckBoxClearExisiting.Checked then
+      TTransponderMappingStore.GetSingleton.Clear;
     FRunning := true;
     ButtonStartReceiving.Caption := 'Beenden';
   end;

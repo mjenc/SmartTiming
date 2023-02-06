@@ -299,14 +299,14 @@ var
   i: integer;
   lCompetitorId: integer;
 
-  procedure FillValue(const AFieldName, AFieldTitle: string; AReadFunction: TFnReadFunction);
+  procedure FillValue(const AFieldName, AFieldTitle: string; AReadFunction: TFnReadFunction; ADefault: Variant);
   var
     lCol: integer;
   begin
     lCol := GetFileFieldIndexFromColumn(AFieldTitle);
-    if StringGridPreview.Cells[lCol, i].IsEmpty then
+    if (lCol < 0) or StringGridPreview.Cells[lCol, i].IsEmpty then
     begin
-      MainDataModule.ClientDataSetCompetitors.FieldByName(AFieldName).Value := Null;
+      MainDataModule.ClientDataSetCompetitors.FieldByName(AFieldName).Value := ADefault;
       Exit;
     end;
     MainDataModule.ClientDataSetCompetitors.FieldByName(AFieldName).Value := AReadFunction(lCol, i);
@@ -322,16 +322,17 @@ begin
   begin
     MainDataModule.ClientDataSetCompetitors.Append;
     MainDataModule.ClientDataSetCompetitors.FieldByName('COMPETITORID').Value := lCompetitorId + i;
-    FillValue('CLASS', cFieldTitleClass, GetStringValueFromFileLines);
-    FillValue('BIB', cFieldTitleBib, GetIntegerValueFromFileLines);
-    FillValue('FIRSTNAME', cFieldTitleFirstName, GetStringValueFromFileLines);
-    FillValue('LASTNAME', cFieldTitleLastName, GetStringValueFromFileLines);
-    FillValue('CLUB', cFieldTitleClub, GetStringValueFromFileLines);
-    FillValue('TEAM', cFieldTitleTeam, GetStringValueFromFileLines);
-    FillValue('NATIONALITY', cFieldTitleNationality, GetStringValueFromFileLines);
-    FillValue('UCIID', cFieldTitleUCIID, GetStringValueFromFileLines);
-    FillValue('STARTTIME',cFieldTitleStarttime, GetStarttimeValueFromFileLines);
-    FillValue('TRANSPONDERID', cFieldTitleTransponder, GetIntegerValueFromFileLines);
+    FillValue('CLASS', cFieldTitleClass, GetStringValueFromFileLines, 'Unbekannt');
+    FillValue('BIB', cFieldTitleBib, GetIntegerValueFromFileLines, -1);
+    FillValue('FIRSTNAME', cFieldTitleFirstName, GetStringValueFromFileLines, null);
+    FillValue('LASTNAME', cFieldTitleLastName, GetStringValueFromFileLines, null);
+    FillValue('CLUB', cFieldTitleClub, GetStringValueFromFileLines, null);
+    FillValue('TEAM', cFieldTitleTeam, GetStringValueFromFileLines, null);
+    FillValue('NATIONALITY', cFieldTitleNationality, GetStringValueFromFileLines, null);
+    FillValue('UCIID', cFieldTitleUCIID, GetStringValueFromFileLines, null);
+    FillValue('STARTTIME',cFieldTitleStarttime, GetStarttimeValueFromFileLines, 0);
+    FillValue('TRANSPONDERID', cFieldTitleTransponder, GetIntegerValueFromFileLines, -1);
+    FillValue('HANDICAPFACTOR', cFieldTitleHandicapFactor, GetIntegerValueFromFileLines, 100);
     MainDataModule.ClientDataSetCompetitors.Post;
     LabelProgress.Caption := Format('%d von %d importiert', [i, FFileLines.Count]);
     ProgressBar.StepIt;

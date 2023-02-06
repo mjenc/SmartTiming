@@ -88,9 +88,9 @@
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Locale>1033</VerInfo_Locale>
+        <VerInfo_Locale>1031</VerInfo_Locale>
         <DCC_ExeOutput>..\bin</DCC_ExeOutput>
-        <Icon_MainIcon>..\Resources\STLogo32.ico</Icon_MainIcon>
+        <VerInfo_Keys>CompanyName=Michael Jenc;FileDescription=SmartTiming;FileVersion=1.0.0.0;InternalName=SmartTiming;LegalCopyright=© Michael Jenc 2023;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=SmartTiming;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -106,13 +106,11 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="FormMain.pas">
-            <Form>FormMain</Form>
-        </DCCReference>
         <DCCReference Include="DataModule.pas">
             <Form>MainDataModule</Form>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
+        <DCCReference Include="SmartTiming.Controller.pas"/>
         <None Include="ModelSupport_SmartTiming\default.txaPackage"/>
         <None Include="ModelSupport_SmartTiming\default.txvpck"/>
         <None Include="..\Resources\PassingBeep.wav"/>

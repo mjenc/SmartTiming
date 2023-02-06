@@ -9,6 +9,8 @@ const
   // Database
   cStdDataPath = 'd:\projects\SmartTiming\Data\';
   cStdDatabaseName = 'SmartTiming.db';
+  cCreateSchemaScriptName = 'CreateSchema.sql';
+
   cRegKeyPath = 'SOFTWARE\MJ\SmartTiming';
 
   cNotFound = '<notfound>';
@@ -59,13 +61,21 @@ resourcestring
   cFieldTitleUCIID = 'UCI-ID';
   cFieldTitleTransponder = 'Transponder';
   cFieldTitleStartTime = 'Startzeit';
-
+  cFieldTitleHandicapFactor = 'Handicapfaktor';
 
   cFieldTitleLap = 'Runde';
   cFieldTitlePassingTime = 'Durchgangszeit';
   cFieldTitleGap = 'Abstand';
   cFieldTitleChipID = 'ChipID';
 
+
+  cButtonCaptionBackup = 'Sichern';
+  cButtonCaptionExport = 'Exportieren';
+  cButtonCaptionImport = 'Importieren';
+
+  cMessagesBackupSucceeded = 'Das Datenbank-Backup wurde erfolgreich erstellt.';
+  cMessagesBackupFailed = 'Das Erstellen eines Datenbank-Backup ist fehlgeschlagen.';
+  cMessagesNoTxMapping = 'Es ist noch keine Transponder-Mapping-Tabelle importiert.'#13#10'Möchten Sie diese nun importieren?';
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
   TRaceTypes = set of TRaceType;

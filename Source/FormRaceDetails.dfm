@@ -21,8 +21,6 @@ object FormRaceDetails: TFormRaceDetails
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 270
-    ExplicitWidth = 402
     DesignSize = (
       404
       41)
@@ -37,7 +35,6 @@ object FormRaceDetails: TFormRaceDetails
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonOKClick
-      ExplicitLeft = 226
     end
     object ButtonCancel: TButton
       Left = 318
@@ -49,7 +46,6 @@ object FormRaceDetails: TFormRaceDetails
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
-      ExplicitLeft = 314
     end
   end
   object PanelMain: TPanel
@@ -60,8 +56,6 @@ object FormRaceDetails: TFormRaceDetails
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 402
-    ExplicitHeight = 270
     object Bezeichnung: TLabel
       Left = 17
       Top = 24
@@ -182,6 +176,7 @@ object FormRaceDetails: TFormRaceDetails
       Top = 21
       Width = 193
       Height = 23
+      DataSource = MainDataModule.DataSourceRaces
       TabOrder = 0
     end
     object DBEditLapCount: TDBEdit
@@ -189,6 +184,7 @@ object FormRaceDetails: TFormRaceDetails
       Top = 108
       Width = 60
       Height = 23
+      DataSource = MainDataModule.DataSourceRaces
       TabOrder = 4
     end
     object DBEditDistance: TDBEdit
@@ -196,6 +192,7 @@ object FormRaceDetails: TFormRaceDetails
       Top = 160
       Width = 60
       Height = 23
+      DataSource = MainDataModule.DataSourceRaces
       TabOrder = 6
     end
   end

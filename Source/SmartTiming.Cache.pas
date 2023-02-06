@@ -343,9 +343,7 @@ end;
 procedure TTransponderMappingStore.Lock;
 begin
   Synchronizer.BeginWrite;
-{$IFDEF WINDOWS}
   FLockingThreadId := GetCurrentThreadId;
-{$ENDIF}
 end;
 
 {==============================================================================}
@@ -358,20 +356,16 @@ end;
 {==============================================================================}
 function TTransponderMappingStore.GetTxIdToShortId: TDictionary<string, integer>;
 begin
-{$IFDEF WINDOWS}
   if FLockingThreadId <> GetCurrentThreadId then
     raise Exception.Create('TransponderMappingList has not been locked before calling GetTxIdToShortId');
-{$ENDIF}
   result := FTxIdToShortId;
 end;
 
 {==============================================================================}
 function TTransponderMappingStore.GetShortIdToTxId: TDictionary<integer, string>;
 begin
-{$IFDEF WINDOWS}
   if FLockingThreadId <> GetCurrentThreadId then
     raise Exception.Create('TransponderMappingList has not been locked before calling GetShortIdToTxId');
-{$ENDIF}
   result := FShortIdToTxId;
 end;
 

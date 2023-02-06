@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls, Vcl.Mask,
   Vcl.ExtCtrls, DB, DateUtils, DBClient,
-  SmartTiming.Database, SmartTiming.Consts, SmartTiming.Tools, Vcl.DBCtrls,
+  SmartTiming.Consts, SmartTiming.Tools, Vcl.DBCtrls,
   DataModule;
 
 type
@@ -37,6 +37,7 @@ type
     FEventId: integer;
     FIsInsert: Boolean;
     FEventDate: TDatetime;
+    FStatus: integer;
     function GetStartDatetime: TDatetime;
   public
     constructor Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean; AEventDate: TDatetime);
@@ -60,6 +61,7 @@ begin
   FEventId := AEventId;
   FIsInsert := AIsInsert;
   FEventDate := AEventDate;
+  FStatus := 0;
 end;
 
 {==============================================================================}
@@ -71,7 +73,7 @@ begin
   DBEditTitle.DataSource := FDataSource;
   DBEditTitle.DataField := 'TITLE';
 
-  if FIsInsert then
+  if FIsInsert or FDataSource.DataSet.FieldByName('STARTTIME').IsNull then
   begin
     EditDate.Text := DateToStr(FEventDate);
     EditTime.Text := FormatDatetime('hh:mm:00', lDateTime);
@@ -83,22 +85,34 @@ begin
     EditTime.Text := FormatDatetime('hh:mm:ss', lDateTime);
   end;
 
+  if FIsInsert then
+    FStatus := 0
+  else
+    FStatus := FDataSource.DataSet.FieldByName('STATUS').AsInteger;
+
   for lRaceType := rtUnknown to rtIndividualTimeTrial do
     ComboBoxRaceType.Items.Add(SmartTimingTools.GetRaceTypeStringFromEnum(lRaceType));
-  ComboBoxRaceType.ItemIndex := FDataSource.DataSet.FieldByName('RACETYPE').AsInteger;
+  if FIsInsert then
+    ComboBoxRaceType.ItemIndex := 0
+  else
+    ComboBoxRaceType.ItemIndex := FDataSource.DataSet.FieldByName('RACETYPE').AsInteger;
 
   DBEditLapCount.DataSource := FDataSource;
   DBEditLapCount.DataField := 'LAPS';
   if FIsInsert then
     DBEditLapCount.Field.Value := 1;
 
-  CBFirstPassingCounts.Checked := FDataSource.DataSet.FieldByName('FIRSTPASSINGISLAP').AsInteger <> 0;
+  if FIsInsert then
+   CBFirstPassingCounts.Checked := False
+  else
+    CBFirstPassingCounts.Checked := FDataSource.DataSet.FieldByName('FIRSTPASSINGISLAP').AsInteger <> 0;
 
   DBEditDistance.DataSource := FDataSource;
   DBEditDistance.DataField := 'DISTANCE';
 
   lDateTime := Trunc(Now);
-  lDateTime.IncSecond(FDataSource.DataSet.FieldByName('MINLAPDURATION').AsInteger);
+  if not FIsInsert then
+    lDateTime.IncSecond(FDataSource.DataSet.FieldByName('MINLAPDURATION').AsInteger);
   EditMinLapDuration.Text := FormatDateTime('mm:ss', lDateTime);
 end;
 
@@ -139,6 +153,7 @@ begin
 
   lDateTime := StrToTime('00:' + EditMinLapDuration.Text);
   FDataSource.DataSet.FieldByName('MINLAPDURATION').Value := SecondOfTheDay(lDatetime);
+  FDataSource.DataSet.FieldByName('STATUS').Value := FStatus;
   FDataSource.DataSet.Post;
   TClientDataSet(FDataSource.DataSet).ApplyUpdates(-1);
 end;

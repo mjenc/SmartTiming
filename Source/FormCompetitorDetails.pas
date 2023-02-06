@@ -42,6 +42,8 @@ type
     Label12: TLabel;
     Label13: TLabel;
     Label14: TLabel;
+    Label15: TLabel;
+    DBEditStarttime: TDBEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure ButtonOKClick(Sender: TObject);
@@ -87,6 +89,8 @@ begin
   MainDataModule.FillWithDistinctValues('COMPETITORS', 'CLUB', DBComboBoxClub.Items);
   DBComboBoxTeam.DataSource := FDataSource;
   DBComboBoxTeam.DataField := 'TEAM';
+  DBEditStartTime.DataSource := FDataSource;
+  DBEditStartTime.DataField := 'STARTTIME';
   MainDataModule.FillWithDistinctValues('COMPETITORS', 'TEAM', DBComboBoxTeam.Items);
   DBComboBoxNationality.DataSource := FDataSource;
   DBComboBoxNationality.DataField := 'NATIONALITY';

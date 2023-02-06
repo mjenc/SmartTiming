@@ -67,8 +67,7 @@ begin
 
   FListener := nil;
   FDecoderFoundCount := 0;
-  FDecoderFinder := TDecoderFinder.Create;
-  FDecoderFinder.OnDecoderFound := OnDecoderFound;
+  FDecoderFinder := TDecoderFinder.Create(OnDecoderFound);
   RefreshDecoderList;
 end;
 
@@ -108,9 +107,7 @@ begin
 
   FDecoder := ADecoder;
 
-  FListener := TDecoderListener.GetListenerForDecoder(FDecoder);
-  FListener.OnStatusReceived := OnStatusReceived;
-  FListener.OnPassingReceived := OnPassingReceived;
+  FListener := TDecoderListener.GetListenerForDecoder(FDecoder, OnStatusReceived, OnPassingReceived);
   FListener.Start;
 end;
 

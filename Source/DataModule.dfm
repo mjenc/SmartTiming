@@ -43,4 +43,32 @@ object MainDataModule: TMainDataModule
     Left = 250
     Top = 192
   end
+  object SQLDataSetRaces: TSQLDataSet
+    CommandText = 'SELECT * FROM RACES'
+    DataSource = DataSourceRaces
+    MaxBlobSize = -1
+    Params = <>
+    SQLConnection = SQLConnection
+    Left = 58
+    Top = 253
+  end
+  object DataSetProviderRaces: TDataSetProvider
+    DataSet = SQLDataSetRaces
+    Options = [poAutoRefresh, poUseQuoteChar]
+    Left = 58
+    Top = 302
+  end
+  object ClientDataSetRaces: TClientDataSet
+    Aggregates = <>
+    DisableStringTrim = True
+    Params = <>
+    ProviderName = 'DataSetProviderRaces'
+    Left = 56
+    Top = 354
+  end
+  object DataSourceRaces: TDataSource
+    DataSet = ClientDataSetRaces
+    Left = 60
+    Top = 403
+  end
 end

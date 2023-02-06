@@ -3,13 +3,14 @@ unit SmartTiming.Tools;
 interface
 
 uses
-  Classes, SysUtils, DateUtils, Windows,
+  Classes, SysUtils, DateUtils, Windows, Dialogs, Forms,
   Registry, DBGrids, Controls, Graphics,
   Generics.Defaults, UITypes, DB,
   uSuperObject, SmartTiming.Consts, RaceEngine.Custom;
 
 type
   SmartTimingTools = class
+    class function FieldAsDatetime(AField: TField): TDatetime;
     class function RegistryReadString(aRootKey: HKEY; const aPath, aKey: string; aDefault: String = ''): String;
     class procedure RegistryWriteString(aRootKey: HKEY; const aPath, aKey: string; aValue: String);
     class function RegistryReadBool(aRootKey: HKEY; const aPath, aKey: string; aDefault: boolean = false): boolean;
@@ -32,6 +33,7 @@ type
     class procedure OnGetTimeFromValue(ASender: TField; var AText: string; ADisplayText: Boolean);
     class procedure OnGetRaceStatus(ASender: TField; var AText: string; ADisplayText: Boolean);
     class procedure InitFieldDescriptions;
+    class function ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]): TModalResult;
   end;
 
   TRaceEngineFactory = class
@@ -45,6 +47,25 @@ implementation
 
 uses
   RaceEngine.TimeTrial;
+
+class function SmartTimingTools.ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]): TModalResult;
+var
+  lTaskDialog : TTaskDialog;
+begin
+  lTaskDialog := TTaskDialog.Create(nil);
+  try
+    if ATitle.IsEmpty then
+      lTaskDialog.Title := Application.Title
+    else
+      lTaskDialog.Title := ATitle;
+    lTaskDialog.Text := AMessage;
+    lTaskDialog.CommonButtons := AButtons;
+    lTaskDialog.Execute;
+    result := lTaskDialog.ModalResult;
+  finally
+    lTaskDialog.Free;
+  end;
+end;
 
 {==============================================================================}
 class function SmartTimingTools.RegistryReadString(aRootKey: HKEY; const aPath, aKey: string; aDefault: String = ''): String;
@@ -255,8 +276,8 @@ end;
 {==============================================================================}
 class procedure SmartTimingTools.GetColorsForRaceStatus(ARaceStatus: TRaceStatus; ASelected: boolean; var ABgColor, AFgColor: TColor);
 begin
-  ABgColor := clWindow;
-  AFgColor := clWindowText;
+  ABgColor := clWhite;
+  AFgColor := clBlack;
 
   if ASelected then
   begin
@@ -301,11 +322,21 @@ begin
 end;
 
 {==============================================================================}
+class function SmartTimingTools.FieldAsDatetime(AField: TField): TDatetime;
+begin
+  if AField.IsNull then
+    Exit(0.0);
+  if AField.DataType = ftDatetime then
+    Exit(AField.AsDateTime);
+  result := StrToDatetime(AField.Text);
+end;
+
+{==============================================================================}
 class procedure SmartTimingTools.FillRaceItemFromDataSet(AParent: TWinControl; ADataSet: TDataSet; ARaceItem: TRaceItem);
 begin
   ARaceItem.Id := ADataSet.FieldByName('RACEID').AsInteger;
   ARaceItem.RaceType := TRaceType(ADataSet.FieldByName('RACETYPE').AsInteger);
-  ARaceItem.StartTime := ADataSet.FieldByName('STARTTIME').AsFloat;
+  ARaceItem.StartTime := FieldAsDatetime(ADataSet.FieldByName('STARTTIME'));
   ARaceItem.Title := ADataSet.FieldByName('TITLE').AsString;
   ARaceItem.Laps := ADataSet.FieldByName('LAPS').AsInteger;
   ARaceItem.Distance := ADataSet.FieldByName('DISTANCE').AsFloat;
@@ -373,6 +404,11 @@ class procedure SmartTimingTools.SetColumnProperties(const ATable: string; AColu
   begin
     if SameText(AString, 'ftString') then
       Exit(ftString);
+    if SameText(AString, 'ftDatetime') then
+      Exit(ftDatetime);
+    if SameText(AString, 'ftTime') then
+      Exit(ftTime);
+
     Exit(ftUnknown);
   end;
 
@@ -406,7 +442,7 @@ begin
         AColumn.Title.Caption := AColumn.FieldName;
       AColumn.Width := lColumn.I['width'];
       AColumn.Alignment := GetAlignmentFromString(lColumn.S['align']);
-      lFieldType := GetFieldTypeFromString('fieldtype');
+      lFieldType := GetFieldTypeFromString(lColumn.S['fieldtype']);
       if lFieldType <> ftUnknown then
         AColumn.Field.SetFieldType(lFieldType);
 
@@ -427,13 +463,25 @@ end;
 {==============================================================================}
 class procedure SmartTimingTools.OnGetDefaultColumnText(ASender: TField; var AText: string; ADisplayText: Boolean);
 begin
-  AText := ASender.AsString;
+  if ASender.IsNull then
+    AText := ''
+  else
+    AText := ASender.AsString;
 end;
 
 {==============================================================================}
 class procedure SmartTimingTools.OnGetDateTimeFromValue(ASender: TField; var AText: string; ADisplayText: Boolean);
 begin
-  AText := DateTimeToStr(ASender.AsFloat);
+  if ASender.IsNull then
+  begin
+    AText := '';
+    Exit;
+  end;
+
+  if ASender.DataType = ftDatetime then
+    AText := DateTimeToStr(ASender.AsDateTime)
+  else
+    AText := ASender.AsString;
 end;
 
 {==============================================================================}
@@ -448,7 +496,10 @@ end;
 {==============================================================================}
 class procedure SmartTimingTools.OnGetRaceStatus(ASender: TField; var AText: string; ADisplayText: Boolean);
 begin
-  AText := SmartTimingTools.GetRaceStatusStringFromEnum(TRaceStatus(ASender.AsInteger));
+  if ASender.IsNull then
+    AText := ''
+  else
+    AText := SmartTimingTools.GetRaceStatusStringFromEnum(TRaceStatus(ASender.AsInteger));
 end;
 
 {==============================================================================}

@@ -24,6 +24,7 @@ type
     Voltage: Double;
     Temperature: integer;
     DecoderId: string;
+    RaceId: integer;
     function ToString: string;
   end;
 
@@ -55,13 +56,11 @@ type
     FOnPassing: TDecoderPassingReceivedEvent;
 
   public
-    constructor Create(ADecoder: TDecoder; AServerPort: Word); reintroduce;
+    constructor Create(ADecoder: TDecoder; AServerPort: Word; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent); reintroduce;
 
-    class function GetListenerForDecoder(ADecoder: TDecoder): TDecoderListener;
+    class function GetListenerForDecoder(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent): TDecoderListener;
 
     property ActiveDecoder: TDecoder read FDecoder;
-    property OnStatusReceived: TDecoderStatusReceivedEvent read FOnStatus write FOnStatus;
-    property OnPassingReceived: TDecoderPassingReceivedEvent read FOnPassing write FOnPassing;
   end;
 
   TDecoderFinder = class
@@ -69,9 +68,8 @@ type
     FOnDecoderFound: TDecoderFoundEvent;
     FMyLapsFinder: TDecoderFinder;
   public
-    constructor Create; virtual;
+    constructor Create(AOnDecoderFound: TDecoderFoundEvent); virtual;
     destructor Destroy; override;
-    property OnDecoderFound: TDecoderFoundEvent read FOnDecoderFound write FOnDecoderFound;
     procedure Refresh; virtual;
   end;
 
@@ -88,37 +86,37 @@ begin
 end;
 
 {==============================================================================}
-constructor TDecoderListener.Create(ADecoder: TDecoder; AServerPort: Word);
+constructor TDecoderListener.Create(ADecoder: TDecoder; AServerPort: Word; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent);
 begin
   inherited Create(true);
   FDecoder := ADecoder;
   FServerPort := AServerPort;
+  FOnStatus := AOnStatus;
+  FOnPassing := AOnPassing;
 end;
 
 {==============================================================================}
-class function TDecoderListener.GetListenerForDecoder(ADecoder: TDecoder): TDecoderListener;
+class function TDecoderListener.GetListenerForDecoder(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent): TDecoderListener;
 begin
   if ADecoder.DecoderManufacturer = cDecoderManufacturerMyLaps then
-    Exit(TMyLapsP3Listener.Create(ADecoder, cMyLapsDefaultOperatingPort));
+    Exit(TMyLapsP3Listener.Create(ADecoder, cMyLapsDefaultOperatingPort, AOnStatus, AOnPassing));
 
 // TODO
 //  if ADecoder.DecoderManufacturer = cDecoderManufacturerRaceResult then
 //    Exit(TRaceResultListener.Create(ADecoder, cMyLapsDefaultOperatingPort));
 
+
   raise Exception.Create('No listener found for decoder.')
 end;
 
 {==============================================================================}
-constructor TDecoderFinder.Create;
+constructor TDecoderFinder.Create(AOnDecoderFound: TDecoderFoundEvent);
 begin
-  inherited;
-  FOnDecoderFound := nil;
-
   // MyLaps
-  FMyLapsFinder := TMyLapsDecoderFinder.Create;
+  FMyLapsFinder := TMyLapsDecoderFinder.Create(AOnDecoderFound);
 
   // TODO RaceResult
-// FRaceResultFinder := TRaceResultDecoderFinder.Create;
+// FRaceResultFinder := TRaceResultDecoderFinder.Create(AOnDecoderFound);;
 end;
 
 {==============================================================================}

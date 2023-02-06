@@ -58,12 +58,6 @@ begin
   lListItem.SubItems.Add(FormatDateTime('hh:mm:ss.zzz', APassing.PassingTime));
   lListItem.SubItems.Add(APassing.TxId.ToString);
   lListItem.SubItems.Add(APassing.ChipId);
-
-  lListItem.Caption := '<BIP>';  // TODO
-  lListItem.SubItems.Add('<LASTNAME, FIRSTNAME>');
-  lListItem.SubItems.Add(FormatDateTime('hh:mm:ss.zzz', APassing.PassingTime));
-  lListItem.SubItems.Add(APassing.TxId.ToString);
-  lListItem.SubItems.Add(APassing.ChipId);
   TListView(FPassingDisplay).Refresh;
 end;
 

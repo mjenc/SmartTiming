@@ -57,7 +57,7 @@ type
     procedure PostMessage;
 
   public
-    constructor Create(ADecoder: TDecoder; AServerPort: Word); reintroduce;
+    constructor Create(ADecoder: TDecoder; AServerPort: Word; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent); reintroduce;
     destructor Destroy; override;
     procedure Execute; override;
     property MyLapsP3MessageParser: TMyLapsP3MessageParser read FMyLapsParser write FMyLapsParser;
@@ -71,7 +71,7 @@ type
     FOnDecoderFound: TDecoderFoundEvent;
     procedure OnUdpRead(AThread: TIdUDPListenerThread; const AData: TIdBytes; ABinding: TIdSocketHandle);
   public
-    constructor Create; virtual;
+    constructor Create(AOnDecoderFound: TDecoderFoundEvent);
     destructor Destroy; override;
     property OnDecoderFound: TDecoderFoundEvent read FOnDecoderFound write FOnDecoderFound;
     procedure Refresh; override;
@@ -421,9 +421,9 @@ var l: integer;
     Checksum: integer;
     Flags: integer;
     TypeOfRecord: integer;
-    P3Passing: TPassing;
-    P3Status: TDecoderStatus;
-    P3VersionDecoder: TDecoder;
+    lPassing: TPassing;
+    lStatus: TDecoderStatus;
+    lVersionDecoder: TDecoder;
     OrigMsg: string;
 begin
   try
@@ -461,18 +461,18 @@ begin
       case TypeOfRecord of
       TOR_PASSING:
         begin
-          P3Passing := ParseRecordTypePassing(MidStr(Msg, 21, length(Msg) - 21 - 1));
+          lPassing := ParseRecordTypePassing(MidStr(Msg, 21, length(Msg) - 21 - 1));
           if assigned(FOnPassing) then
-            FOnPassing(P3Passing);
+            FOnPassing(lPassing);
         end;
       TOR_STATUS:
         begin
-          P3Status := ParseRecordTypeStatus(MidStr(Msg, 21, length(Msg) - 21 - 1));
+          lStatus := ParseRecordTypeStatus(MidStr(Msg, 21, length(Msg) - 21 - 1));
           if assigned(FOnStatus) then
-            FOnStatus(P3Status);
+            FOnStatus(lStatus);
         end;
       TOR_VERSION_DECODER:
-        P3VersionDecoder := ParseRecordTypeVersionDecoder(MidStr(Msg, 21, length(Msg) - 21 - 1));
+        lVersionDecoder := ParseRecordTypeVersionDecoder(MidStr(Msg, 21, length(Msg) - 21 - 1));
       end;
     end;
 
@@ -668,10 +668,16 @@ end;
 {$ENDIF}
 
 {==============================================================================}
-constructor TMyLapsP3Listener.Create(ADecoder: TDecoder; AServerPort: Word);
+constructor TMyLapsP3Listener.Create(ADecoder: TDecoder; AServerPort: Word; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent);
 begin
-  inherited Create(ADecoder, AServerPort);
+  inherited Create(ADecoder, AServerPort, AOnStatus, AOnPassing);
+
+  FServerPort := AServerPort;
+
   FMyLapsParser := TMyLapsP3MessageParser.Create;
+  FMyLapsParser.OnStatusReceived := AOnStatus;
+  FMyLapsParser.OnPassingReceived := AOnPassing;
+
   FTcpClient := TIdTCPClient.Create(nil);
 end;
 
@@ -750,9 +756,9 @@ begin
 end;
 
 {==============================================================================}
-constructor TMyLapsDecoderFinder.Create;
+constructor TMyLapsDecoderFinder.Create(AOnDecoderFound: TDecoderFoundEvent);
 begin
-  FOnDecoderFound := nil;
+  FOnDecoderFound := AOnDecoderFound;
   FParser := TMyLapsP3MessageParser.Create;
   FUdpServer := TIdUDPServer.Create(nil);
   FUdpServer.ReuseSocket := rsTrue;
@@ -789,6 +795,7 @@ var
 begin
   lDecoder := FParser.AddMessageDecoderSearch(lMsg);
   lDecoder.Address := ABinding.PeerIP;
+  lDecoder.DecoderManufacturer := cDecoderManufacturerMyLaps;
   if assigned(FOnDecoderFound) then
     FOnDecoderFound(lDecoder);
 end;
