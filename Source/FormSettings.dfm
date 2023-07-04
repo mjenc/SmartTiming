@@ -2,8 +2,8 @@ object FormSettings: TFormSettings
   Left = 0
   Top = 0
   Caption = 'Einstellungen'
-  ClientHeight = 457
-  ClientWidth = 628
+  ClientHeight = 465
+  ClientWidth = 630
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,19 +14,19 @@ object FormSettings: TFormSettings
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 416
-    Width = 628
+    Top = 424
+    Width = 630
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 408
-    ExplicitWidth = 626
+    ExplicitTop = 416
+    ExplicitWidth = 628
     DesignSize = (
-      628
+      630
       41)
     object ButtonOK: TButton
-      Left = 454
+      Left = 456
       Top = 8
       Width = 75
       Height = 25
@@ -38,7 +38,7 @@ object FormSettings: TFormSettings
       ExplicitLeft = 452
     end
     object ButtonCancel: TButton
-      Left = 542
+      Left = 544
       Top = 8
       Width = 75
       Height = 25
@@ -53,8 +53,8 @@ object FormSettings: TFormSettings
   object PanelMain: TPanel
     Left = 0
     Top = 0
-    Width = 628
-    Height = 416
+    Width = 630
+    Height = 424
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
@@ -64,8 +64,8 @@ object FormSettings: TFormSettings
       AlignWithMargins = True
       Left = 5
       Top = 5
-      Width = 618
-      Height = 406
+      Width = 620
+      Height = 414
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -112,8 +112,8 @@ object FormSettings: TFormSettings
         Caption = 'Spaltentitel'
         ImageIndex = 2
         DesignSize = (
-          610
-          376)
+          612
+          384)
         object Label1: TLabel
           Left = 24
           Top = 16
@@ -140,8 +140,8 @@ object FormSettings: TFormSettings
         object DBGridDictionary: TDBGrid
           Left = 16
           Top = 56
-          Width = 573
-          Height = 297
+          Width = 575
+          Height = 305
           Anchors = [akLeft, akTop, akRight, akBottom]
           DataSource = DataSourceDictionary
           TabOrder = 1

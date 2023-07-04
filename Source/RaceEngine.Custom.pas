@@ -4,8 +4,8 @@ interface
 
 uses
   Controls, StdCtrls, ComCtrls, SysUtils, Graphics, Types, UITypes, Classes,
-  DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs,
-  SmartTiming.Consts, DecoderInterface;
+  DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages,
+  SmartTiming.Consts, DecoderInterface, SmartTiming.Event, Report.ExcelTemplateFiller;
 
 type
   TCustomRaceEngine = class;
@@ -27,6 +27,7 @@ type
   protected
     FOwner: TComponent;
     FParent: TWinControl;
+    FEvent: TEventDataObject;
     FRaceItem: TRaceItem;
     FPassingDisplay: TWinControl;
     FRankingGrid: TDBGrid;
@@ -36,19 +37,24 @@ type
     FDataSetProviderRankings: TDataSetProvider;
     FClientDataSetRankings: TClientDataSet;
     FDataSourceRankings: TDataSource;
+    FLastChangeTimestamp: TDatetime;
+    FLastRefreshTimestamp: TDatetime;
+    FLastConsideredPassingId: integer;
+    FExcelFiller: TExcelFiller;
 
     function GetPassingDisplay: TWinControl; virtual;
     procedure OnDrawListItem(ASender: TCustomListView; AItem: TListItem; AState: TCustomDrawState; var ADefaultDraw: Boolean);
-
     procedure AddColumnToDisplay(const ACaption: string);
-
     function GetRankingGrid: TDBGrid; virtual;
+    function GetRankingDataSet: TDataSet; virtual;
+    procedure UpdateParticipationTable(ACurrentPassingId: integer); virtual; abstract;
+
   public
-    constructor Create(AParent: TWinControl; ARaceItem: TRaceItem); virtual;
+    constructor Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem); virtual;
     destructor Destroy; override;
 
     // passing display screen
-    procedure AddPassingToDisplay(APassing: TPassing); virtual;
+    procedure AddPassingToDisplay(APassing: TPassing; AAutoScroll: boolean); virtual;
     procedure ClearAllPassings; virtual;
     procedure ClearPassingNumber(APassingNumber: integer); virtual;
 
@@ -58,24 +64,29 @@ type
     // ranking
     procedure RefreshRankingDisplay;
     property RankingDisplay: TDBGrid read GetRankingGrid;
+    property RankingDataSet: TDataSet read GetRankingDataSet;
 
     // corrections
 
-    // result
+    // Reports
+    procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual;
+    procedure ExportResultsToExcelTemplate(const AOutputFile: string); virtual; abstract;
   end;
 
 implementation
 
 uses
-  SmartTiming.Tools, Math,
+  SmartTiming.Tools, Math, SmartTiming.Controller,
   DataModule;
 
 {==============================================================================}
-constructor TCustomRaceEngine.Create(AParent: TWinControl; ARaceItem: TRaceItem);
+constructor TCustomRaceEngine.Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem);
 begin
   FPassingDisplay := nil;
   FOwner := TComponent.Create(nil);
   FParent := AParent;
+
+  FEvent := AEvent;
   FRaceItem := ARaceItem;
   FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped];
 
@@ -93,6 +104,8 @@ begin
   FDataSourceRankings.DataSet := FClientDataSetRankings;
 
   FSQLDataSetRankings.DataSource := FDataSourceRankings;
+
+  FLastChangeTimestamp := Now;
 end;
 
 {==============================================================================}
@@ -199,17 +212,30 @@ begin
 end;
 
 {==============================================================================}
+function TCustomRaceEngine.GetRankingDataSet: TDataSet;
+begin
+  result := TDataSet(FSQLDataSetRankings);
+end;
+
+{==============================================================================}
 procedure TCustomRaceEngine.RefreshRankingDisplay;
 var
   i: integer;
   lColumn: TColumn;
   s: string;
 begin
+  if FLastRefreshTimestamp >= FLastChangeTimestamp then
+    Exit;
+
   FClientDataSetRankings.Active := false;
   FSQLDataSetRankings.Active := false;
 
   FSQLDataSetRankings.Active := true;
   FClientDataSetRankings.Active := True;
+  FLastRefreshTimestamp := Now;
+
+  if FRankingGrid = nil then
+    GetRankingGrid;
 
   for i := 0 to FRankingGrid.Columns.Count - 1 do
   begin
@@ -220,11 +246,14 @@ begin
 end;
 
 {==============================================================================}
-procedure TCustomRaceEngine.AddPassingToDisplay(APassing: TPassing);
+procedure TCustomRaceEngine.AddPassingToDisplay(APassing: TPassing; AAutoScroll: boolean);
 begin
   if (FPassingDisplay = nil) or  (not (FPassingDisplay is TMemo)) then
     Exit;
   TMemo(FPassingDisplay).Lines.Add(APassing.ToString);
+  if AAutoScroll then
+    SendMessage(FPassingDisplay.Handle, EM_LINESCROLL, 0,TMemo(FPassingDisplay).Lines.Count);
+  FLastChangeTimestamp := Now;
 end;
 
 {==============================================================================}
@@ -251,6 +280,33 @@ begin
       Continue;
     TMemo(FPassingDisplay).Lines.Delete(i);
     Exit;
+  end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.ExportParticipantsToExcelTemplate(const AOutputFile: string);
+var
+  lExcelFiller: TExcelFiller;
+  lResultSet: TSQLDataSet;
+begin
+//  lResultSet := TSQLDataSet.Create(nil);
+  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
+  try
+    lExcelFiller.TemplateFile := cStdTemplatePath + 'StartListTT.xlsx';
+    lExcelFiller.OutputFile := cStdDataPath + Format('StartList-%s.xlsx', [FRaceItem.Title]);
+
+    lResultSet := nil;
+    MainDataModule.FillReadOnlyDataSetForSQL(
+      'SELECT C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, C.TEAM, C.CLUB ' +
+      'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+      'WHERE RACEID = ' + FRaceItem.Id.ToString + ' ' +
+      'ORDER BY C.BIB',
+      lResultSet);
+
+    lExcelFiller.FillDataRows(lResultSet);
+  finally
+    FreeAndNil(lExcelFiller);
+    FreeAndNil(lResultSet);
   end;
 end;
 

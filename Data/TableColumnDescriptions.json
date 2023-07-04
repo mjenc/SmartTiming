@@ -216,10 +216,11 @@
                     "width": 50
                 },
                 {
-                    "columnname": "TRANSPONDERID",
+                    "columnname": "CHIPID",
                     "caption": "Tx-Id",
                     "align": "taRightJustify",
-                    "width": 50
+                    "width": 50,
+                    "ongettext": "OnGetTxId"
                 }
             ]
         },

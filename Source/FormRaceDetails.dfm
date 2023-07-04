@@ -2,8 +2,8 @@ object FormRaceDetails: TFormRaceDetails
   Left = 0
   Top = 0
   Caption = 'Rennen Details'
-  ClientHeight = 319
-  ClientWidth = 404
+  ClientHeight = 327
+  ClientWidth = 406
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,17 +15,19 @@ object FormRaceDetails: TFormRaceDetails
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 278
-    Width = 404
+    Top = 286
+    Width = 406
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitTop = 278
+    ExplicitWidth = 404
     DesignSize = (
-      404
+      406
       41)
     object ButtonOK: TButton
-      Left = 230
+      Left = 232
       Top = 8
       Width = 75
       Height = 25
@@ -35,9 +37,10 @@ object FormRaceDetails: TFormRaceDetails
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonOKClick
+      ExplicitLeft = 230
     end
     object ButtonCancel: TButton
-      Left = 318
+      Left = 320
       Top = 8
       Width = 75
       Height = 25
@@ -46,16 +49,19 @@ object FormRaceDetails: TFormRaceDetails
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
+      ExplicitLeft = 318
     end
   end
   object PanelMain: TPanel
     Left = 0
     Top = 0
-    Width = 404
-    Height = 278
+    Width = 406
+    Height = 286
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitWidth = 404
+    ExplicitHeight = 278
     object Bezeichnung: TLabel
       Left = 17
       Top = 24

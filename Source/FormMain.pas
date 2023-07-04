@@ -14,7 +14,9 @@ uses
   FormCompetitorImport, FormPassingSimulator, FormGenerateTransponderMappings,
   SmartTiming.Consts, SmartTiming.Tools, Vcl.DBCtrls,
   DataModule, SimpleDS, uSuperObject, System.ImageList, Vcl.ImgList,
-  SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask;
+  SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
+  VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
+  VCLTee.Chart, SmartTiming.Event;
 
 type
   TMyDBNavigator = class(TDBNavigator);
@@ -29,8 +31,6 @@ type
     PanelDecoder: TPanel;
     LabelDecoderIpAddress: TLabel;
     LabelDecoderId: TLabel;
-    LabelDecoderTemperature: TLabel;
-    LabelDecoderNoiseLevel: TLabel;
     MainMenu: TMainMenu;
     PageControlMain: TPageControl;
     TabSheetEvent: TTabSheet;
@@ -97,6 +97,25 @@ type
     MenuItemBackup: TMenuItem;
     EditDateFrom: TMaskEdit;
     EditDateTo: TMaskEdit;
+    CheckBoxAutoScrollPassings: TCheckBox;
+    PanelNoiseChart: TPanel;
+    Splitter4: TSplitter;
+    PanelTemperatureChart: TPanel;
+    LabelDecoderNoiseLevel: TLabel;
+    LabelDecoderTemperature: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    MenuItemReports: TMenuItem;
+    PanelResultRaces: TPanel;
+    PanelResults: TPanel;
+    PanelResultControls: TPanel;
+    ButtonExportToExelTemplate: TButton;
+    ButtonResultExportCSV: TButton;
+    ButtonResultExportHTML: TButton;
+    PanelResultGrid: TPanel;
+    ButtonImportCompetitors: TButton;
+    PopupMenuCompetitorRemoveFromRace: TMenuItem;
+    ButtonPrintParticipantList: TButton;
     procedure DatePickerFromChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -124,20 +143,25 @@ type
     procedure ButtonStopClick(Sender: TObject);
     procedure MenuItemSimulatePassingsClick(Sender: TObject);
     procedure ListBoxRacesDrawItem(Control: TWinControl; Index: Integer; Rect: TRect; State: TOwnerDrawState);
-    procedure ListBoxRacesClick(Sender: TObject);
+    procedure ListBoxRacesTimingClick(Sender: TObject);
+    procedure ListBoxRacesResultClick(Sender: TObject);
     procedure MenuItemTxMappingImportClick(Sender: TObject);
     procedure MenuItemTxMappingGenerateClick(Sender: TObject);
     procedure MenuItemTxMappingExportClick(Sender: TObject);
     procedure MenuItemCheckBatteryStatusClick(Sender: TObject);
     procedure MenuItemBackupClick(Sender: TObject);
+    procedure ToggleAutoScrollClick(Sender: TObject);
+    procedure LabelDecoderIdClick(Sender: TObject);
+    procedure MenuItemReportsClick(Sender: TObject);
+    procedure PopupMenuCompetitorActionsPopup(Sender: TObject);
+    procedure ButtonPrintParticipantListClick(Sender: TObject);
 
   private
     FCurrentEventId: integer;
-    FBeepOnPassing: boolean;
     FDBCheckBoxRacesFirstPassing: TDBCheckbox;
     FFormPassingSimulator: TFormPassingSimulator;
     FFormGenerateTransponderMappings: TFormGenerateTransponderMappings;
-    FCurrentRaceId: Integer;
+    FAutoScrollPassingList: boolean;
 
     procedure ReadSettings;
     procedure SetupRacesGrid;
@@ -146,9 +170,10 @@ type
     procedure RefreshRacesListBox;
     procedure FillClassFilterComboBox;
     procedure OnAssignCompetitorsToRace(ASender: TObject);
+    procedure OnRemoveCompetitorsFromRace(ASender: TObject);
     procedure RaceButtonStatusChange(ARaceStatus: TRaceStatus);
     procedure RefreshFlagButtons(ARaceItem: TRaceItem);
-
+    procedure RefreshAddCompetitorToRaceMenu;
   protected
     procedure OnGetRaceType(ASender: TField; var AText: string; ADisplayText: Boolean);
 
@@ -166,7 +191,7 @@ var
 implementation
 
 uses
-  SmartTiming.Controller;
+  SmartTiming.Controller, Report.ExcelTemplateFiller;
 
 {$R *.dfm}
 
@@ -266,7 +291,10 @@ begin
   nbEdit:
     DataSourceCompetitors.DataSet.Edit;
   nbDelete:
-    Exit;
+    begin
+      DataSourceCompetitors.DataSet.Delete;
+      Exit;
+    end
   else
     Abort;
   end;
@@ -281,28 +309,72 @@ begin
 end;
 
 {==============================================================================}
-procedure TFormMain.DBNavigatorRacesBeforeAction(Sender: TObject; Button: TNavigateBtn);
+procedure TFormMain.RefreshAddCompetitorToRaceMenu;
 var
-  lRaceDetailsForm: TFormRaceDetails;
-  lDate: TDate;
+  lMenuItemRace: TMenuItem;
+  lRaceId: Integer;
+  lMenuCaption: string;
+begin
+  PopupMenuCompetitorAssignToRace.Clear;
+  PopupMenuCompetitorRemoveFromRace.Clear;
+
+  MainDataModule.DataSourceRaces.DataSet.First;
+  while not MainDataModule.DataSourceRaces.DataSet.Eof do
+  begin
+    lRaceId := MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').Value;
+    lMenuCaption := VarToStr(lRaceId) + ' - ' + MainDataModule.DataSourceRaces.DataSet.FieldByName('TITLE').Value;
+
+    lMenuItemRace := TMenuItem.Create(PopupMenuCompetitorAssignToRace);
+    lMenuItemRace.Tag := lRaceId;
+    lMenuItemRace.OnClick := OnAssignCompetitorsToRace;
+    lMenuItemRace.Caption := lMenuCaption;
+    PopupMenuCompetitorAssignToRace.Add(lMenuItemRace);
+
+    lMenuItemRace := TMenuItem.Create(PopupMenuCompetitorRemoveFromRace);
+    lMenuItemRace.Tag := lRaceId;
+    lMenuItemRace.OnClick := OnRemoveCompetitorsFromRace;
+    lMenuItemRace.Caption := lMenuCaption;
+    PopupMenuCompetitorRemoveFromRace.Add(lMenuItemRace);
+
+    MainDataModule.DataSourceRaces.DataSet.Next;
+  end;
+end;
+
+{==============================================================================}
+procedure TFormMain.DBNavigatorRacesBeforeAction(Sender: TObject; Button: TNavigateBtn);
+
+  procedure ShowRaceDetailsForm;
+  var
+    lRaceDetailsForm: TFormRaceDetails;
+  begin
+    lRaceDetailsForm := TFormRaceDetails.Create(nil, MainDataModule.DataSourceRaces, FCurrentEventId, Button = nbInsert, StrToDate(EditDateFrom.Text));
+    try
+      lRaceDetailsForm.ShowModal;
+      Abort;
+    finally
+      FreeAndNil(lRaceDetailsForm);
+    end;
+  end;
+
 begin
   case Button of
   nbInsert:
-    MainDataModule.DataSourceRaces.DataSet.Append;
+    begin
+      MainDataModule.DataSourceRaces.DataSet.Append;
+      ShowRaceDetailsForm;
+    end;
   nbEdit:
-    MainDataModule.DataSourceRaces.DataSet.Edit;
+    begin
+      MainDataModule.DataSourceRaces.DataSet.Edit;
+      ShowRaceDetailsForm;
+    end;
   nbDelete:
-    Exit;
+    ;
   else
-    Abort;
-  end;
-
-  lRaceDetailsForm := TFormRaceDetails.Create(nil, MainDataModule.DataSourceRaces, FCurrentEventId, Button = nbInsert, StrToDate(EditDateFrom.Text));
-  try
-    lRaceDetailsForm.ShowModal;
-    Abort;
-  finally
-    FreeAndNil(lRaceDetailsForm);
+    begin
+      Abort;
+      Exit;
+    end;
   end;
 end;
 
@@ -322,7 +394,7 @@ begin
   EditDateFrom.Text := DateToStr(Now);
   EditDateTo.Text := DateToStr(Now);
 
-  FCurrentRaceId := -1;
+  FAutoScrollPassingList := true;
 end;
 
 {==============================================================================}
@@ -346,7 +418,13 @@ begin
 end;
 
 {==============================================================================}
-procedure TFormMain.ListBoxRacesClick(Sender: TObject);
+procedure TFormMain.LabelDecoderIdClick(Sender: TObject);
+begin
+  TDecoderEngine.GetSingleton.RefreshDecoderList;
+end;
+
+{==============================================================================}
+procedure TFormMain.ListBoxRacesTimingClick(Sender: TObject);
 var
   i: integer;
   lPassingDisplay: TWinControl;
@@ -387,6 +465,30 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.ListBoxRacesResultClick(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
+  lRankingGrid: TDBGrid;
+begin
+  if ListBoxRaces.ItemIndex < 0 then
+    Exit;
+
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  if lRaceItem.Status <> rsFinished then
+  begin
+    PanelResultGrid.Caption := cMessagesRaceNotFinishedYet;
+    Exit;
+  end;
+  PanelResultGrid.Caption := '';
+
+  lRankingGrid := lRaceItem.RaceEngine.RankingDisplay;
+  lRaceItem.RaceEngine.RefreshRankingDisplay;
+  lRankingGrid.Parent := PanelResultGrid;
+  lRankingGrid.Align := alClient;
+  lRankingGrid.Visible := true;
+end;
+
+{==============================================================================}
 procedure TFormMain.ListBoxRacesDrawItem(Control: TWinControl; Index: Integer; Rect: TRect; State: TOwnerDrawState);
 var
   lListBox: TListBox;
@@ -416,7 +518,6 @@ procedure TFormMain.SetupRacesGrid;
 var
   i: integer;
   lColumn: TColumn;
-  lMenuItemRace: TMenuItem;
 begin
   MainDataModule.RefreshRacesDataSet(FCurrentEventId);
   for i := 0 to DBGridRaces.Columns.Count - 1 do
@@ -433,19 +534,9 @@ begin
   FDBCheckBoxRacesFirstPassing.Color := DBGridRaces.Color;
   FDBCheckBoxRacesFirstPassing.Caption := '';
 
-  PopupMenuCompetitorAssignToRace.Clear;
-  MainDataModule.DataSourceRaces.DataSet.First;
-  while not MainDataModule.DataSourceRaces.DataSet.Eof do
-  begin
-    lMenuItemRace := TMenuItem.Create(PopupMenuCompetitorAssignToRace);
-    lMenuItemRace.Tag := MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').Value;
-    lMenuItemRace.OnClick := OnAssignCompetitorsToRace;
-    lMenuItemRace.Caption :=
-      VarToStr(lMenuItemRace.Tag) + ' - ' + MainDataModule.DataSourceRaces.DataSet.FieldByName('TITLE').Value;
-    PopupMenuCompetitorAssignToRace.Add(lMenuItemRace);
-    MainDataModule.DataSourceRaces.DataSet.Next;
-  end;
   RefreshRacesListBox;
+  GSmartTimingController.RestorePassings;
+  ListBoxRacesTimingClick(nil);
 end;
 
 {==============================================================================}
@@ -454,67 +545,26 @@ var
   lText: string;
   lRaceItem: TRaceItem;
   lRaceId: integer;
-  i: integer;
-  lVisited: TList<string>;
   lIndex: integer;
 begin
-  lVisited := TList<string>.Create;
   ListBoxRaces.LockDrawing;
   try
-    MainDataModule.SQLDataSetRaces.Refresh;
-    MainDataModule.DataSourceRaces.DataSet.Refresh;
-    MainDataModule.DataSourceRaces.DataSet.First;
-    while not MainDataModule.DataSourceRaces.DataSet.Eof do
+    ListBoxRaces.Items.Clear;
+
+    for lRaceId in GSmartTimingController.RaceList.Keys do
     begin
-      lRaceItem := nil;
-      lRaceId := MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').Value;
-      for i := ListBoxRaces.Items.Count - 1 downto 0 do
-      begin
-        lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[i]);
-        if lRaceItem = nil then
-        begin
-          ListBoxRaces.Items.Delete(i);
-          Continue;
-        end;
-        if lRaceItem.Id = lRaceId then
-          break;
-        lRaceItem := nil;
-      end;
-
-      lText :=
-        FormatDatetime('hh:mm', StrToDatetime(MainDataModule.DataSourceRaces.DataSet.FieldByName('STARTTIME').DisplayText))
-        + ' - ' + MainDataModule.DataSourceRaces.DataSet.FieldByName('TITLE').Value;
-
-      if lRaceItem = nil then
-      begin
-        lRaceItem := TRaceItem.Create;
-        ListBoxRaces.AddItem(lText, lRaceItem);
-      end;
-      SmartTimingTools.FillRaceItemFromDataSet(PanelPassingGrid, MainDataModule.DataSourceRaces.DataSet, lRaceItem);
-      lVisited.Add(lRaceItem.Id.ToString);
-      MainDataModule.DataSourceRaces.DataSet.Next;
-    end;
-
-    for i := ListBoxRaces.Items.Count - 1 downto 0 do
-    begin
-      lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[i]);
-      if lRaceItem = nil then
-      begin
-        ListBoxRaces.Items.Delete(i);
+      if not GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) then
         Continue;
-      end;
-      if lVisited.IndexOf(lRaceItem.Id.ToString) >= 0 then
-        Continue;
-      ListBoxRaces.Items.Delete(i);
+
+      lText := FormatDatetime('hh:mm', lRaceItem.StartTime) + ' - ' + lRaceItem.Title;
+      ListBoxRaces.AddItem(lText, lRaceItem);
     end;
 
     // TODO Sorting
 
     ListBoxRaces.Invalidate;
-
   finally
     ListBoxRaces.UnlockDrawing;
-    FreeAndNil(lVisited);
   end;
   Application.ProcessMessages;
 
@@ -554,6 +604,12 @@ end;
 procedure TFormMain.SetupRankingsGrid(ARaceId: Integer);
 begin
   TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]).RaceEngine.RefreshRankingDisplay;
+end;
+
+{==============================================================================}
+procedure TFormMain.ToggleAutoScrollClick(Sender: TObject);
+begin
+  FAutoScrollPassingList := not FAutoScrollPAssingList;
 end;
 
 {==============================================================================}
@@ -630,6 +686,11 @@ end;
 procedure TFormMain.MenuItemLoadEventClick(Sender: TObject);
 begin
   ShowMessage('Not implemented yet.');
+end;
+
+{==============================================================================}
+procedure TFormMain.MenuItemReportsClick(Sender: TObject);
+begin
 end;
 
 {==============================================================================}
@@ -719,6 +780,17 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.ButtonPrintParticipantListClick(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
+begin
+  if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
+    Exit;
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  lRaceItem.RaceEngine.ExportParticipantsToExcelTemplate('');
+end;
+
+{==============================================================================}
 procedure TFormMain.ButtonAbortClick(Sender: TObject);
 begin
   RaceButtonStatusChange(rsAborted);
@@ -796,14 +868,36 @@ end;
 {==============================================================================}
 procedure TFormMain.PageControlMainChange(Sender: TObject);
 begin
+  if PageControlMain.ActivePage = TabSheetEvent then
+    Exit;
+
   if PageControlMain.ActivePage = TabSheetCompetitors then
+  begin
     SetupCompetitorsGrid;
+    Exit;
+  end;
+
   if PageControlMain.ActivePage = TabSheetTiming then
   begin
-    if (ListBoxRaces.ItemIndex < 0) and (ListBoxRaces.Count > 0) then
-      ListBoxRaces.ItemIndex := 0;
-    ListBoxRacesClick(nil);
+    ListBoxRaces.Parent := PanelRaces;
+    ListBoxRaces.OnClick := ListBoxRacesTimingClick;
   end;
+
+  if PageControlMain.ActivePage = TabSheetResults then
+  begin
+    ListBoxRaces.Parent := PanelResultRaces;
+    ListBoxRaces.OnClick := ListBoxRacesResultClick;
+  end;
+
+  if (ListBoxRaces.ItemIndex < 0) and (ListBoxRaces.Count > 0) then
+    ListBoxRaces.ItemIndex := 0;
+  ListBoxRacesTimingClick(nil);
+end;
+
+{==============================================================================}
+procedure TFormMain.PopupMenuCompetitorActionsPopup(Sender: TObject);
+begin
+  RefreshAddCompetitorToRaceMenu;
 end;
 
 {==============================================================================}
@@ -833,7 +927,8 @@ begin
     lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[i]);
     if lRaceItem.Id = ARaceId then
     begin
-      lRaceItem.RaceEngine.AddPassingToDisplay(APassing);
+      lRaceItem.RaceEngine.AddPassingToDisplay(APassing, FAutoScrollPassingList);
+      lRaceItem.RaceEngine.RefreshRankingDisplay;
       Exit;
     end;
   end;
@@ -875,13 +970,16 @@ end;
 {==============================================================================}
 procedure TFormMain.OnAssignCompetitorsToRace(ASender: TObject);
 var
+  lSelected: Integer;
   lMenuItem: TMenuItem;
   lRaceId: Integer;
   lCompetitorIds: TArray<Integer>;
+  lRaceItem: TRaceItem;
 begin
   if not (ASender is TMenuItem) then
     Exit;
 
+  lSelected := DBGridCompetitors.SelectedIndex;
   lMenuItem := TMenuItem(ASender);
   lRaceId := lMenuItem.Tag;
 
@@ -896,6 +994,41 @@ begin
     DBGridCompetitors.DataSource.DataSet.Next;
   end;
   MainDataModule.AssignCompetitorsToRace(FCurrentEventId, lRaceId, lCompetitorIds);
+  if GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) then
+    lRaceItem.RaceEngine.RankingDisplay.DataSource.DataSet.Refresh;
+  DBGridCompetitors.SelectedIndex := lSelected;
+end;
+
+{==============================================================================}
+procedure TFormMain.OnRemoveCompetitorsFromRace(ASender: TObject);
+var
+  lSelected: Integer;
+  lMenuItem: TMenuItem;
+  lRaceId: Integer;
+  lCompetitorIds: TArray<Integer>;
+  lRaceItem: TRaceItem;
+begin
+  if not (ASender is TMenuItem) then
+    Exit;
+
+  lSelected := DBGridCompetitors.SelectedIndex;
+  lMenuItem := TMenuItem(ASender);
+  lRaceId := lMenuItem.Tag;
+
+  DBGridCompetitors.DataSource.DataSet.First;
+  while not DBGridCompetitors.DataSource.DataSet.Eof do
+  begin
+    if DBGridCompetitors.SelectedRows.CurrentRowSelected then
+    begin
+      SetLength(lCompetitorIds, Length(lCompetitorIds) + 1);
+      lCompetitorIds[High(lCompetitorIds)] := DBGridCompetitors.DataSource.DataSet.FieldByName('COMPETITORID').Value;
+    end;
+    DBGridCompetitors.DataSource.DataSet.Next;
+  end;
+  MainDataModule.RemoveCompetitorsFromRace(FCurrentEventId, lRaceId, lCompetitorIds);
+  if GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) then
+    lRaceItem.RaceEngine.RankingDisplay.DataSource.DataSet.Refresh;
+  DBGridCompetitors.SelectedIndex := lSelected;
 end;
 
 end.

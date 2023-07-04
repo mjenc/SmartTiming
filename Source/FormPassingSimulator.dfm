@@ -57,6 +57,7 @@ object FormPassingSimulator: TFormPassingSimulator
         Height = 646
         Align = alClient
         FixedCols = 0
+        FixedRows = 0
         TabOrder = 0
         OnSelectCell = StringGridCompetitorsInRaceCellClick
       end

@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, Data.DbxSqlite, Data.FMTBcd, DBGrids,
   Datasnap.DBClient, Datasnap.Provider, Data.DB, Data.SqlExpr, DBCtrls,
-  Graphics, Dialogs, Registry, Windows, JclFileUtils,
+  Graphics, Dialogs, Registry, Windows, JclFileUtils, Variants,
   SmartTiming.Consts, SmartTiming.Tools, DecoderInterface;
 
 
@@ -20,6 +20,7 @@ type
     DataSetProviderRaces: TDataSetProvider;
     ClientDataSetRaces: TClientDataSet;
     DataSourceRaces: TDataSource;
+    DataSourceResults: TDataSource;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
   private
@@ -39,18 +40,27 @@ type
     function BackupDatabase(const ATo: string): boolean;
     procedure RestoreDatabase(const AFrom: string; const ATo: string = '');
 
+    procedure FillReadOnlyDataSetForSQL(const ASQL: string; var ADataSet: TSQLDataSet);
     procedure RefreshRacesDataSet(AEventId: integer);
 
     function GetMaxRaceId(AEventId: integer): integer;
     function GetMaxCompetitorId: integer;
     function GetMaxParticipationId: integer;
+    function GetMaxPassingNumber: integer;
 
     procedure FillWithDistinctValues(const ATableName, AFieldName: string; AStrings: TStrings);
+
     procedure AssignCompetitorsToRace(AEventId, ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
+    procedure RemoveCompetitorsFromRace(AEventId, ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
     function IsCompetitorAssignedToRace(ARaceId, ACompetitorId: Integer): Boolean;
-    function GetRaceIdForPassing(APassing: TPassing): integer;
+    function GetCompetitorID(ARaceId: integer; AChipId: string): integer;
+    function GetRaceIdForPassing(APassing: TPassing; var ACompetitorId: integer): integer;
     function GetAllPassingsForRaceId(ARaceId: Integer): TArray<TPassing>;
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
+    procedure GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
+
+    function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer): integer;
+    procedure UpdateParticipantValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
 
     procedure ImportTxMapping(const AFileName: string);
     procedure ExportTxMapping(const AFileName: string);
@@ -60,29 +70,6 @@ type
     procedure AddPassingToDatabase(APassing: TPassing; var ARaceId: integer);
 
     property DatabasePathAndName: string read FDatabaseName;
-  end;
-
-  TEventDataObject = class
-  private
-    FEventId: integer;
-    FOrganizer: string;
-    FTitle: string;
-    FDateFrom: TDatetime;
-    FDateTo: TDatetime;
-
-    function Exists(AEventId: integer): boolean;
-
-  public
-
-    procedure SaveToDatabase;
-    procedure DeleteFromDatabase;
-    procedure RefreshFromDatabase;
-
-    property EventId: integer read FEventId write FEventId;
-    property Organizer: string read FOrganizer write FOrganizer;
-    property Title: string read FTitle write FTitle;
-    property DateFrom: TDatetime read FDateFrom write FDateFrom;
-    property DateTo: TDatetime read FDateTo write FDateTo;
   end;
 
 var
@@ -325,6 +312,19 @@ begin
 end;
 
 {==============================================================================}
+procedure TMainDataModule.FillReadOnlyDataSetForSQL(const ASQL: string; var ADataSet: TSQLDataSet);
+var
+  lRecordCount: integer;
+begin
+  if ADataSet = nil then
+    ADataSet := TSQLDataSet.Create(nil);
+  ADataSet.SQLConnection := SQLConnection;
+  ADataSet.CommandText := ASQL;
+  ADataSet.CommandType := ctQuery;
+  ADataSet.Active := true;
+end;
+
+{==============================================================================}
 procedure TMainDataModule.RefreshRacesDataSet(AEventId: integer);
 begin
   ClientDataSetRaces.Active := false;
@@ -358,6 +358,12 @@ end;
 function TMainDataModule.GetMaxParticipationId: integer;
 begin
   result := GetMaxIdOf('PARTICIPATION', 'PARTICIPATIONID');
+end;
+
+{==============================================================================}
+function TMainDataModule.GetMaxPassingNumber: integer;
+begin
+  result := GetMaxIdOf('PASSINGS', 'PASSINGNUMBER');
 end;
 
 {==============================================================================}
@@ -403,17 +409,39 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.GetRaceIdForPassing(APassing: TPassing): integer;
+function TMainDataModule.GetCompetitorID(ARaceId: integer; AChipId: string): integer;
 var
   lResultSet: TDataSet;
 begin
-  SQLConnection.Execute(Format(
-    'SELECT R.RACEID FROM PARTICIPATION P INNER JOIN RACES R ON P.RACEID = R.RACEID INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID ' +
-    'WHERE STATUS IN (1, 2) AND TRANSPONDERID = %d', [APassing.TxId]), nil, lResultSet);
+  SQLConnection.Execute(
+    Format('SELECT C.COMPETITORID FROM PARTICIPATION P INNER JOIN COMPETITOR C ON P.COMPETITORID = C.COMPETITOR ID ' +
+           'WHERE P.RACEID = %d AND C.CHIPID = ''%s''', [ARaceId, AChipId]), nil, lResultSet);
   try
     if lResultSet.IsEmpty then
       Exit(-1);
     lResultSet.First;
+    if lResultSet.Eof then
+      Exit(-1);
+    result := lResultSet.FieldByName('COMPETITORID').AsInteger;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetRaceIdForPassing(APassing: TPassing; var ACompetitorId: integer): integer;
+var
+  lResultSet: TDataSet;
+begin
+  ACompetitorId := -1;
+  SQLConnection.Execute(Format(
+    'SELECT R.RACEID, P.COMPETITORID FROM PARTICIPATION P INNER JOIN RACES R ON P.RACEID = R.RACEID INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID ' +
+    'WHERE STATUS IN (2) AND CHIPID = %s', [QuotedStr(APassing.ChipId)]), nil, lResultSet);
+  try
+    if lResultSet.IsEmpty then
+      Exit(-1);
+    lResultSet.First;
+    ACompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
     Exit(lResultSet.FieldByName('RACEID').AsInteger);
   finally
     FreeAndNil(lResultSet);
@@ -427,21 +455,129 @@ var
   i: integer;
 begin
   SQLConnection.Execute(Format(
-    '', [ARaceId]), nil, lResultSet);
+    'SELECT * FROM PASSINGS WHERE RACEID = %d ORDER BY PASSINGID', [ARaceId]), nil, lResultSet);
   try
     if lResultSet.IsEmpty then
       Exit(nil);
 
+    SetLength(result, lResultSet.RecordCount);
     i := 0;
     lResultSet.First;
     while not lResultSet.Eof do
     begin
-      raise Exception.Create('Not implemented yet.');
+      result[i].PassingNumber := lResultSet.FieldByName('PASSINGNUMBER').AsInteger;
+      result[i].ChipId := lResultSet.FieldByName('CHIPID').AsString;
+      result[i].PassingTime := SmartTimingTools.GetFieldAsDatetime(lResultSet.FieldByName('PASSINGTIME'), 0.0);
+      result[i].SignalStrength := lResultSet.FieldByName('SIGNALSTRENGTH').AsInteger;
+      result[i].Hits := lResultSet.FieldByName('HITS').AsInteger;
+      result[i].Flags := lResultSet.FieldByName('FLAGS').AsInteger;
+      result[i].Sport := lResultSet.FieldByName('SPORT').AsInteger;
+      result[i].Voltage := 0;
+      result[i].Temperature := 0;
+      result[i].DecoderId := lResultSet.FieldByName('DECODERID').AsString;
+      result[i].TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(result[i].ChipId);
       Inc(i);
       lResultSet.Next;
     end;
   finally
     FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+procedure TMainDataModule.GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
+var
+  lResultSet: TDataSet;
+  lField: TField;
+begin
+  ABIB := 0;
+  AName := '?';
+  AClubTeam := '?';
+
+  SQLConnection.Execute(
+    Format(
+      'SELECT C.CLASS, C.BIB, C.LASTNAME, C.FIRSTNAME AS NAME, C.CLUB, C.TEAM FROM ' +
+      'COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+      'WHERE P.RACEID = %d AND C.CHIPID = %s',
+      [APassing.RaceId, QuotedStr(APassing.ChipId)]),
+    nil, lResultSet);
+  try
+    if lResultSet.IsEmpty then
+      Exit;
+    lResultSet.First;
+    ABIB := lResultSet.FieldByName('BIB').AsInteger;
+    lField := lResultSet.FieldByName('LASTNAME');
+    if not lField.IsNull then
+      AName := lField.AsString;
+    AName := AName + ', ';
+    lField := lResultSet.FieldByName('FIRSTNAME');
+    if lField.IsNull then
+      AName := AName + '?'
+    else
+      AName := AName + lField.AsString;
+    lField := lResultSet.FieldByName('TEAM');
+    if lField.IsNull or lField.AsString.IsEmpty then
+    begin
+      lField := lResultSet.FieldByName('CLUB');
+      if not lField.IsNull then
+        AClubTeam := lField.AsString;
+    end
+    else
+      AClubTeam := lField.AsString
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer): integer;
+var
+  lResultSet: TDataSet;
+  lValue: string;
+begin
+  result := 0;
+  AParticipationId := -1;
+
+  SQLConnection.Execute('SELECT LAPS, PARTICIPATIONID FROM PARTICIPATION P INNER JOIN COMPETITOR C ON P.COMPETITORID = C.COMPETITORID WHERE P.RACEID = ' + ARaceId.ToString + ' AND C.CHIPID = ' + QuotedStr(AChipId), nil, lResultSet);
+  try
+    if lResultSet.IsEmpty then
+      Exit;
+
+    lResultSet.First;
+    if lResultSet.Eof then
+      Exit;
+
+    result := lResultSet.Fields[0].AsInteger;
+    AParticipationId := lResultSet.Fields[1].AsInteger;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+procedure TMainDataModule.UpdateParticipantValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
+var
+  lParams: TParams;
+  lValue: TParam;
+  i: integer;
+  lCmd: string;
+begin
+  lParams := TParams.Create;
+  try
+    lCmd := 'UPDATE PARTICIPANTS SET ';
+    for i := 0 to High(AFields) do
+    begin
+      lCmd := lCmd + AFields[i] + '=?,';
+      lValue := lParams.AddParameter;
+      lValue.Value := AValues[i];
+    end;
+    lCmd[Length(lCmd)] := ' ';
+    lCmd := lCmd + ' WHERE PARTICIPANTID = ?';
+    lValue := lParams.AddParameter;
+    lValue.Value := AParticipationId;
+    MainDataModule.SQLConnection.Execute(lCmd, lParams);
+  finally
+    FreeAndNil(lParams);
   end;
 end;
 
@@ -487,6 +623,26 @@ begin
   end;
 end;
 
+{==============================================================================}
+procedure TMainDataModule.RemoveCompetitorsFromRace(AEventId, ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
+var
+  lCmd: string;
+  i: integer;
+  lIDs: TStringList;
+begin
+  if Length(ACompetitorIDs) = 0 then
+    Exit;
+
+  lIDs := TStringList.Create;
+  try
+    for i := 0 to High(ACompetitorIDs) do
+      lIDs.Add(ACompetitorIDs[i].ToString);
+    lCmd := Format('DELETE FROM PARTICIPATION WHERE RACEID = %d AND COMPETITORID IN (%s)', [ARaceId, lIDs.CommaText]);
+  finally
+    FreeAndNil(lIDs);
+  end;
+  SQLConnection.Execute(lCmd, nil);
+end;
 
 {==============================================================================}
 procedure TMainDataModule.SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
@@ -499,17 +655,18 @@ procedure TMainDataModule.AddPassingToDatabase(APassing: TPassing; var ARaceId: 
 var
   lCmd: string;
   lTimeStr: string;
+  lCompetitorId: integer;
 begin
   if APassing.Flags <> 2 then
   begin
-    ARaceId := GetRaceIdForPassing(APassing);
+    ARaceId := GetRaceIdForPassing(APassing, lCompetitorId);
     APassing.RaceId := ARaceId;
   end;
 
   lTimeStr := FormatDatetime('yyyy-mm-dd hh:mm:ss.zzz', APassing.PassingTime).QuotedString;
   lCmd :=
-        Format('INSERT INTO PASSINGS ' +
-           '(PASSINGNUMBER, TRANSPONDERID, PASSINGTIME, SIGNALSTRENGTH, HITS, FLAGS, SPORT, DECODERID, RACEID) VALUES ' +
+    Format('INSERT INTO PASSINGS ' +
+           '(PASSINGNUMBER, CHIPID, PASSINGTIME, SIGNALSTRENGTH, HITS, FLAGS, SPORT, DECODERID, RACEID) VALUES ' +
            '(%d, %s, %s, %d, %d, %d, %d, %s, %d)',
            [APassing.PassingNumber, APassing.ChipId.QuotedString, lTimeStr, APassing.SignalStrength, APassing.Hits, APassing.Flags, APassing.Sport, APassing.DecoderId.QuotedString,
             APassing.RaceId]);
@@ -531,40 +688,9 @@ begin
     lLines.NameValueSeparator := #9;
     lLines.LoadFromFile(AFileName);
 
-    SQLConnection.Execute('SELECT * FROM TRANSPONDERS ORDER BY SHORTID', nil, lResultSet);
-    if not lResultSet.IsEmpty then
-    begin
-      // Look for changes and deletions and remove them from the list
-      lResultSet.First;
-      while not lResultSet.Eof do
-      begin
-        lShortId := lResultSet.FieldByName('SHORTID').AsInteger;
-        i := lLines.IndexOfName(lShortId.ToString);
-        if i < 0 then
-        begin
-          lResultSet.Delete;
-          lCmd := Format('DELETE FROM TRANSPONDERS WHERE SHORTID = %d', [lShortId]);
-          SQLConnection.Execute(lCmd, nil);
-          lResultSet.Next;
-          Continue;
-        end;
+    SQLConnection.ExecuteDirect('DELETE FROM TRANSPONDERS');
 
-        lChipId := lLines.ValueFromIndex[i];
-        if SameText(lChipId, lResultSet.FieldByName('SHORTID').AsString) then
-        begin
-          lLines.Delete(i);
-          lResultSet.Next;
-          Continue;
-        end;
-
-        lCmd := Format('UPDATE TRANSPONDERS SET CHIPID = %s, LOWBATTERYSTATUS = 0, FIRSTLOWBATTERYTIME = NULL WHERE SHORTID = %d', [lShortId]);
-        SQLConnection.Execute(lCmd, nil);
-        lLines.Delete(i);
-        lResultSet.Next;
-      end;
-    end;
-
-    // Add the remaining entries to the table
+    // Add the entries to the table
     for i  := 0 to lLines.Count - 1 do
     begin
       lShortId := lLines.KeyNames[i].ToInteger;
@@ -661,89 +787,6 @@ begin
   finally
     lMappingStore.Unlock;
   end;
-end;
-
-{==============================================================================}
-function TEventDataObject.Exists(AEventId: integer): boolean;
-var
-  lResultSet: TDataSet;
-begin
-  MainDataModule.SQLConnection.Execute('SELECT EVENTID FROM EVENTS WHERE EVENTID = ' + AEventId.ToString, nil, lResultSet);
-  if lResultSet = nil then
-    Exit(false);
-  try
-    result := lResultSet.RecordCount > 0;
-  finally
-    FreeAndNil(lResultSet);
-  end;
-end;
-
-{==============================================================================}
-procedure TEventDataObject.SaveToDatabase;
-var
-  lCmd: string;
-  lFormatSettings: TFormatSettings;
-begin
-  lFormatSettings := TFormatSettings.Create;
-  lFormatSettings.DecimalSeparator := '.';
-  lFormatSettings.ThousandSeparator := #0;
-  if Exists(FEventId) then
-    lCmd :=
-      Format('UPDATE EVENTS SET ORGANIZER = %s, TITLE = %s, DATEFROM = %f, DATETO = %f WHERE EVENTID = %d',
-        [QuotedStr(FOrganizer),
-         QuotedStr(FTitle),
-         FDateFrom,
-         FDateTo,
-         FEventId], lFormatSettings)
-  else
-    lCmd :=
-      Format('INSERT INTO EVENTS (ORGANIZER, TITLE, DATEFROM, DATETO, EVENTID) VALUES (%s, %s, %f, %f, %d)',
-        [QuotedStr(FOrganizer),
-         QuotedStr(FTitle),
-         FDateFrom,
-         FDateTo,
-         FEventId], lFormatSettings);
-
-  MainDataModule.SQLConnection.ExecuteDirect(lCmd);
-end;
-
-{==============================================================================}
-procedure TEventDataObject.DeleteFromDatabase;
-var
-  lParams: TParams;
-  lValue: TParam;
-begin
-  if not Exists(FEventId) then
-    Exit;
-
-  lParams := TParams.Create;
-  try
-    lValue := lParams.AddParameter;
-    lValue.AsInteger := FEventId;
-    MainDataModule.SQLConnection.Execute('DELETE FROM EVENTS WHERE EVENTID = ?', lParams);
-  finally
-    FreeAndNil(lParams);
-  end;
-end;
-
-{==============================================================================}
-procedure TEventDataObject.RefreshFromDatabase;
-var
-  lResultSet: TDataSet;
-begin
-  if not Exists(FEventId) then
-    Exit;
-
-  MainDataModule.SQLConnection.Execute('SELECT * FROM EVENTS WHERE EVENTID = ' + FEventId.ToString, nil, lResultSet);
-  if (lResultSet = nil) or (lResultSet.RecordCount = 0) then
-    Exit;
-
-  lResultSet.First;
-
-  FOrganizer := lResultSet.FieldByName('ORGANIZER').AsString;
-  FTitle := lResultSet.FieldByName('TITLE').AsString;
-  FDateFrom := lResultSet.FieldByName('DATEFROM').AsFloat;
-  FDateTo := lResultSet.FieldByName('DATETO').AsFloat;
 end;
 
 end.

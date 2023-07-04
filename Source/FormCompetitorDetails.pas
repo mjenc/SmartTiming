@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Mask,
-  Vcl.DBCtrls, DB,  DBClient, DataModule;
+  Vcl.DBCtrls, DB,  DBClient, DataModule, SmartTiming.Cache;
 
 type
   TFormCompetitorDetails = class(TForm)
@@ -105,7 +105,7 @@ begin
     FDataSource.DataSet.FieldByName('HANDICAPFACTOR').Value := 100;
 
   DBEditTxId.DataSource := FDataSource;
-  DBEditTxId.DataField := 'TRANSPONDERID';
+  DBEditTxId.DataField := 'CHIPID';
   DBEditAddtional1.DataSource := FDataSource;
   DBEditAddtional1.DataField := 'ADDITIONAL1';
   DBEditAdditional2.DataSource := FDataSource;
@@ -122,7 +122,14 @@ end;
 
 {==============================================================================}
 procedure TFormCompetitorDetails.ButtonOKClick(Sender: TObject);
+var
+  lTxId: string;
 begin
+  lTxId := DBEditTxId.EditText;
+  if not TTransponderMappingStore.GetSingleton.ConvertToValidChipId(lTxId) then
+    raise Exception.Create('Keine gültige Transponder ID.');
+  DBEditTxId.EditText := lTxId;
+
   if FIsInsert then
   begin
     FDataSource.DataSet.FieldByName('COMPETITORID').Value := MainDataModule.GetMaxCompetitorId + 1;

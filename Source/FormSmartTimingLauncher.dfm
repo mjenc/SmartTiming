@@ -3,8 +3,8 @@ object FormAppLauncher: TFormAppLauncher
   Top = 0
   BorderStyle = bsDialog
   Caption = 'SmartTiming - Veranstaltung w'#228'hlen'
-  ClientHeight = 493
-  ClientWidth = 590
+  ClientHeight = 485
+  ClientWidth = 588
   Color = clBtnFace
   DefaultMonitor = dmDesktop
   Font.Charset = DEFAULT_CHARSET
@@ -16,8 +16,8 @@ object FormAppLauncher: TFormAppLauncher
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   DesignSize = (
-    590
-    493)
+    588
+    485)
   TextHeight = 15
   object Label1: TLabel
     Left = 8
@@ -31,8 +31,8 @@ object FormAppLauncher: TFormAppLauncher
     AlignWithMargins = True
     Left = 5
     Top = 5
-    Width = 580
-    Height = 290
+    Width = 578
+    Height = 282
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -2506,6 +2506,8 @@ object FormAppLauncher: TFormAppLauncher
       8CF2291C5973D8DBA7DE0265F1B3FFD9}
     Stretch = True
     ExplicitLeft = 10
+    ExplicitWidth = 580
+    ExplicitHeight = 290
   end
   object LabelVersion: TLabel
     Left = 8
@@ -2524,7 +2526,7 @@ object FormAppLauncher: TFormAppLauncher
   end
   object LabelCopyright: TLabel
     Left = 8
-    Top = 473
+    Top = 465
     Width = 105
     Height = 13
     Anchors = [akLeft, akBottom]
@@ -2540,7 +2542,7 @@ object FormAppLauncher: TFormAppLauncher
   object ComboBoxEventHistory: TComboBox
     Left = 87
     Top = 303
-    Width = 495
+    Width = 493
     Height = 23
     AutoComplete = False
     Style = csDropDownList
@@ -2550,7 +2552,7 @@ object FormAppLauncher: TFormAppLauncher
     TabStop = False
   end
   object ButtonNew: TButton
-    Left = 421
+    Left = 419
     Top = 394
     Width = 161
     Height = 25
@@ -2559,9 +2561,10 @@ object FormAppLauncher: TFormAppLauncher
     ModalResult = 1
     TabOrder = 3
     OnClick = ButtonNewClick
+    ExplicitLeft = 421
   end
   object ButtonLoad: TButton
-    Left = 421
+    Left = 419
     Top = 332
     Width = 161
     Height = 25
@@ -2571,9 +2574,10 @@ object FormAppLauncher: TFormAppLauncher
     ModalResult = 1
     TabOrder = 1
     OnClick = ButtonLoadClick
+    ExplicitLeft = 421
   end
   object ButtonNewWithTemplate: TButton
-    Left = 421
+    Left = 419
     Top = 363
     Width = 161
     Height = 25
@@ -2582,9 +2586,10 @@ object FormAppLauncher: TFormAppLauncher
     ModalResult = 1
     TabOrder = 2
     OnClick = ButtonNewWithTemplateClick
+    ExplicitLeft = 421
   end
   object ButtonFromBackup: TButton
-    Left = 421
+    Left = 419
     Top = 425
     Width = 161
     Height = 25
@@ -2593,9 +2598,10 @@ object FormAppLauncher: TFormAppLauncher
     ModalResult = 1
     TabOrder = 4
     OnClick = ButtonFromBackupClick
+    ExplicitLeft = 421
   end
   object ButtonCancel: TButton
-    Left = 421
+    Left = 419
     Top = 456
     Width = 161
     Height = 25
@@ -2603,6 +2609,7 @@ object FormAppLauncher: TFormAppLauncher
     Caption = 'Beenden'
     ModalResult = 2
     TabOrder = 5
+    ExplicitLeft = 421
   end
   object FileOpenDialog: TFileOpenDialog
     FavoriteLinks = <>

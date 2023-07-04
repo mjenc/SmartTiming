@@ -131,63 +131,59 @@ object FormBatteryCheck: TFormBatteryCheck
     end
     object RadioGroup1: TRadioGroup
       Left = 16
-      Top = 184
+      Top = 216
       Width = 129
-      Height = 129
-      Caption = 'Anzeigen'
+      Height = 130
+      Caption = 'Kopierauswahl'
       TabOrder = 4
     end
-    object RadioButtonAll: TRadioButton
-      Left = 32
-      Top = 208
-      Width = 113
-      Height = 17
-      Caption = 'Alle'
-      Checked = True
-      TabOrder = 5
-      TabStop = True
-      OnClick = RadioButtonAllClick
-    end
-    object RadioButtonCriticals: TRadioButton
-      Left = 32
-      Top = 231
-      Width = 113
-      Height = 17
-      Caption = 'Kritische'
-      TabOrder = 6
-      OnClick = RadioButtonAllClick
-    end
-    object RadioButtonGaps: TRadioButton
-      Left = 32
-      Top = 254
-      Width = 113
-      Height = 17
-      Caption = 'L'#252'cken'
-      TabOrder = 7
-      OnClick = RadioButtonAllClick
-    end
-    object RadioButtonWeaks: TRadioButton
-      Left = 32
-      Top = 277
-      Width = 113
-      Height = 17
-      Caption = 'Schwache'
-      TabOrder = 8
-      OnClick = RadioButtonAllClick
-    end
     object ButtonCopyListToClipboard: TButton
-      Left = 16
-      Top = 344
-      Width = 129
+      Left = 32
+      Top = 309
+      Width = 97
       Height = 25
       Caption = 'Liste kopieren'
-      TabOrder = 9
+      TabOrder = 5
       OnClick = ButtonCopyListToClipboardClick
+    end
+    object CheckBoxCopyGaps: TCheckBox
+      Left = 32
+      Top = 240
+      Width = 97
+      Height = 17
+      Caption = 'L'#252'cken'
+      TabOrder = 6
+    end
+    object CheckBoxWeak: TCheckBox
+      Left = 32
+      Top = 263
+      Width = 97
+      Height = 17
+      Caption = 'Schwache'
+      TabOrder = 7
+    end
+    object CheckBoxHealthy: TCheckBox
+      Left = 32
+      Top = 286
+      Width = 97
+      Height = 17
+      Caption = 'Gesunde'
+      TabOrder = 8
+    end
+    object Button1: TButton
+      Left = 16
+      Top = 368
+      Width = 129
+      Height = 49
+      Caption = 'Bericht in Zwischenablage'
+      TabOrder = 9
+      WordWrap = True
+      OnClick = Button1Click
     end
   end
   object ImageListIcons: TImageList
-    Left = 72
-    Top = 272
+    Left = 56
+    Top = 400
     Bitmap = {
       494C010102000800040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010

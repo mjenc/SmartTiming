@@ -38,6 +38,8 @@ implementation
 
 {$R *.dfm}
 
+uses
+  DataModule;
 
 {==============================================================================}
 procedure TFormPassingSimulator.ButtonCloseClick(Sender: TObject);
@@ -48,7 +50,7 @@ end;
 {==============================================================================}
 procedure TFormPassingSimulator.FormCreate(Sender: TObject);
 begin
-  FPassingNumber := 1;
+  FPassingNumber := MainDataModule.GetMaxPassingNumber + 1;
   SetupCompetitorsInRaceGrid;
 end;
 
@@ -60,7 +62,7 @@ begin
   ClientDataSetCompetitorsInRace.Active := false;
   SQLDataSetCompetitorsInRace.Active := false;
   SQLDataSetCompetitorsInRace.CommandText :=
-    'SELECT C.BIB, C.FIRSTNAME, C.LASTNAME, C.TRANSPONDERID, C.CLUB ' +
+    'SELECT C.BIB, C.FIRSTNAME, C.LASTNAME, C.CHIPID, C.CLUB ' +
     'FROM ' +
     'PARTICIPATION P ' +
     'INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID ' +
@@ -71,12 +73,12 @@ begin
   ClientDataSetCompetitorsInRace.Active := True;
 
   StringGridCompetitorsInRace.RowCount := ClientDataSetCompetitorsInRace.RecordCount;
-  i := 1;
+  i := 0;
   ClientDataSetCompetitorsInRace.First;
   while not ClientDataSetCompetitorsInRace.Eof do
   begin
     StringGridCompetitorsInRace.Cells[0, i] := ClientDataSetCompetitorsInRace.FieldByName('BIB').AsString;
-    StringGridCompetitorsInRace.Cells[1, i] := ClientDataSetCompetitorsInRace.FieldByName('TRANSPONDERID').AsString;
+    StringGridCompetitorsInRace.Cells[1, i] := ClientDataSetCompetitorsInRace.FieldByName('CHIPID').AsString;
     StringGridCompetitorsInRace.Cells[2, i] := ClientDataSetCompetitorsInRace.FieldByName('FIRSTNAME').AsString;
     StringGridCompetitorsInRace.Cells[3, i] := ClientDataSetCompetitorsInRace.FieldByName('LASTNAME').AsString;
     StringGridCompetitorsInRace.Cells[4, i] := ClientDataSetCompetitorsInRace.FieldByName('CLUB').AsString;
@@ -94,7 +96,7 @@ begin
 
   lPassing.PassingNumber := FPassingNumber;
   Inc(FPassingNumber);
-  lPassing.ChipId := TTransponderMappingStore.GetSingleton.GetTransponderIdFromShortId(StringGridCompetitorsInRace.Cells[1, ARow].ToInteger);
+  lPassing.ChipId := StringGridCompetitorsInRace.Cells[1, ARow];
   lPassing.PassingTime := Now;
   lPassing.SignalStrength := 123;
   lpAssing.Hits := 90;

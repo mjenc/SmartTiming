@@ -10,6 +10,7 @@ const
   cStdDataPath = 'd:\projects\SmartTiming\Data\';
   cStdDatabaseName = 'SmartTiming.db';
   cCreateSchemaScriptName = 'CreateSchema.sql';
+  cStdTemplatePath = 'd:\projects\SmartTiming\Templates\';
 
   cRegKeyPath = 'SOFTWARE\MJ\SmartTiming';
 
@@ -31,6 +32,8 @@ const
 
   cColorInactive     = TColor($C8C8C8);
   cColorInactiveDark = TColor($404040);
+
+  cRecalcRankingMilliSeconds = 2000;
 
 resourcestring
   cRaceTypeNameUnknown = 'Unbestimmt';
@@ -76,6 +79,8 @@ resourcestring
   cMessagesBackupSucceeded = 'Das Datenbank-Backup wurde erfolgreich erstellt.';
   cMessagesBackupFailed = 'Das Erstellen eines Datenbank-Backup ist fehlgeschlagen.';
   cMessagesNoTxMapping = 'Es ist noch keine Transponder-Mapping-Tabelle importiert.'#13#10'Möchten Sie diese nun importieren?';
+  cMessagesRaceNotFinishedYet = 'Das Rennen ist noch nicht beendet.';
+
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
   TRaceTypes = set of TRaceType;

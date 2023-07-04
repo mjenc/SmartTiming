@@ -4,7 +4,7 @@ interface
 
 uses
   Classes, Generics.Collections, SysUtils, Math, Variants, SyncObjs,
-  Windows,
+  Windows, System.Character,
   DecoderInterface, SmartTiming.Consts;
 
 type
@@ -80,7 +80,7 @@ type
     procedure SetLowBatteryStatus(AShortId: integer; AStatus: boolean);
     function GetShortIdFromTransponderId(const ATransponderId: string): integer;
     function GetTransponderIdFromShortId(AShortId: integer): string;
-
+    function ConvertToValidChipId(var AID: string): boolean;
     procedure Lock;
     procedure Unlock;
 
@@ -429,6 +429,41 @@ begin
   try
     if not FShortIdToTxId.TryGetValue(AShortId, result) then
       Exit(cNotFound);
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+function TTransponderMappingStore.ConvertToValidChipId(var AID: string): boolean;
+
+  function IsNumber(const AStr: string): boolean;
+  var
+    i: integer;
+  begin
+    for i := 1 to Length(AStr) do
+    begin
+      if not AStr[i].IsDigit then
+        Exit(false);
+    end;
+    result := true;
+  end;
+
+var
+  lTemp: string;
+begin
+  if AID.IsEmpty then
+    Exit(false);
+
+  if not IsNumber(AID) then
+    Exit(true);
+
+  Synchronizer.BeginRead;
+  try
+    if not FShortIdToTxId.TryGetValue(AID.ToInteger, lTemp) then
+      Exit(false);
+    AID := lTemp;
+    result := true;
   finally
     Synchronizer.EndRead;
   end;

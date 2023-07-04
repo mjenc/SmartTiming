@@ -56,7 +56,7 @@ type
     FOnPassing: TDecoderPassingReceivedEvent;
 
   public
-    constructor Create(ADecoder: TDecoder; AServerPort: Word; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent); reintroduce;
+    constructor Create(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent); reintroduce;
 
     class function GetListenerForDecoder(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent): TDecoderListener;
 
@@ -86,11 +86,10 @@ begin
 end;
 
 {==============================================================================}
-constructor TDecoderListener.Create(ADecoder: TDecoder; AServerPort: Word; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent);
+constructor TDecoderListener.Create(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent);
 begin
   inherited Create(true);
   FDecoder := ADecoder;
-  FServerPort := AServerPort;
   FOnStatus := AOnStatus;
   FOnPassing := AOnPassing;
 end;
@@ -99,7 +98,7 @@ end;
 class function TDecoderListener.GetListenerForDecoder(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent): TDecoderListener;
 begin
   if ADecoder.DecoderManufacturer = cDecoderManufacturerMyLaps then
-    Exit(TMyLapsP3Listener.Create(ADecoder, cMyLapsDefaultOperatingPort, AOnStatus, AOnPassing));
+    Exit(TMyLapsP3Listener.Create(ADecoder, AOnStatus, AOnPassing));
 
 // TODO
 //  if ADecoder.DecoderManufacturer = cDecoderManufacturerRaceResult then

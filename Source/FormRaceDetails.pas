@@ -80,7 +80,7 @@ begin
   end
   else
   begin
-    lDateTime := FDataSource.DataSet.FieldByName('STARTTIME').AsFloat;
+    lDateTime := SmartTimingTools.GetFieldAsDatetime(FDataSource.DataSet.FieldByName('STARTTIME'), FEventDate);
     EditDate.Text := DateToStr(lDateTime);
     EditTime.Text := FormatDatetime('hh:mm:ss', lDateTime);
   end;

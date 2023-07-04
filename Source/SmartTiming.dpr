@@ -1,17 +1,35 @@
 program SmartTiming;
 
-
+{$R 'SmartTimingResource.res' 'SmartTimingResource.rc'}
 
 uses
-  Vcl.Forms, Controls, Windows, SysUtils,
-  FormMain,
+  Vcl.Forms,
+  Controls,
+  Windows,
+  SysUtils,
+  FormMain in 'FormMain.pas' {FormMain: TDataModule},
   DataModule in 'DataModule.pas' {MainDataModule: TDataModule},
   Vcl.Themes,
   Vcl.Styles,
-  SmartTiming.Consts,
-  SmartTiming.Tools,
+  SmartTiming.Consts in 'SmartTiming.Consts.pas',
+  SmartTiming.Tools in 'SmartTiming.Tools.pas',
   SmartTiming.Controller in 'SmartTiming.Controller.pas',
-  FormSmartTimingLauncher;
+  FormSmartTimingLauncher in 'FormSmartTimingLauncher.pas',
+  DecoderInterface.MyLaps in 'DecoderInterface.MyLaps.pas',
+  DecoderInterface in 'DecoderInterface.pas',
+  FormBatteryCheck in 'FormBatteryCheck.pas' {FormBatteryCheck},
+  FormCompetitorDetails in 'FormCompetitorDetails.pas' {FormCompetitorDetails},
+  FormCompetitorImport in 'FormCompetitorImport.pas' {FormCompetitorImport},
+  FormGenerateTransponderMappings in 'FormGenerateTransponderMappings.pas' {FormGenerateTransponderMappings},
+  FormPassingSimulator in 'FormPassingSimulator.pas' {FormPassingSimulator},
+  FormRaceDetails in 'FormRaceDetails.pas' {FormRaceDetails},
+  FormSettings in 'FormSettings.pas' {FormSettings},
+  SmartTiming.DecoderEngine in 'SmartTiming.DecoderEngine.pas',
+  RaceEngine.Custom in 'RaceEngine.Custom.pas',
+  RaceEngine.TimeTrial in 'RaceEngine.TimeTrial.pas',
+  SmartTiming.Cache in 'SmartTiming.Cache.pas',
+  Report.ExcelTemplateFiller in 'Report.ExcelTemplateFiller.pas',
+  SmartTiming.Event in 'SmartTiming.Event.pas';
 
 {$R *.res}
 
@@ -27,7 +45,6 @@ begin
     TStyleManager.SetStyle(lStylename);
 
   Application.CreateForm(TMainDataModule, MainDataModule);
-
   FormAppLauncher := TFormAppLauncher.Create(nil);
   try
     lResult := FormAppLauncher.ShowModal;

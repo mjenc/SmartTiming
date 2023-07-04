@@ -338,6 +338,15 @@ object FormMain: TFormMain
             TabOrder = 1
             OnClick = BitBtnClearClassFilterClick
           end
+          object ButtonImportCompetitors: TButton
+            Left = 312
+            Top = 10
+            Width = 113
+            Height = 25
+            Caption = 'Importieren ...'
+            TabOrder = 2
+            OnClick = MenuItemImportCompetitorsClick
+          end
         end
         object DBGridCompetitors: TDBGrid
           Left = 36
@@ -355,7 +364,7 @@ object FormMain: TFormMain
           Font.Height = -12
           Font.Name = 'Segoe UI'
           Font.Style = []
-          Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete, dgCancelOnExit, dgMultiSelect, dgTitleClick, dgTitleHotTrack]
+          Options = [dgTitles, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgConfirmDelete, dgCancelOnExit, dgMultiSelect, dgTitleClick, dgTitleHotTrack]
           ParentFont = False
           TabOrder = 1
           TitleFont.Charset = DEFAULT_CHARSET
@@ -433,7 +442,7 @@ object FormMain: TFormMain
             ItemHeight = 20
             ParentFont = False
             TabOrder = 0
-            OnClick = ListBoxRacesClick
+            OnClick = ListBoxRacesTimingClick
             OnDrawItem = ListBoxRacesDrawItem
           end
         end
@@ -453,6 +462,9 @@ object FormMain: TFormMain
             Align = alTop
             BevelOuter = bvNone
             TabOrder = 0
+            DesignSize = (
+              768
+              41)
             object ButtonNeutralize: TBitBtn
               Left = 104
               Top = 2
@@ -521,6 +533,27 @@ object FormMain: TFormMain
               TabOrder = 5
               OnClick = ButtonStopClick
             end
+            object CheckBoxAutoScrollPassings: TCheckBox
+              Left = 662
+              Top = 13
+              Width = 88
+              Height = 17
+              Anchors = [akTop, akRight]
+              Caption = 'AutoScroll'
+              Checked = True
+              State = cbChecked
+              TabOrder = 6
+              OnClick = ToggleAutoScrollClick
+            end
+            object ButtonPrintParticipantList: TButton
+              Left = 280
+              Top = 10
+              Width = 121
+              Height = 25
+              Caption = 'Startliste drucken'
+              TabOrder = 7
+              OnClick = ButtonPrintParticipantListClick
+            end
           end
           object PanelPassingGrid: TPanel
             Left = 0
@@ -544,6 +577,77 @@ object FormMain: TFormMain
       object TabSheetResults: TTabSheet
         Caption = 'Ergebnisse'
         ImageIndex = 2
+        object PanelResultRaces: TPanel
+          Left = 0
+          Top = 0
+          Width = 185
+          Height = 757
+          Align = alLeft
+          BevelEdges = []
+          BevelOuter = bvNone
+          TabOrder = 0
+        end
+        object PanelResults: TPanel
+          Left = 185
+          Top = 0
+          Width = 1284
+          Height = 757
+          Align = alClient
+          BevelEdges = []
+          BevelOuter = bvNone
+          TabOrder = 1
+          object PanelResultControls: TPanel
+            Left = 0
+            Top = 0
+            Width = 1284
+            Height = 41
+            Align = alTop
+            BevelEdges = []
+            BevelOuter = bvNone
+            TabOrder = 0
+            object ButtonExportToExelTemplate: TButton
+              Left = 16
+              Top = 8
+              Width = 145
+              Height = 25
+              Caption = 'Export Excel Vorlage'
+              TabOrder = 0
+            end
+            object ButtonResultExportCSV: TButton
+              Left = 167
+              Top = 8
+              Width = 146
+              Height = 25
+              Caption = 'Export CSV'
+              TabOrder = 1
+            end
+            object ButtonResultExportHTML: TButton
+              Left = 319
+              Top = 8
+              Width = 146
+              Height = 25
+              Caption = 'Export HTML'
+              TabOrder = 2
+            end
+          end
+          object PanelResultGrid: TPanel
+            Left = 0
+            Top = 41
+            Width = 1284
+            Height = 716
+            Align = alClient
+            BevelEdges = []
+            BevelOuter = bvNone
+            Caption = 'Bitte Rennen ausw'#228'hlen.'
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clWindowText
+            Font.Height = -17
+            Font.Name = 'Segoe UI'
+            Font.Style = [fsBold]
+            ParentFont = False
+            TabOrder = 1
+          end
+        end
       end
     end
   end
@@ -563,10 +667,18 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 2
+    object Splitter4: TSplitter
+      Left = 753
+      Top = 0
+      Height = 45
+      ExplicitLeft = 656
+      ExplicitTop = 16
+      ExplicitHeight = 100
+    end
     object PanelDecoder: TPanel
       Left = 0
       Top = 0
-      Width = 401
+      Width = 244
       Height = 45
       Align = alLeft
       BevelOuter = bvNone
@@ -585,20 +697,52 @@ object FormMain: TFormMain
         Width = 134
         Height = 15
         Caption = 'Decoder nicht verbunden'
+        OnClick = LabelDecoderIdClick
       end
+    end
+    object PanelNoiseChart: TPanel
+      Left = 244
+      Top = 0
+      Width = 509
+      Height = 45
+      Align = alLeft
+      BevelOuter = bvNone
+      TabOrder = 1
+      object LabelDecoderNoiseLevel: TLabel
+        Left = 6
+        Top = 4
+        Width = 71
+        Height = 15
+        Caption = 'St'#246'rungslevel'
+      end
+      object Label6: TLabel
+        Left = 6
+        Top = 23
+        Width = 86
+        Height = 15
+        Caption = 'LabelNoiseValue'
+      end
+    end
+    object PanelTemperatureChart: TPanel
+      Left = 756
+      Top = 0
+      Width = 717
+      Height = 45
+      Align = alClient
+      TabOrder = 2
       object LabelDecoderTemperature: TLabel
-        Left = 248
-        Top = 2
+        Left = 6
+        Top = 4
         Width = 60
         Height = 15
         Caption = 'Temperatur'
       end
-      object LabelDecoderNoiseLevel: TLabel
-        Left = 248
+      object Label7: TLabel
+        Left = 6
         Top = 23
-        Width = 71
+        Width = 122
         Height = 15
-        Caption = 'St'#246'rungslevel'
+        Caption = 'LabelTemperatureValue'
       end
     end
   end
@@ -658,6 +802,10 @@ object FormMain: TFormMain
       object MenuItemSettings: TMenuItem
         Caption = 'Einstellungen'
         OnClick = MenuItemSettingsClick
+      end
+      object MenuItemReports: TMenuItem
+        Caption = 'Druckvorlagen'
+        OnClick = MenuItemReportsClick
       end
     end
   end
@@ -833,13 +981,18 @@ object FormMain: TFormMain
       000000000000}
   end
   object PopupMenuCompetitorActions: TPopupMenu
+    OnPopup = PopupMenuCompetitorActionsPopup
     Left = 698
     Top = 93
     object PopupMenuCompetitorAssignToRace: TMenuItem
       Caption = 'Zu Rennen zuweisen'
     end
+    object PopupMenuCompetitorRemoveFromRace: TMenuItem
+      Caption = 'Aus Rennen entfernen'
+    end
     object PopupMenuCompetitorDelete: TMenuItem
       Caption = 'L'#246'schen'
+      Enabled = False
       OnClick = PopupMenuCompetitorDeleteClick
     end
   end

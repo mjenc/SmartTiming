@@ -4,8 +4,8 @@ interface
 
 uses
   Classes, SysUtils, DateUtils, Windows, Dialogs, Forms,
-  Registry, DBGrids, Controls, Graphics,
-  Generics.Defaults, UITypes, DB,
+  Registry, DBGrids, Controls, Graphics, Variants,
+  Generics.Defaults, UITypes, DB, SmartTiming.Event,
   uSuperObject, SmartTiming.Consts, RaceEngine.Custom;
 
 type
@@ -24,20 +24,23 @@ type
     class function GetRaceStatusEnumFromString(const AValue: string): TRaceStatus;
     class function GetRaceStatusStringFromEnum(ARaceStatus: TRaceStatus): string;
     class procedure GetColorsForRaceStatus(ARaceStatus: TRaceStatus; ASelected: boolean; var ABgColor, AFgColor: TColor);
-    class procedure FillRaceItemFromDataSet(AParent: TWinControl; ADataSet: TDataSet; ARaceItem: TRaceItem);
+    class procedure FillRaceItemFromDataSet(ADataSet: TDataSet; ARaceItem: TRaceItem);
     class function GetFlagNameFromRaceStatus(ARaceStatus: TRaceStatus): string;
     class procedure SortGridColumns(ADBGrid: TDBGrid; const ATableName: string);
     class procedure SetColumnProperties(const ATable: string; AColumn: TColumn);
     class procedure OnGetDefaultColumnText(ASender: TField; var AText: string; ADisplayText: Boolean);
     class procedure OnGetDateTimeFromValue(ASender: TField; var AText: string; ADisplayText: Boolean);
     class procedure OnGetTimeFromValue(ASender: TField; var AText: string; ADisplayText: Boolean);
+    class function ISOTimeStrToDateTime(const AStr: string): TDatetime;
+    class function GetFieldAsDatetime(AField: TField; ADefaultIfNull: TDatetime): TDatetime;
     class procedure OnGetRaceStatus(ASender: TField; var AText: string; ADisplayText: Boolean);
+    class procedure OnGetTxId(ASender: TField; var AText: string; ADisplayText: Boolean);
     class procedure InitFieldDescriptions;
     class function ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]): TModalResult;
   end;
 
   TRaceEngineFactory = class
-    class function CreateRaceEngineForRaceType(AParent: TWinControl; ARaceItem: TRaceItem): TCustomRaceEngine;
+    class function CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
   end;
 
 var
@@ -46,7 +49,7 @@ var
 implementation
 
 uses
-  RaceEngine.TimeTrial;
+  RaceEngine.TimeTrial, SmartTiming.Cache;
 
 class function SmartTimingTools.ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]): TModalResult;
 var
@@ -328,11 +331,14 @@ begin
     Exit(0.0);
   if AField.DataType = ftDatetime then
     Exit(AField.AsDateTime);
+  if AField.DataType = ftWidememo then
+    Exit(StrToDatetime(AField.AsString));
+
   result := StrToDatetime(AField.Text);
 end;
 
 {==============================================================================}
-class procedure SmartTimingTools.FillRaceItemFromDataSet(AParent: TWinControl; ADataSet: TDataSet; ARaceItem: TRaceItem);
+class procedure SmartTimingTools.FillRaceItemFromDataSet(ADataSet: TDataSet; ARaceItem: TRaceItem);
 begin
   ARaceItem.Id := ADataSet.FieldByName('RACEID').AsInteger;
   ARaceItem.RaceType := TRaceType(ADataSet.FieldByName('RACETYPE').AsInteger);
@@ -343,8 +349,6 @@ begin
   ARaceItem.FirstPassingIsLap := ADataSet.FieldByName('FIRSTPASSINGISLAP').AsInteger <> 0;
   ARaceItem.MinLapDuration := ADataSet.FieldByName('MINLAPDURATION').AsInteger;
   ARaceItem.Status := TRaceStatus(ADataSet.FieldByName('STATUS').AsInteger);
-  if ARaceItem.RaceEngine = nil then
-    ARaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(AParent, ARaceItem);
 end;
 
 {==============================================================================}
@@ -454,7 +458,9 @@ begin
         else if SameText(lMethodName, 'OnGetTimeFromValue') then
           AColumn.Field.OnGetText := OnGetTimeFromValue
         else if SameText(lMethodName, 'OnGetRaceStatus') then
-          AColumn.Field.OnGetText := OnGetRaceStatus;
+          AColumn.Field.OnGetText := OnGetRaceStatus
+        else if SameText(lMethodName, 'OnGetTxId') then
+          AColumn.Field.OnGetText := OnGetTxId;
       end;
     end;
   end;
@@ -478,10 +484,31 @@ begin
     Exit;
   end;
 
-  if ASender.DataType = ftDatetime then
-    AText := DateTimeToStr(ASender.AsDateTime)
+  AText := DateTimeToStr(SmartTimingTools.GetFieldAsDatetime(ASender, 0.0));
+end;
+
+{==============================================================================}
+class function SmartTimingTools.GetFieldAsDatetime(AField: TField; ADefaultIfNull: TDatetime): TDatetime;
+var
+  lStringValue: string;
+begin
+  if AField.IsNull then
+    Exit(ADefauLtIfNull);
+
+  case AField.DataType of
+  ftString, ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftFmtMemo, ftFixedChar, ftWideString, ftVariant, ftFixedWideChar, ftWideMemo:
+    begin
+      lStringValue := VarToStr(AField.AsVariant);
+      if not TryStrToDateTime(lStringValue, result) then
+        result := ISOTimeStrToDateTime(lStringValue);
+    end;
+  ftSmallint, ftInteger, ftWord, ftFloat, ftCurrency, ftLargeint, ftLongWord, ftShortint, ftExtended, ftSingle:
+    Exit(AField.AsExtended);
+  ftDate, ftTime, ftDateTime, ftTimeStamp:
+    Exit(AField.AsDateTime);
   else
-    AText := ASender.AsString;
+    Exit(ADefauLtIfNull);
+  end;
 end;
 
 {==============================================================================}
@@ -494,6 +521,29 @@ begin
 end;
 
 {==============================================================================}
+class function SmartTimingTools.ISOTimeStrToDateTime(const AStr: string): TDateTime;
+var
+  lYear: Word;
+  lMonth: Word;
+  lDay: Word;
+  lHour: Word;
+  lMinute: Word;
+  lSecond: Word;
+  lMSec: Word;
+begin
+  lYear := StrToInt(Copy(AStr, 1, 4));
+  lMonth := StrToInt(Copy(AStr, 6, 2));
+  lDay := StrToInt(Copy(AStr, 9, 2));
+  lHour := StrToInt(Copy(AStr, 12, 2));
+  lMinute := StrToInt(Copy(AStr, 15, 2));
+  lSecond := StrToInt(Copy(AStr, 18, 2));
+  if (Length(AStr) >= 21) and (AStr[20] = '.') then
+    lMSec := StrToInt(Copy(AStr, 21, 3))
+  else
+    lMSec := 0;
+  Result := EncodeDateTime(lYear, lMonth, lDay, lHour, lMinute, lSecond, lMSec);
+end;
+{==============================================================================}
 class procedure SmartTimingTools.OnGetRaceStatus(ASender: TField; var AText: string; ADisplayText: Boolean);
 begin
   if ASender.IsNull then
@@ -503,15 +553,32 @@ begin
 end;
 
 {==============================================================================}
-class function TRaceEngineFactory.CreateRaceEngineForRaceType(AParent: TWinControl; ARaceItem: TRaceItem): TCustomRaceEngine;
+class procedure SmartTimingTools.OnGetTxId(ASender: TField; var AText: string; ADisplayText: Boolean);
+var
+  lShortId: integer;
+begin
+  if ASender.IsNull then
+  begin
+    AText := '';
+    Exit;
+  end;
+  lShortId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(ASender.AsString);
+  if lShortId < 0 then
+    AText := ASender.AsString
+  else
+    AText := lShortId.ToString;
+end;
+
+{==============================================================================}
+class function TRaceEngineFactory.CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
 begin
   case ARaceItem.RaceType of
   rtIndividualTimeTrial:
-    Exit(TTimeTrialRaceEngine.Create(AParent, ARaceItem));
+    Exit(TTimeTrialRaceEngine.Create(AParent, AEvent, ARaceItem));
   rtTeamTimeTrial:
-    Exit(TTeamTimeTrialRaceEngine.Create(AParent, ARaceItem));
+    Exit(TTeamTimeTrialRaceEngine.Create(AParent, AEvent, ARaceItem));
   else
-    Exit(TCustomRaceEngine.Create(AParent, ARaceItem));
+    Exit(TCustomRaceEngine.Create(AParent, AEvent, ARaceItem));
   end;
 end;
 

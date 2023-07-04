@@ -56,8 +56,12 @@ type
     FMyLapsParser: TMyLapsP3MessageParser;
     procedure PostMessage;
 
+  protected
+    FBoundPortMin: Integer;
+    FBoundPortMax: Integer;
+
   public
-    constructor Create(ADecoder: TDecoder; AServerPort: Word; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent); reintroduce;
+    constructor Create(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent); reintroduce;
     destructor Destroy; override;
     procedure Execute; override;
     property MyLapsP3MessageParser: TMyLapsP3MessageParser read FMyLapsParser write FMyLapsParser;
@@ -668,11 +672,13 @@ end;
 {$ENDIF}
 
 {==============================================================================}
-constructor TMyLapsP3Listener.Create(ADecoder: TDecoder; AServerPort: Word; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent);
+constructor TMyLapsP3Listener.Create(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent);
 begin
-  inherited Create(ADecoder, AServerPort, AOnStatus, AOnPassing);
+  inherited Create(ADecoder, AOnStatus, AOnPassing);
 
-  FServerPort := AServerPort;
+  FServerPort := cMyLapsDefaultOperatingPort;
+  FBoundPortMin := cMyLapsDefaultOperatingPort + 1;
+  FBoundPortMax := FBoundPortMin + 10;
 
   FMyLapsParser := TMyLapsP3MessageParser.Create;
   FMyLapsParser.OnStatusReceived := AOnStatus;
@@ -697,7 +703,13 @@ begin
   repeat
     try
       if not FTcpClient.Connected then
+      begin
+        FTcpClient.BoundPortMin := FBoundPortMin;
+        FTcpClient.BoundPortMax := FBoundPortMax;
+        FTcpClient.BoundPort := FBoundPortMin;
+
         FTcpClient.Connect(FDecoder.Address, FServerPort);
+      end;
 
       InByte := FTcpClient.IOHandler.ReadByte;
       FNewData := FNewData + IntToHex(InByte, 2);
@@ -720,10 +732,12 @@ begin
         Synchronize(PostMessage);
       end;
     except
+      // TODO LogOnError(...)
+      Sleep(500);
     end;
   until Terminated;
 
-  if FTcpClient.Connected then
+  if (FTcpClient <> nil) and FTcpClient.Connected then
     FTcpClient.Disconnect;
 end;
 

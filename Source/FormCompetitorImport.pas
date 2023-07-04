@@ -6,7 +6,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Grids,
   SmartTiming.Consts, DataModule, DB, Vcl.ComCtrls, Data.FMTBcd, Data.SqlExpr,
-  Data.DbxSqlite, Datasnap.DBClient, Datasnap.Provider, SqlTimSt;
+  Data.DbxSqlite, Datasnap.DBClient, Datasnap.Provider, SqlTimSt,
+  SmartTiming.Cache;
 
 type
   TFormCompetitorImport = class(TForm)
@@ -44,6 +45,7 @@ type
     function GetIntegerValueFromFileLines(ACol, ARow: integer): Variant;
     function GetStringValueFromFileLines(ACol, ARow: integer): Variant;
     function GetStarttimeValueFromFileLines(ACol, ARow: integer): Variant;
+    function GetChipIdValueFromFileLines(ACol, ARow: integer): Variant;
     function GetMaxCompetitorId: integer;
   public
     { Public-Deklarationen }
@@ -186,6 +188,21 @@ begin
 end;
 
 {==============================================================================}
+function TFormCompetitorImport.GetChipIdValueFromFileLines(ACol, ARow: integer): Variant;
+var
+  lStringValue: string;
+begin
+  if ACol < 0 then
+    Exit('');
+  lStringValue := StringGridPreview.Cells[ACol, ARow];
+  if lStringValue.IsEmpty then
+    Exit('');
+  if lStringValue[1] in ['0'..'9'] then
+    Exit(TTransponderMappingStore.GetSingleton.GetTransponderIdFromShortId(lStringValue.ToInteger));
+  Exit(lStringValue);
+end;
+
+{==============================================================================}
 function TFormCompetitorImport.GetStringValueFromFileLines(ACol, ARow: integer): Variant;
 begin
   Exit(StringGridPreview.Cells[ACol, ARow]);
@@ -298,6 +315,7 @@ const
 var
   i: integer;
   lCompetitorId: integer;
+  lTxMapper: TTransponderMappingStore;
 
   procedure FillValue(const AFieldName, AFieldTitle: string; AReadFunction: TFnReadFunction; ADefault: Variant);
   var
@@ -316,6 +334,7 @@ begin
   ProgressBar.Visible := true;
   ProgressBar.Max := FFileLines.Count;
   lCompetitorId := GetMaxCompetitorId;
+  lTxMapper := TTransponderMappingStore.GetSingleton;
   MainDataModule.ClientDataSetCompetitors.Active := true;
 
   for i := 1 to FFileLines.Count - 1 do
@@ -331,7 +350,7 @@ begin
     FillValue('NATIONALITY', cFieldTitleNationality, GetStringValueFromFileLines, null);
     FillValue('UCIID', cFieldTitleUCIID, GetStringValueFromFileLines, null);
     FillValue('STARTTIME',cFieldTitleStarttime, GetStarttimeValueFromFileLines, 0);
-    FillValue('TRANSPONDERID', cFieldTitleTransponder, GetIntegerValueFromFileLines, -1);
+    FillValue('CHIPID', cFieldTitleTransponder, GetChipIdValueFromFileLines, -1);
     FillValue('HANDICAPFACTOR', cFieldTitleHandicapFactor, GetIntegerValueFromFileLines, 100);
     MainDataModule.ClientDataSetCompetitors.Post;
     LabelProgress.Caption := Format('%d von %d importiert', [i, FFileLines.Count]);

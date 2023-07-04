@@ -184,7 +184,7 @@ begin
   lMappingCache.Lock;
   lShortIdList := lMappingCache.ShortIdToTxId;
   try
-    FFirstGap := 1;
+    FFirstGap := String(EditStartingNumber.Text).ToInteger;
     for lListId in lShortIdList.Keys do
     begin
       if lListId >= FFirstGap then

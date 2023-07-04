@@ -71,4 +71,8 @@ object MainDataModule: TMainDataModule
     Left = 60
     Top = 403
   end
+  object DataSourceResults: TDataSource
+    Left = 520
+    Top = 312
+  end
 end

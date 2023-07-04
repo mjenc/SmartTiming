@@ -23,19 +23,19 @@ type
     LabelReadCount: TLabel;
     ButtonFillGaps: TButton;
     RadioGroup1: TRadioGroup;
-    RadioButtonAll: TRadioButton;
-    RadioButtonCriticals: TRadioButton;
-    RadioButtonGaps: TRadioButton;
-    RadioButtonWeaks: TRadioButton;
     ButtonCopyListToClipboard: TButton;
+    CheckBoxCopyGaps: TCheckBox;
+    CheckBoxWeak: TCheckBox;
+    CheckBoxHealthy: TCheckBox;
+    Button1: TButton;
     procedure ButtonStartReceivingClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure ButtonClearListClick(Sender: TObject);
     procedure ListViewTransponderBatteryStatusCompare(Sender: TObject; Item1, Item2: TListItem; Data: Integer; var Compare: Integer);
     procedure ButtonFillGapsClick(Sender: TObject);
-    procedure RadioButtonAllClick(Sender: TObject);
     procedure ButtonCopyListToClipboardClick(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
   private
     FRunning: boolean;
     FSavedPassingReceiveEvent: TDecoderPassingReceivedEvent;
@@ -44,7 +44,6 @@ type
 
     procedure OnReceivePassing(APassing: TPassing);
     function FindListItem(ATransponderID: integer): TListItem;
-    procedure RefreshList;
   public
 
 
@@ -55,6 +54,11 @@ implementation
 
 {$R *.dfm}
 
+
+resourcestring
+  cGapNotFunctional = 'Lücken / Ohne Funktion';
+  cWeak = 'Schwacher Batteriestatus';
+  cHealthy = 'Gesund';
 
 {==============================================================================}
 procedure TFormBatteryCheck.ButtonStartReceivingClick(Sender: TObject);
@@ -174,35 +178,65 @@ begin
 end;
 
 {==============================================================================}
-procedure TFormBatteryCheck.RadioButtonAllClick(Sender: TObject);
+procedure TFormBatteryCheck.Button1Click(Sender: TObject);
+type
+  TReportStep = (rsGaps, rsWeak, rsHealthy);
+var
+  lText: string;
+  i: integer;
+  lStep: TReportStep;
+  lGapCount: integer;
+  lWeakCount: integer;
+  lHealthyCount: integer;
 begin
-  try
-    if RadioButtonAll.Checked then
+  ButtonFillGapsClick(Sender);
+
+  lText := '';
+  lGapCount := 0;
+  lWeakCount := 0;
+  lHealthyCount := 0;
+
+  for lStep := rsGaps to rsHealthy do
+  begin
+    if lStep = rsGaps then
+      lText := lText + cGapNotFunctional + #13#10
+    else if lStep = rsWeak then
+      lText := lText + cWeak + #13#10
+    else if lStep = rsHealthy then
+      lText := lText + cHealthy + #13#10;
+
+    for i := 0 to ListViewTransponderBatteryStatus.GetCount - 1 do
     begin
-      Exit;
+      if (lStep = rsGaps) and (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '-') then
+      begin
+        Inc(lGapCount);
+        lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+        Continue;
+      end;
+      if (lStep = rsWeak) and (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '1') then
+      begin
+        Inc(lWeakCount);
+        lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+        Continue;
+      end;
+      if (lStep = rsHealthy)  and  (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '0') then
+      begin
+        Inc(lHealthyCount);
+        lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+      end;
     end;
-    if RadioButtonAll.Checked then
-    begin
-      Exit;
-    end;
-    if RadioButtonAll.Checked then
-    begin
-      Exit;
-    end;
-    if RadioButtonAll.Checked then
-    begin
-      Exit;
-    end;
-  finally
-    RefreshList;
+
+     lText := lText + '************************************' + #13#10;
   end;
+
+  lText := lText + 'Zusammenfassung'#13#10;
+  lText := lText + '==============='#13#10;
+  lText := lText + cGapNotFunctional + ': ' +lGapCount.ToString + #13#10;
+  lText := lText + cWeak + ': ' +lWeakCount.ToString + #13#10;
+  lText := lText + cHealthy + ': ' +lHealthyCount.ToString + #13#10;
+  Clipboard.AsText := lText;
 end;
 
-{==============================================================================}
-procedure TFormBatteryCheck.RefreshList;
-begin
-  // TODO ... but what?
-end;
 
 {==============================================================================}
 procedure TFormBatteryCheck.ButtonClearListClick(Sender: TObject);
@@ -221,7 +255,20 @@ begin
   lText := '';
 
   for i := 0 to ListViewTransponderBatteryStatus.GetCount - 1 do
-    lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+  begin
+    if CheckBoxCopyGaps.Checked and (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '-') then
+    begin
+      lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+      Continue;
+    end;
+    if CheckBoxWeak.Checked and (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '1') then
+    begin
+      lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+      Continue;
+    end;
+    if CheckBoxHealthy.Checked and  (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '0') then
+      lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+  end;
 
   Clipboard.AsText := lText;
 end;

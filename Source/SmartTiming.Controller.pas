@@ -3,9 +3,9 @@ unit SmartTiming.Controller;
 interface
 
 uses
-  Windows, MMSystem, SysUtils,
+  Windows, MMSystem, SysUtils, Generics.Collections,
   SmartTiming.Consts, SmartTiming.DecoderEngine, DecoderInterface, SmartTiming.Tools,
-  DataModule,
+  DataModule, SmartTiming.Event,
   RaceEngine.Custom;
 
 type
@@ -15,6 +15,7 @@ type
     FPlayPassingSound: boolean;
     FDatabasePath: string;
     FEventDataObject: TEventDataObject;
+    FRaceList: TDictionary<integer, TRaceItem>;
 
     procedure OnStatusReceived(AStatus: TDecoderStatus);
     procedure OnPassingReceived(APassing: TPassing);
@@ -24,6 +25,7 @@ type
 
     procedure LoadSettings;
     procedure LoadEventData(const AEventPath: string);
+    procedure LoadRaces;
     procedure SaveEvent(AEventDataObject: TEventDataObject); overload;
     procedure SaveEvent(const AOrganizer, ATitle: string; ADateFrom, ADateTo: TDatetime); overload;
     procedure RestorePassings;
@@ -32,6 +34,7 @@ type
     procedure ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
 
     property Event: TEventDataObject read FEventDataObject;
+    property RaceList: TDictionary<integer, TRaceItem> read FRaceList;
   end;
 
 var
@@ -52,12 +55,19 @@ begin
   FDecoderEngine.NewStatusReceived := OnStatusReceived;
 
   LoadSettings;
+
+  FRaceList := TDictionary<integer, TRaceItem>.Create;
 end;
 
 {==============================================================================}
 destructor TSmartTimingController.Destroy;
+var
+  lRaceItem: TRaceItem;
 begin
   try
+    for lRaceItem in FRaceList.Values do
+      FreeAndNil(lRaceItem);
+    FreeAndNil(FRaceList);
     FreeAndNil(FEventDataObject);
   finally
     inherited Destroy;
@@ -67,9 +77,7 @@ end;
 {==============================================================================}
 procedure TSmartTimingController.LoadSettings;
 begin
-//  Sound Effect by <a href="https://pixabay.com/users/edr-1177074/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=music&amp;utm_content=8333">EdR</a> from <a href="https://pixabay.com//?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=music&amp;utm_content=8333">Pixabay</a>
-//  Sound Effect by <a href="https://pixabay.com/users/irinairinafomicheva-25140203/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=music&amp;utm_content=13691">irinairinafomicheva</a> from <a href="https://pixabay.com//?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=music&amp;utm_content=13691">Pixabay</a>
-//  Sound Effect from <a href="https://pixabay.com/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=music&amp;utm_content=86247">Pixabay</a>
+//  Sound Effect by https://pixabay.com
   FPlayPassingSound := SmartTimingTools.RegistryReadBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'BeepOnPassing', true);
 end;
 
@@ -80,8 +88,54 @@ begin
   MainDataModule.OpenDatabase(FDatabasePath);
   FEventDataObject.RefreshFromDatabase;
   GFormMain.RefreshControlsFromEventDataObject(FEventDataObject);
-  ResetRacesDataSet;
   SaveEvent(FEventDataObject);
+
+  MainDataModule.RefreshRacesDataSet(FEventDataObject.EventId);
+  ResetRacesDataSet;
+  LoadRaces;
+  RestorePassings;
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.LoadRaces;
+var
+  lRaceItem: TRaceItem;
+  lRaceId: integer;
+  i: integer;
+  lVisited: TList<string>;
+begin
+  lVisited := TList<string>.Create;
+  try
+    MainDataModule.SQLDataSetRaces.Refresh;
+    MainDataModule.DataSourceRaces.DataSet.Refresh;
+    MainDataModule.DataSourceRaces.DataSet.First;
+    while not MainDataModule.DataSourceRaces.DataSet.Eof do
+    begin
+      lRaceId := MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').Value;
+      if not FRaceList.TryGetValue(lRaceId, lRaceItem) then
+      begin
+        lRaceItem := TRaceItem.Create;
+        FRaceList.Add(lRaceId, lRaceItem);
+      end;
+
+      SmartTimingTools.FillRaceItemFromDataSet(MainDataModule.DataSourceRaces.DataSet, lRaceItem);
+      if lRaceItem.RaceEngine = nil then
+        lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(GFormMain.PanelPassingGrid, FEventDataObject, lRaceItem);
+
+      lVisited.Add(lRaceItem.Id.ToString);
+      MainDataModule.DataSourceRaces.DataSet.Next;
+    end;
+
+    for i in FRaceList.Keys do
+    begin
+      if lVisited.IndexOf(lRaceItem.Id.ToString) >= 0 then
+        Continue;
+      FRaceList.Remove(i);
+    end;
+
+  finally
+    FreeAndNil(lVisited);
+  end;
 end;
 
 {==============================================================================}
@@ -113,13 +167,14 @@ var
   lRaceIds: TArray<integer>;
   lRaceId: integer;
   lPassings: TArray<TPassing>;
-  lPassing: TPassing;
+  i: integer;
 begin
   lRaceIds := GFormMain.GetAllRaceIds;
   for lRaceId in lRaceIds do
   begin
     lPassings := MainDataModule.GetAllPassingsForRaceId(lRaceId);
-
+    for i := 0 to Length(lPassings) - 1 do
+      GFormMain.AddPassingForRaceId(lRaceId, lPassings[i]);
   end;
 end;
 
@@ -133,16 +188,14 @@ end;
 procedure TSmartTimingController.ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
 var
   lPassing: TPassing;
-  lRaceItem: TRaceItem;
 begin
   MainDataModule.SetRaceStatus(ARaceId, ARaceStatus);
 
   lPassing.PassingNumber := 0;
   lPassing.ChipId := '';
-  lPassing.TxId := 0 - Ord(ARaceStatus);
   lPassing.PassingTime := Now;
   lPassing.SignalStrength := 100;
-  lPassing.Hits := 1;
+  lPassing.Hits := 0 - Ord(ARaceStatus);
   lPassing.Flags := 2;
   lPassing.Sport := sSportsIdCycling;
   lPassing.DecoderId := 'SYSTEM';
@@ -163,13 +216,14 @@ end;
 procedure TSmartTimingController.OnPassingReceived(APassing: TPassing);
 var
   lRaceId: integer;
+  lCompetitorId: integer;
 begin
   if FPlayPassingSound then
     PlaySound('PassingBeep', 0, SND_NOSTOP or SND_NOWAIT or SND_RESOURCE or SND_ASYNC or SND_NODEFAULT);
 
   MainDataModule.AddPassingToDatabase(APassing, lRaceId);
 
-  lRaceId := MainDataModule.GetRaceIdForPassing(APassing);
+  lRaceId := MainDataModule.GetRaceIdForPassing(APassing, lCompetitorId);
   GFormMain.AddPassingForRaceId(lRaceId, APassing);
 end;
 

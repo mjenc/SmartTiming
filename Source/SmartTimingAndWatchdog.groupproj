@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{D7DEA042-212F-4D5B-A6E6-E258D6CAA620}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="SmartDecoderWatchDog.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SmartTiming.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="SmartDecoderWatchDog">
+        <MSBuild Projects="SmartDecoderWatchDog.dproj"/>
+    </Target>
+    <Target Name="SmartDecoderWatchDog:Clean">
+        <MSBuild Projects="SmartDecoderWatchDog.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SmartDecoderWatchDog:Make">
+        <MSBuild Projects="SmartDecoderWatchDog.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SmartTiming">
+        <MSBuild Projects="SmartTiming.dproj"/>
+    </Target>
+    <Target Name="SmartTiming:Clean">
+        <MSBuild Projects="SmartTiming.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SmartTiming:Make">
+        <MSBuild Projects="SmartTiming.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="SmartDecoderWatchDog;SmartTiming"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="SmartDecoderWatchDog:Clean;SmartTiming:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="SmartDecoderWatchDog:Make;SmartTiming:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
