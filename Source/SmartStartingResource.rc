@@ -1,0 +1,3 @@
+LastSecondsBeep SOUND "..\Resources\LastSecondsBeep.wav"
+StartBeep SOUND "..\Resources\StartBeep.wav"
+

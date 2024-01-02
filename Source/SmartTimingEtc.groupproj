@@ -9,6 +9,9 @@
         <Projects Include="SmartTiming.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="SmartStarting.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -35,14 +38,23 @@
     <Target Name="SmartTiming:Make">
         <MSBuild Projects="SmartTiming.dproj" Targets="Make"/>
     </Target>
+    <Target Name="SmartStarting">
+        <MSBuild Projects="SmartStarting.dproj"/>
+    </Target>
+    <Target Name="SmartStarting:Clean">
+        <MSBuild Projects="SmartStarting.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SmartStarting:Make">
+        <MSBuild Projects="SmartStarting.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="SmartDecoderWatchDog;SmartTiming"/>
+        <CallTarget Targets="SmartDecoderWatchDog;SmartTiming;SmartStarting"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="SmartDecoderWatchDog:Clean;SmartTiming:Clean"/>
+        <CallTarget Targets="SmartDecoderWatchDog:Clean;SmartTiming:Clean;SmartStarting:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="SmartDecoderWatchDog:Make;SmartTiming:Make"/>
+        <CallTarget Targets="SmartDecoderWatchDog:Make;SmartTiming:Make;SmartStarting:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
