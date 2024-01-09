@@ -16,11 +16,9 @@ uses
   DataModule, SimpleDS, uSuperObject, System.ImageList, Vcl.ImgList,
   SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
   VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
-  VCLTee.Chart, SmartTiming.Event;
+  VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider;
 
 type
-  TMyDBNavigator = class(TDBNavigator);
-
   TFormMain = class(TForm)
     PanelTitle: TPanel;
     LabelTitle: TLabel;
@@ -54,7 +52,6 @@ type
     PanelEventRaces: TPanel;
     Label4: TLabel;
     ButtonSaveEvent: TButton;
-    DBNavigatorRaces: TDBNavigator;
     DBGridRaces: TDBGrid;
     TabSheetCompetitors: TTabSheet;
     PanelCompetitorFilters: TPanel;
@@ -116,6 +113,11 @@ type
     ButtonImportCompetitors: TButton;
     PopupMenuCompetitorRemoveFromRace: TMenuItem;
     ButtonPrintParticipantList: TButton;
+    DBNavigatorRaces: TDBNavigator;
+    PanelRacesGridButtons: TPanel;
+    PanelCompetitorsGridButtons: TPanel;
+    PanelStandingsControls: TPanel;
+    CheckBoxRankingGroupedByClass: TCheckBox;
     procedure DatePickerFromChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -155,6 +157,11 @@ type
     procedure MenuItemReportsClick(Sender: TObject);
     procedure PopupMenuCompetitorActionsPopup(Sender: TObject);
     procedure ButtonPrintParticipantListClick(Sender: TObject);
+    procedure DBGridCompetitorsDblClick(Sender: TObject);
+    procedure ClientDataSetCompetitorsAfterOpen(DataSet: TDataSet);
+    procedure PanelCompetitorsGridButtonsClick(Sender: TObject);
+    procedure DBGridCompetitorsMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure CheckBoxRankingGroupedByClassClick(Sender: TObject);
 
   private
     FCurrentEventId: integer;
@@ -162,6 +169,7 @@ type
     FFormPassingSimulator: TFormPassingSimulator;
     FFormGenerateTransponderMappings: TFormGenerateTransponderMappings;
     FAutoScrollPassingList: boolean;
+    FRangeSelectStart: Integer;
 
     procedure ReadSettings;
     procedure SetupRacesGrid;
@@ -174,6 +182,7 @@ type
     procedure RaceButtonStatusChange(ARaceStatus: TRaceStatus);
     procedure RefreshFlagButtons(ARaceItem: TRaceItem);
     procedure RefreshAddCompetitorToRaceMenu;
+
   protected
     procedure OnGetRaceType(ASender: TField; var AText: string; ADisplayText: Boolean);
 
@@ -194,6 +203,28 @@ uses
   SmartTiming.Controller, Report.ExcelTemplateFiller;
 
 {$R *.dfm}
+
+{==============================================================================}
+procedure TFormMain.CheckBoxRankingGroupedByClassClick(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
+begin
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  if lRaceItem = nil then
+    Exit;
+  lRaceItem.RaceEngine.RankingGroupedByClass := CheckBoxRankingGroupedByClass.Checked;
+end;
+
+{==============================================================================}
+procedure TFormMain.ClientDataSetCompetitorsAfterOpen(DataSet: TDataSet);
+var
+  lField: TField;
+begin
+  lField := DataSet.FieldByName('COMPETITORID');
+  if lField = nil then
+    Exit;
+  lField.ProviderFlags := [pfInKey];
+end;
 
 {==============================================================================}
 procedure TFormMain.ClientDataSetRacesBeforeRefresh(DataSet: TDataSet);
@@ -232,9 +263,25 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.DBGridCompetitorsDblClick(Sender: TObject);
+var
+ lCompetitorDetailsForm: TFormCompetitorDetails;
+begin
+  DataSourceCompetitors.DataSet.Edit;
+
+  lCompetitorDetailsForm := TFormCompetitorDetails.Create(nil, DataSourceCompetitors, FCurrentEventId, false);
+  try
+    if lCompetitorDetailsForm.ShowModal <> mrOK then
+      Abort;
+  finally
+    FreeAndNil(lCompetitorDetailsForm);
+  end;
+end;
+
+{==============================================================================}
 procedure TFormMain.DBGridCompetitorsKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  if (Shift <> [ssCtrl]) or not (Key in [Ord('A'), Ord('a')]) then
+  if not ((Shift = [ssCtrl]) and (Key in [Ord('A'), Ord('a')])) then
     Exit;
 
   DBGridCompetitors.DataSource.DataSet.DisableControls;
@@ -250,6 +297,59 @@ begin
     DBGridCompetitors.DataSource.DataSet.EnableControls;
   end;
   DBGridCompetitors.Refresh;
+end;
+
+{==============================================================================}
+procedure TFormMain.DBGridCompetitorsMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  lGridCoord: TGridCoord;
+  lLow: Integer;
+  lHigh: Integer;
+  lRow: Integer;
+begin
+  if not ((Shift = [ssShift]) and (Button = mbLeft)) then
+    Exit;
+
+  lGridCoord := DBGridCompetitors.MouseCoord(X,Y);
+  if lGridCoord.Y < 0 then
+    Exit;
+
+//  if DBGridCompetitors.SelectedRows.< 0 then
+    Exit;
+  if FRangeSelectStart < 0 then
+  begin
+    FRangeSelectStart := lGridCoord.Y;
+    Exit;
+  end;
+
+  if lGridCoord.Y >= FRangeSelectStart then
+  begin
+    lLow := FRangeSelectStart;
+    lHigh := lGridCoord.Y;
+  end
+  else
+  begin
+    lHigh := FRangeSelectStart;
+    lLow := lGridCoord.Y;
+  end;
+
+  DBGridCompetitors.DataSource.DataSet.DisableControls;
+  try
+    DBGridCompetitors.SelectedRows.Clear;
+    DBGridCompetitors.DataSource.DataSet.First;
+    lRow := 0;
+    while (lRow <= lHigh) and (not DBGridCompetitors.DataSource.DataSet.Eof) do
+    begin
+      if lRow >= lLow then
+        DBGridCompetitors.SelectedRows.CurrentRowSelected := true;
+      Inc(lRow);
+      DBGridCompetitors.DataSource.DataSet.Next;
+    end;
+  finally
+    DBGridCompetitors.DataSource.DataSet.EnableControls;
+  end;
+  DBGridCompetitors.Refresh;
+  FRangeSelectStart := -1;
 end;
 
 {==============================================================================}
@@ -301,8 +401,8 @@ begin
 
   lCompetitorDetailsForm := TFormCompetitorDetails.Create(nil, DataSourceCompetitors, FCurrentEventId, Button = nbInsert);
   try
-    lCompetitorDetailsForm.ShowModal;
-    Abort;
+    if lCompetitorDetailsForm.ShowModal <> mrOK then;
+      Abort;
   finally
     FreeAndNil(lCompetitorDetailsForm);
   end;
@@ -402,17 +502,21 @@ procedure TFormMain.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FDBCheckBoxRacesFirstPassing);
   FreeAndNil(FFormPassingSimulator);
+  FreeAndNil(GSmartTimingController);
 end;
 
 {==============================================================================}
 procedure TFormMain.FormShow(Sender: TObject);
 begin
+  FRangeSelectStart := -1;
   SetupRacesGrid;
 end;
 
 {==============================================================================}
 procedure TFormMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
+  TGridFormatProvider.SaveSettings(DBGridCompetitors);
+  TGridFormatProvider.SaveSettings(DBGridRaces);
   ClientDataSetRacesBeforeRefresh(MainDataModule.ClientDataSetRaces);
   MainDataModule.WriteEventHistory;
 end;
@@ -520,6 +624,8 @@ var
   lColumn: TColumn;
 begin
   MainDataModule.RefreshRacesDataSet(FCurrentEventId);
+
+  TGridFormatProvider.LoadSettings(DBGridRaces, cDefaultListFormatRaces);
   for i := 0 to DBGridRaces.Columns.Count - 1 do
   begin
     lColumn := DBGridRaces.Columns[i];
@@ -591,6 +697,7 @@ begin
   SQLDataSetCompetitors.CommandText := 'SELECT * FROM COMPETITORS ORDER BY CLASS, BIB';
   SQLDataSetCompetitors.Active := true;
   ClientDataSetCompetitors.Active := True;
+  TGridFormatProvider.LoadSettings(DBGridCompetitors, cDefaultListFormatCompetitors);
   for i := 0 to DBGridCompetitors.Columns.Count - 1 do
   begin
     lColumn := DBGridCompetitors.Columns[i];
@@ -892,6 +999,11 @@ begin
   if (ListBoxRaces.ItemIndex < 0) and (ListBoxRaces.Count > 0) then
     ListBoxRaces.ItemIndex := 0;
   ListBoxRacesTimingClick(nil);
+end;
+
+procedure TFormMain.PanelCompetitorsGridButtonsClick(Sender: TObject);
+begin
+
 end;
 
 {==============================================================================}

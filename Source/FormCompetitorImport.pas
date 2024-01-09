@@ -315,7 +315,6 @@ const
 var
   i: integer;
   lCompetitorId: integer;
-  lTxMapper: TTransponderMappingStore;
 
   procedure FillValue(const AFieldName, AFieldTitle: string; AReadFunction: TFnReadFunction; ADefault: Variant);
   var
@@ -334,7 +333,7 @@ begin
   ProgressBar.Visible := true;
   ProgressBar.Max := FFileLines.Count;
   lCompetitorId := GetMaxCompetitorId;
-  lTxMapper := TTransponderMappingStore.GetSingleton;
+  TTransponderMappingStore.GetSingleton;
   MainDataModule.ClientDataSetCompetitors.Active := true;
 
   for i := 1 to FFileLines.Count - 1 do

@@ -28,7 +28,7 @@ type
     FDatabaseName: string;
 
     function GetMaxIdOf(const ATableName, AColumnName: string): Integer;
-
+    function GetSQLValueFromVariant(AValue: Variant): string;
   public
     procedure LoadEventHistory(AStrings: TStrings);
     procedure PushEventToHistory(const ATitle: string);
@@ -59,8 +59,8 @@ type
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
     procedure GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
 
-    function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer): integer;
-    procedure UpdateParticipantValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
+    function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer; var AStartTime: TDatetime): integer;
+    procedure UpdateParticipationValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
 
     procedure ImportTxMapping(const AFileName: string);
     procedure ExportTxMapping(const AFileName: string);
@@ -69,6 +69,7 @@ type
 
     procedure AddPassingToDatabase(APassing: TPassing; var ARaceId: integer);
 
+    class function GetJSONFromDataSet(ADataSet: TDataSet): string;
     property DatabasePathAndName: string read FDatabaseName;
   end;
 
@@ -82,7 +83,7 @@ implementation
 {$R *.dfm}
 
 uses
-  SmartTiming.Cache;
+  SmartTiming.Cache, Tools.SuperObject;
 
 {==============================================================================}
 procedure TMainDataModule.DataModuleCreate(Sender: TObject);
@@ -530,7 +531,7 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer): integer;
+function TMainDataModule.GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer; var AStartTime: TDatetime): integer;
 var
   lResultSet: TDataSet;
   lValue: string;
@@ -538,7 +539,7 @@ begin
   result := 0;
   AParticipationId := -1;
 
-  SQLConnection.Execute('SELECT LAPS, PARTICIPATIONID FROM PARTICIPATION P INNER JOIN COMPETITOR C ON P.COMPETITORID = C.COMPETITORID WHERE P.RACEID = ' + ARaceId.ToString + ' AND C.CHIPID = ' + QuotedStr(AChipId), nil, lResultSet);
+  SQLConnection.Execute('SELECT LAPS, PARTICIPATIONID, P.STARTTIME FROM PARTICIPATION P INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID WHERE P.RACEID = ' + ARaceId.ToString + ' AND C.CHIPID = ' + QuotedStr(AChipId), nil, lResultSet);
   try
     if lResultSet.IsEmpty then
       Exit;
@@ -547,38 +548,50 @@ begin
     if lResultSet.Eof then
       Exit;
 
-    result := lResultSet.Fields[0].AsInteger;
-    AParticipationId := lResultSet.Fields[1].AsInteger;
+    if lResultSet.Fields[0].IsNull then
+      result := 0
+    else
+      result := lResultSet.Fields[0].AsInteger;
+    if not lResultSet.Fields[1].IsNull then
+      AParticipationId := lResultSet.Fields[1].AsInteger;
+    AStartTime := SmartTimingTools.FieldAsDatetime(lResultSet.Fields[2]);
   finally
     FreeAndNil(lResultSet);
   end;
 end;
 
 {==============================================================================}
-procedure TMainDataModule.UpdateParticipantValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
+function TMainDataModule.GetSQLValueFromVariant(AValue: Variant): string;
+begin
+  case VarType(AValue) of
+  varNull, varEmpty:
+    result := 'NULL';
+  varDate:
+    result := FormatDatetime('yyyy-mm-dd hh:mm:ss.zzz', AValue).QuotedString;
+  else
+    result := VarToStr(AValue).QuotedString;
+  end;
+
+end;
+
+{==============================================================================}
+procedure TMainDataModule.UpdateParticipationValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
 var
-  lParams: TParams;
-  lValue: TParam;
   i: integer;
   lCmd: string;
 begin
-  lParams := TParams.Create;
-  try
-    lCmd := 'UPDATE PARTICIPANTS SET ';
-    for i := 0 to High(AFields) do
-    begin
-      lCmd := lCmd + AFields[i] + '=?,';
-      lValue := lParams.AddParameter;
-      lValue.Value := AValues[i];
-    end;
-    lCmd[Length(lCmd)] := ' ';
-    lCmd := lCmd + ' WHERE PARTICIPANTID = ?';
-    lValue := lParams.AddParameter;
-    lValue.Value := AParticipationId;
-    MainDataModule.SQLConnection.Execute(lCmd, lParams);
-  finally
-    FreeAndNil(lParams);
+  if length(AFields) = 0 then
+    Exit;
+
+  lCmd := 'UPDATE PARTICIPATION SET ';
+  for i := 0 to High(AFields) do
+  begin
+    lCmd := lCmd +
+      AFields[i] + ' = ' + GetSQLValueFromVariant(AValues[i]) + ',';
   end;
+  lCmd[Length(lCmd)] := ' ';
+  lCmd := lCmd + ' WHERE PARTICIPATIONID = ' + AParticipationId.ToString;
+  MainDataModule.SQLConnection.Execute(lCmd, nil);
 end;
 
 {==============================================================================}
@@ -787,6 +800,36 @@ begin
   finally
     lMappingStore.Unlock;
   end;
+end;
+
+{==============================================================================}
+class function TMainDataModule.GetJSONFromDataSet(ADataSet: TDataSet): string;
+var
+  lRowIdx: Integer;
+  lColIdx: Integer;
+  lRow: ISuperObject;
+  lField: TField;
+begin
+  result := '{"list":[';
+
+  ADataSet.First;
+  while not ADataSet.Eof do
+  begin
+    lRow := TSuperObject.Create;
+    for lColIdx := 0 to ADataSet.FieldCount - 1 do
+    begin
+      lField := ADataSet.FieldList[lColIdx];
+      if SameText(lField.FieldName, 'STARTTIME') then
+        lRow.D[lField.FieldName] := SmartTimingTools.GetFieldAsDatetime(lField, 0)
+      else
+        lRow.S[lField.FieldName] := lField.AsString;
+    end;
+    result := result + lRow.AsJSon;
+    ADataSet.Next;
+    if not ADataSet.Eof then
+      result := result + ',';
+  end;
+  result := result + ']}';
 end;
 
 end.

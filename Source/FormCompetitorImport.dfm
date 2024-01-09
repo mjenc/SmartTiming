@@ -2,8 +2,8 @@ object FormCompetitorImport: TFormCompetitorImport
   Left = 0
   Top = 0
   Caption = 'Teilnehmer importieren'
-  ClientHeight = 488
-  ClientWidth = 819
+  ClientHeight = 496
+  ClientWidth = 821
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,14 +15,16 @@ object FormCompetitorImport: TFormCompetitorImport
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 447
-    Width = 819
+    Top = 455
+    Width = 821
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitTop = 447
+    ExplicitWidth = 819
     DesignSize = (
-      819
+      821
       41)
     object LabelProgress: TLabel
       Left = 348
@@ -31,7 +33,7 @@ object FormCompetitorImport: TFormCompetitorImport
       Height = 15
     end
     object ButtonOK: TButton
-      Left = 645
+      Left = 647
       Top = 8
       Width = 75
       Height = 25
@@ -41,9 +43,10 @@ object FormCompetitorImport: TFormCompetitorImport
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonOKClick
+      ExplicitLeft = 645
     end
     object ButtonCancel: TButton
-      Left = 733
+      Left = 735
       Top = 8
       Width = 75
       Height = 25
@@ -52,6 +55,7 @@ object FormCompetitorImport: TFormCompetitorImport
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
+      ExplicitLeft = 733
     end
     object ProgressBar: TProgressBar
       Left = 16
@@ -66,13 +70,14 @@ object FormCompetitorImport: TFormCompetitorImport
     Left = 0
     Top = 0
     Width = 249
-    Height = 447
+    Height = 455
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitHeight = 447
     DesignSize = (
       249
-      447)
+      455)
     object Label1: TLabel
       Left = 16
       Top = 11
@@ -84,7 +89,7 @@ object FormCompetitorImport: TFormCompetitorImport
       Left = 13
       Top = 32
       Width = 230
-      Height = 401
+      Height = 409
       Anchors = [akLeft, akTop, akRight, akBottom]
       BorderStyle = bsNone
       ColCount = 2
@@ -96,6 +101,7 @@ object FormCompetitorImport: TFormCompetitorImport
       TabOrder = 0
       OnGetEditText = StringGridFieldMappingGetEditText
       OnSelectCell = StringGridFieldMappingSelectCell
+      ExplicitHeight = 401
     end
   end
   object ComboBoxFileColumns: TComboBox
@@ -119,14 +125,16 @@ object FormCompetitorImport: TFormCompetitorImport
   object PanelGrid: TPanel
     Left = 249
     Top = 0
-    Width = 570
-    Height = 447
+    Width = 572
+    Height = 455
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 3
+    ExplicitWidth = 570
+    ExplicitHeight = 447
     DesignSize = (
-      570
-      447)
+      572
+      455)
     object Label2: TLabel
       Left = 16
       Top = 11
@@ -137,12 +145,14 @@ object FormCompetitorImport: TFormCompetitorImport
     object StringGridPreview: TStringGrid
       Left = 16
       Top = 32
-      Width = 540
-      Height = 401
+      Width = 542
+      Height = 409
       Anchors = [akLeft, akTop, akRight, akBottom]
       ColCount = 8
       FixedCols = 0
       TabOrder = 0
+      ExplicitWidth = 540
+      ExplicitHeight = 401
     end
   end
   object FileOpenDialog: TFileOpenDialog

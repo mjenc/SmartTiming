@@ -76,7 +76,7 @@ begin
   if FIsInsert or FDataSource.DataSet.FieldByName('STARTTIME').IsNull then
   begin
     EditDate.Text := DateToStr(FEventDate);
-    EditTime.Text := FormatDatetime('hh:mm:00', lDateTime);
+    EditTime.Text := FormatDatetime('hh:mm:00', Now);
   end
   else
   begin

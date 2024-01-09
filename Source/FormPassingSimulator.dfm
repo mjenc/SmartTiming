@@ -65,6 +65,7 @@ object FormPassingSimulator: TFormPassingSimulator
     object TabSheetSingleSimulateRace: TTabSheet
       Caption = 'Rennsimulation'
       ImageIndex = 1
+      TabVisible = False
     end
   end
   object SQLDataSetCompetitorsInRace: TSQLDataSet

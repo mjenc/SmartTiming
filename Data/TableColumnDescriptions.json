@@ -297,106 +297,111 @@
                     "position": 7
                 },
                 {
+                    "columnname": "GAP",
+                    "caption": "Diff",
+                    "position": 8
+                },
+                {
                     "columnname": "FINISHTIME",
                     "caption": "Zielzeit",
                     "width": 120,
                     "ongettext": "OnGetTimeFromValue",
                     "fieldtype": "ftDatetime",
                     "align": "taLeftJustify",
-                    "position": 8
+                    "position": 9
                 },
                 {
                     "columnname": "TRANSPONDERID",
                     "caption": "Tx-Id",
                     "align": "taLeftJustify",
                     "width": 50,
-                    "position": 9
+                    "position": 10
                 },
                 {
                     "columnname": "DNS",
                     "caption": "DNS",
                     "width": 30,
-                    "position": 10
+                    "position": 11
                 },
                 {
                     "columnname": "DNF",
                     "caption": "DNF",
                     "width": 30,
-                    "position": 11
+                    "position": 12
                 },
                 {
                     "columnname": "DSQ",
                     "caption": "DSQ",
                     "width": 30,
-                    "position": 12
+                    "position": 13
                 },
                 {
                     "columnname": "CLUB",
                     "caption": "Verein",
                     "align": "taLeftJustify",
                     "width": 200,
-                    "position": 13
+                    "position": 14
                 },
                 {
                     "columnname": "TEAM",
                     "caption": "Team",
                     "align": "taLeftJustify",
                     "width": 200,
-                    "position": 14
+                    "position": 15
                 },
                 {
                     "columnname": "NATIONALITY",
-                    "position": 18,
+                    "position": 16,
                     "invisible": true
                 },
                 {
                     "columnname": "NATIONALITYISO",
-                    "position": 19,
+                    "position": 17,
                     "invisible": true
                 },
                 {
                     "columnname": "UCIID",
-                    "position": 20,
+                    "position": 18,
                     "invisible": true
                 },
                 {
                     "columnname": "HANDICAPFACTOR",
-                    "position": 21,
+                    "position": 19,
                     "invisible": true
                 },
                 {
                     "columnname": "ADDITIONAL1",
-                    "position": 22,
+                    "position": 20,
                     "invisible": true
                 },
                 {
                     "columnname": "ADDITIONAL2",
-                    "position": 23,
+                    "position": 21,
                     "invisible": true
                 },
                 {
                     "columnname": "ADDITIONAL3",
-                    "position": 24,
+                    "position": 22,
                     "invisible": true
                 },
                 {
                     "columnname": "CRITRANKINGVALUE",
-                    "position": 25,
+                    "position": 23,
                     "invisible": true
                 },
                 {
                     "columnname": "PARTICIPATIONID",
-                    "position": 26,
+                    "position": 24,
                     "invisible": true
                 },
                 {
                     "columnname": "PENALTIES",
-                    "position": 27,
+                    "position": 25,
                     "invisible": true
                 },
                 {
                     "columnname": "STARTTIME",
-                    "position": 28,
+                    "position": 26,
                     "invisible": true
                 }
             ]

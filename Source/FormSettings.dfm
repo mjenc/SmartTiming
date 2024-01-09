@@ -2,8 +2,8 @@ object FormSettings: TFormSettings
   Left = 0
   Top = 0
   Caption = 'Einstellungen'
-  ClientHeight = 465
-  ClientWidth = 630
+  ClientHeight = 473
+  ClientWidth = 632
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,19 +14,19 @@ object FormSettings: TFormSettings
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 424
-    Width = 630
+    Top = 432
+    Width = 632
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 416
-    ExplicitWidth = 628
+    ExplicitTop = 424
+    ExplicitWidth = 630
     DesignSize = (
-      630
+      632
       41)
     object ButtonOK: TButton
-      Left = 456
+      Left = 458
       Top = 8
       Width = 75
       Height = 25
@@ -35,10 +35,10 @@ object FormSettings: TFormSettings
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonOKClick
-      ExplicitLeft = 452
+      ExplicitLeft = 456
     end
     object ButtonCancel: TButton
-      Left = 544
+      Left = 546
       Top = 8
       Width = 75
       Height = 25
@@ -47,34 +47,35 @@ object FormSettings: TFormSettings
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
-      ExplicitLeft = 540
+      ExplicitLeft = 544
     end
   end
   object PanelMain: TPanel
     Left = 0
     Top = 0
-    Width = 630
-    Height = 424
+    Width = 632
+    Height = 432
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 626
-    ExplicitHeight = 408
+    ExplicitWidth = 630
+    ExplicitHeight = 424
     object PageControlSettings: TPageControl
       AlignWithMargins = True
       Left = 5
       Top = 5
-      Width = 620
-      Height = 414
+      Width = 622
+      Height = 422
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
       Margins.Bottom = 5
-      ActivePage = TabSheetCommon
+      ActivePage = TabSheetGridFormatEditor
       Align = alClient
       TabOrder = 0
-      ExplicitWidth = 616
-      ExplicitHeight = 398
+      OnChange = PageControlSettingsChange
+      ExplicitWidth = 620
+      ExplicitHeight = 414
       object TabSheetCommon: TTabSheet
         Caption = 'Allgemein'
         object Label2: TLabel
@@ -112,8 +113,8 @@ object FormSettings: TFormSettings
         Caption = 'Spaltentitel'
         ImageIndex = 2
         DesignSize = (
-          612
-          384)
+          614
+          392)
         object Label1: TLabel
           Left = 24
           Top = 16
@@ -124,9 +125,10 @@ object FormSettings: TFormSettings
         object ComboBoxTable: TComboBox
           Left = 69
           Top = 16
-          Width = 228
+          Width = 364
           Height = 23
           TabOrder = 0
+          OnChange = ComboBoxTableChange
           Items.Strings = (
             'Veranstaltung'
             'Teilnehmer'
@@ -140,8 +142,8 @@ object FormSettings: TFormSettings
         object DBGridDictionary: TDBGrid
           Left = 16
           Top = 56
-          Width = 575
-          Height = 305
+          Width = 577
+          Height = 313
           Anchors = [akLeft, akTop, akRight, akBottom]
           DataSource = DataSourceDictionary
           TabOrder = 1
@@ -152,6 +154,39 @@ object FormSettings: TFormSettings
           TitleFont.Style = []
         end
       end
+      object TabSheetGridFormatEditor: TTabSheet
+        Caption = 'Tabellenformate'
+        ImageIndex = 3
+        DesignSize = (
+          614
+          392)
+        object ComboBoxGridFormats: TComboBox
+          Left = 3
+          Top = 3
+          Width = 608
+          Height = 23
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          OnChange = ComboBoxGridFormatsChange
+          ExplicitWidth = 606
+        end
+        object MemoConfig: TMemo
+          Left = 0
+          Top = 32
+          Width = 612
+          Height = 315
+          TabOrder = 1
+        end
+      end
+    end
+    object ButtonResetFormatToStandard: TButton
+      Left = 12
+      Top = 384
+      Width = 157
+      Height = 25
+      Caption = 'Auf Standard zur'#252'cksetzen'
+      TabOrder = 1
+      OnClick = ButtonResetFormatToStandardClick
     end
   end
   object ClientDataSetDictionary: TClientDataSet

@@ -3,16 +3,20 @@ unit SmartTiming.Consts;
 interface
 
 uses
-  Generics.Collections, SysUtils, Graphics, DB;
+  Generics.Collections, SysUtils, System.UITypes, DB;
 
 const
+  cManufacturer = 'MJ';
+  cSmartStartingAppName = 'SmartStarting';
+  cSmartTimingAppName = 'SmartTiming';
+
   // Database
   cStdDataPath = 'd:\projects\SmartTiming\Data\';
   cStdDatabaseName = 'SmartTiming.db';
   cCreateSchemaScriptName = 'CreateSchema.sql';
   cStdTemplatePath = 'd:\projects\SmartTiming\Templates\';
 
-  cRegKeyPath = 'SOFTWARE\MJ\SmartTiming';
+  cRegKeyPath = 'SOFTWARE\' + cManufacturer + '\' + cSmartTimingAppName;
 
   cNotFound = '<notfound>';
 
@@ -34,6 +38,41 @@ const
   cColorInactiveDark = TColor($404040);
 
   cRecalcRankingMilliSeconds = 2000;
+
+  // WebService
+  cWebServicePort = 9768;
+
+  cDefaultListFormatRaces =
+    '{"columns":[' +
+    '{"Alignment":1,"Fieldname":"RACEID","Visible":1,"Width":25,"Title":"Nr.","Index":0},' +
+    '{"Alignment":1,"Fieldname":"EVENTID","Visible":0,"Width":-1,"Index":1},' +
+    '{"Alignment":0,"Fieldname":"TITLE","Visible":1,"Width":100,"Title":"Titel","Index":2},' +
+    '{"Alignment":0,"Fieldname":"STARTTIME","Visible":1,"Width":120,"Title":"Startzeit","Index":3},' +
+    '{"Alignment":0,"Fieldname":"RACETYPE","Visible":1,"Width":120,"Title":"Art","Index":4},' +
+    '{"Alignment":1,"Fieldname":"LAPS","Visible":1,"Width":50,"Title":"Runden","Index":5},' +
+    '{"Alignment":1,"Fieldname":"DISTANCE","Visible":1,"Width":50,"Title":"Distianz","Index":6},' +
+    '{"Alignment":1,"Fieldname":"FIRSTPASSINGISLAP","Visible":1,"Width":145,"Title":"Erste Passage als Runde","Index":7},' +
+    '{"Alignment":1,"Fieldname":"MINLAPDURATION","Visible":1,"Width":100,"Title":"Min. Rundenzeit","Index":8},' +
+    '{"Alignment":0,"Fieldname":"STATUS","Visible":1,"Width":100,"Title":"Status","Index":9}]}';
+
+  cDefaultListFormatCompetitors =
+    '{"columns":[' +
+    '{"Alignment":1,"Fieldname":"COMPETITORID","Visible":0,"Width":-1,"Index":0},' +
+    '{"Alignment":0,"Fieldname":"CLASS","Visible":1,"Width":64,"Title":"Klasse","Index":1},' +
+    '{"Alignment":1,"Fieldname":"BIB","Visible":1,"Width":43,"Title":"Start#","Index":2},' +
+    '{"Alignment":0,"Fieldname":"FIRSTNAME","Visible":1,"Width":101,"Title":"Vorname","Index":3},' +
+    '{"Alignment":0,"Fieldname":"LASTNAME","Visible":1,"Width":89,"Title":"Nachname","Index":4},' +
+    '{"Alignment":0,"Fieldname":"CLUB","Visible":1,"Width":200,"Title":"Verein","Index":5},' +
+    '{"Alignment":0,"Fieldname":"TEAM","Visible":1,"Width":200,"Title":"Team","Index":6},' +
+    '{"Alignment":0,"Fieldname":"NATIONALITY","Visible":0,"Width":-1,"Title":"Nationalit\u00e4t","Index":7},' +
+    '{"Alignment":0,"Fieldname":"NATIONALITYISO","Visible":0,"Width":-1,"Title":"Nat.","Index":8},'+
+    '{"Alignment":0,"Fieldname":"UCIID","Visible":1,"Width":90,"Title":"UCI-ID","Index":9},' +
+    '{"Alignment":1,"Fieldname":"CHIPID","Visible":1,"Width":50,"Title":"Tx-Id","Index":10},' +
+    '{"Alignment":1,"Fieldname":"HANDICAPFACTOR","Visible":0,"Width":-1,"Title":"Handicapfaktor","Index":11},' +
+    '{"Alignment":1,"Fieldname":"STARTTIME","Visible":1,"Width":63,"Title":"Startzeit","Index":12},' +
+    '{"Alignment":0,"Fieldname":"ADDITIONAL1","Visible":0,"Width":-1,"Title":"Zus\u00e4tzlich 1","Index":13},' +
+    '{"Alignment":0,"Fieldname":"ADDITIONAL2","Visible":0,"Width":-1,"Title":"Zus\u00e4tzlich 2","Index":14},' +
+    '{"Alignment":0,"Fieldname":"ADDITIONAL3","Visible":0,"Width":-1,"Title":"Zus\u00e4tzlich 3","Index":15}]}';
 
 resourcestring
   cRaceTypeNameUnknown = 'Unbestimmt';

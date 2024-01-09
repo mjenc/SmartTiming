@@ -81,7 +81,10 @@
 {$ENDIF}
 
 {$DEFINE SUPER_METHOD}
-{$DEFINE WINDOWSNT_COMPATIBILITY}
+
+{$IFNDEF ANDROID}
+  {$DEFINE WINDOWSNT_COMPATIBILITY}
+{$ENDIF}
 
 
 {$if defined(FPC) or defined(VER170) or defined(VER180) or defined(VER190) or defined(VER200) or defined(VER210)}
@@ -107,7 +110,7 @@
 {$OVERFLOWCHECKS OFF}
 {$RANGECHECKS OFF}
 
-unit uSuperObject;
+unit Tools.SuperObject;
 
 interface
 uses
@@ -855,8 +858,11 @@ function SOInvoke(const obj: TValue; const method: string; const params: string;
 
 implementation
 
-uses sysutils, Windows, WinSock;
-
+uses sysutils
+{$IFNDEF ANDROID}
+  ,Windows, WinSock
+{$ENDIF}
+  ;
 const
   super_number_chars_set = ['0'..'9','.','+','-','e','E'];
   super_hex_chars: PSOChar = '0123456789abcdef';
@@ -994,14 +1000,12 @@ begin
   end;
 end;
 
-{$IFDEF UNIX}
+{$IFDEF ANDROID}
 function GetTimeBias: integer;
 var
-  TimeVal: TTimeVal;
-  TimeZone: TTimeZone;
+  lTimeZone: TTimeZone;
 begin
-  fpGetTimeOfDay(@TimeVal, @TimeZone);
-  Result := TimeZone.tz_minuteswest;
+  Result := lTimeZone.GetUtcOffset(Now).Minutes;
 end;
 {$ELSE}
 function GetTimeBias: integer;
@@ -1280,6 +1284,7 @@ begin
   Result := FileTimeToSystemTime(ft, lpUniversalTime^);
 end;
 {$ELSE}
+{$IFNDEF ANDROID}
 function TzSpecificLocalTimeToSystemTime(
   lpTimeZoneInformation: PTimeZoneInformation;
   lpLocalTime, lpUniversalTime: PSystemTime): BOOL; stdcall; external 'kernel32.dll';
@@ -1287,6 +1292,7 @@ function TzSpecificLocalTimeToSystemTime(
 function SystemTimeToTzSpecificLocalTime(
   lpTimeZoneInformation: PTimeZoneInformation;
   lpUniversalTime, lpLocalTime: PSystemTime): BOOL; stdcall; external 'kernel32.dll';
+{$ENDIF}
 {$ENDIF}
 
 function JavaToDelphiDateTime(const dt: int64): TDateTime;

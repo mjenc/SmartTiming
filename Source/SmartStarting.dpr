@@ -1,16 +1,26 @@
 program SmartStarting;
 
-{$R 'SmartStartingResource.res' 'SmartStartingResource.rc'}
+{$R *.dres}
 
 uses
-  Vcl.Forms,
-  SmartStarting.Main in 'SmartStarting.Main.pas' {FormMain};
+  System.StartUpCopy,
+  FMX.Forms,
+  SmartStarting.MainForm in 'SmartStarting.MainForm.pas' {SmartStartingForm},
+  Tools.Dialogs in 'Tools.Dialogs.pas',
+  SmartStarting.SettingsForm in 'SmartStarting.SettingsForm.pas' {FormSettings},
+  SmartStarting.WebClient in 'SmartStarting.WebClient.pas',
+  Tools.Preferences in 'Tools.Preferences.pas';
+
+{$IFNDEF ANDROID}
+  {$R 'SmartStartingResource.res' 'SmartStartingResource.rc'}
+{$ENDIF}
 
 {$R *.res}
 
 begin
   Application.Initialize;
-  Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TFormMain, FormMain);
+  Application.FormFactor.Orientations := [TFormOrientation.InvertedLandscape];
+  Application.CreateForm(TSmartStartingForm, SmartStartingForm);
   Application.Run;
 end.
+

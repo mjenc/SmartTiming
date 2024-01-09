@@ -150,7 +150,6 @@ end;
 procedure TFormAppLauncher.LoadHistory;
 var
   i: integer;
-  lPath: string;
 begin
   FHistoryList.Clear;
   ComboBoxEventHistory.Items.Clear;

@@ -84,12 +84,11 @@
         <DCC_RangeChecking>true</DCC_RangeChecking>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
-        <DCC_RemoteDebug>false</DCC_RemoteDebug>
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1031</VerInfo_Locale>
         <DCC_ExeOutput>..\bin</DCC_ExeOutput>
+        <DCC_RemoteDebug>false</DCC_RemoteDebug>
         <VerInfo_Keys>CompanyName=Michael Jenc;FileDescription=SmartTiming;FileVersion=1.0.0.0;InternalName=SmartTiming;LegalCopyright=© Michael Jenc 2023;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=SmartTiming;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
@@ -150,6 +149,8 @@
         <DCCReference Include="SmartTiming.Cache.pas"/>
         <DCCReference Include="Report.ExcelTemplateFiller.pas"/>
         <DCCReference Include="SmartTiming.Event.pas"/>
+        <DCCReference Include="SmartTiming.WebService.pas"/>
+        <DCCReference Include="SmartTiming.GridFormatProvider.pas"/>
         <None Include="ModelSupport_SmartTiming\default.txaPackage"/>
         <None Include="ModelSupport_SmartTiming\default.txvpck"/>
         <None Include="..\Resources\PassingBeep.wav"/>
@@ -173,9 +174,7 @@
                 <Source>
                     <Source Name="MainSource">SmartTiming.dpr</Source>
                 </Source>
-                <Excluded_Packages>
-                    <Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD28\dclfrxtee28.bpl">FastReport VCL Tee Components</Excluded_Packages>
-                </Excluded_Packages>
+                <Excluded_Packages/>
             </Delphi.Personality>
             <Deployment Version="4">
                 <DeployFile LocalName="..\Resources\PassingBeep.wav" Configuration="Debug" Class="ProjectFile"/>

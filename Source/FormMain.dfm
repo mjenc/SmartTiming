@@ -2,8 +2,8 @@ object FormMain: TFormMain
   Left = 0
   Top = 0
   Caption = 'SmartTiming'
-  ClientHeight = 917
-  ClientWidth = 1477
+  ClientHeight = 956
+  ClientWidth = 1483
   Color = clBackground
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -20,7 +20,7 @@ object FormMain: TFormMain
     AlignWithMargins = True
     Left = 0
     Top = 0
-    Width = 1477
+    Width = 1483
     Height = 59
     Margins.Left = 0
     Margins.Top = 0
@@ -32,8 +32,9 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 0
+    ExplicitWidth = 1481
     DesignSize = (
-      1473
+      1479
       55)
     object LabelTitle: TLabel
       Left = 10
@@ -62,7 +63,7 @@ object FormMain: TFormMain
       ParentFont = False
     end
     object LabelDate: TLabel
-      Left = 1386
+      Left = 1392
       Top = 8
       Width = 70
       Height = 20
@@ -81,35 +82,39 @@ object FormMain: TFormMain
   object PanelMain: TPanel
     Left = 0
     Top = 59
-    Width = 1477
-    Height = 809
+    Width = 1483
+    Height = 848
     Align = alClient
     BevelOuter = bvNone
     Color = clWhite
     ParentBackground = False
     TabOrder = 1
+    ExplicitWidth = 1481
+    ExplicitHeight = 835
     object PageControlMain: TPageControl
       AlignWithMargins = True
       Left = 0
       Top = 6
-      Width = 1477
-      Height = 797
+      Width = 1483
+      Height = 836
       Margins.Left = 0
       Margins.Top = 6
       Margins.Right = 0
       Margins.Bottom = 6
-      ActivePage = TabSheetTiming
+      ActivePage = TabSheetCompetitors
       Align = alClient
       TabHeight = 30
       TabOrder = 0
       StyleElements = [seFont, seClient]
       OnChange = PageControlMainChange
+      ExplicitWidth = 1481
+      ExplicitHeight = 823
       object TabSheetEvent: TTabSheet
         Caption = 'Veranstaltung'
         object PanelEventInfo: TPanel
           Left = 0
           Top = 0
-          Width = 1469
+          Width = 1475
           Height = 121
           Align = alTop
           BevelKind = bkFlat
@@ -217,7 +222,7 @@ object FormMain: TFormMain
           AlignWithMargins = True
           Left = 0
           Top = 126
-          Width = 1469
+          Width = 1475
           Height = 339
           Margins.Left = 0
           Margins.Top = 5
@@ -244,7 +249,7 @@ object FormMain: TFormMain
             AlignWithMargins = True
             Left = 0
             Top = 39
-            Width = 1465
+            Width = 1471
             Height = 296
             Margins.Left = 0
             Margins.Top = 5
@@ -254,27 +259,10 @@ object FormMain: TFormMain
             BevelKind = bkFlat
             BevelOuter = bvNone
             TabOrder = 0
-            object DBNavigatorRaces: TDBNavigator
-              AlignWithMargins = True
-              Left = 3
-              Top = 3
-              Width = 30
-              Height = 109
-              Margins.Bottom = 180
-              DataSource = MainDataModule.DataSourceRaces
-              VisibleButtons = [nbInsert, nbDelete, nbEdit, nbRefresh]
-              Align = alLeft
-              Flat = True
-              Ctl3D = False
-              Kind = dbnVertical
-              ParentCtl3D = False
-              TabOrder = 0
-              BeforeAction = DBNavigatorRacesBeforeAction
-            end
             object DBGridRaces: TDBGrid
-              Left = 36
+              Left = 30
               Top = 0
-              Width = 1425
+              Width = 1437
               Height = 292
               Align = alClient
               DataSource = MainDataModule.DataSourceRaces
@@ -289,13 +277,41 @@ object FormMain: TFormMain
               Font.Style = []
               Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack]
               ParentFont = False
-              TabOrder = 1
+              TabOrder = 0
               TitleFont.Charset = DEFAULT_CHARSET
               TitleFont.Color = clWindowText
               TitleFont.Height = -12
               TitleFont.Name = 'Segoe UI'
               TitleFont.Style = [fsBold]
               OnDrawColumnCell = DBGridDrawCheckBox
+            end
+            object PanelRacesGridButtons: TPanel
+              Left = 0
+              Top = 0
+              Width = 30
+              Height = 292
+              Align = alLeft
+              BevelOuter = bvNone
+              TabOrder = 1
+              object DBNavigatorRaces: TDBNavigator
+                Left = 0
+                Top = 0
+                Width = 30
+                Height = 100
+                Margins.Left = 0
+                Margins.Top = 0
+                Margins.Right = 0
+                Margins.Bottom = 0
+                DataSource = MainDataModule.DataSourceRaces
+                VisibleButtons = [nbInsert, nbDelete, nbEdit, nbRefresh]
+                Align = alTop
+                Flat = True
+                Ctl3D = False
+                Kind = dbnVertical
+                ParentCtl3D = False
+                TabOrder = 0
+                BeforeAction = DBNavigatorRacesBeforeAction
+              end
             end
           end
         end
@@ -307,11 +323,12 @@ object FormMain: TFormMain
         object PanelCompetitorFilters: TPanel
           Left = 0
           Top = 0
-          Width = 1469
+          Width = 1475
           Height = 41
           Align = alTop
           BevelOuter = bvNone
           TabOrder = 0
+          ExplicitWidth = 1473
           object Label5: TLabel
             Left = 42
             Top = 15
@@ -349,10 +366,10 @@ object FormMain: TFormMain
           end
         end
         object DBGridCompetitors: TDBGrid
-          Left = 36
+          Left = 30
           Top = 41
-          Width = 1433
-          Height = 716
+          Width = 1445
+          Height = 755
           Align = alClient
           DataSource = DataSourceCompetitors
           DrawingStyle = gdsGradient
@@ -364,7 +381,7 @@ object FormMain: TFormMain
           Font.Height = -12
           Font.Name = 'Segoe UI'
           Font.Style = []
-          Options = [dgTitles, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgConfirmDelete, dgCancelOnExit, dgMultiSelect, dgTitleClick, dgTitleHotTrack]
+          Options = [dgTitles, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgRowSelect, dgConfirmDelete, dgCancelOnExit, dgMultiSelect, dgTitleClick, dgTitleHotTrack]
           ParentFont = False
           TabOrder = 1
           TitleFont.Charset = DEFAULT_CHARSET
@@ -372,24 +389,34 @@ object FormMain: TFormMain
           TitleFont.Height = -12
           TitleFont.Name = 'Segoe UI'
           TitleFont.Style = [fsBold]
+          OnDblClick = DBGridCompetitorsDblClick
           OnKeyUp = DBGridCompetitorsKeyUp
+          OnMouseUp = DBGridCompetitorsMouseUp
         end
-        object DBNavigatorCompetitors: TDBNavigator
-          AlignWithMargins = True
-          Left = 3
-          Top = 44
+        object PanelCompetitorsGridButtons: TPanel
+          Left = 0
+          Top = 41
           Width = 30
-          Height = 113
-          Margins.Bottom = 600
-          DataSource = DataSourceCompetitors
-          VisibleButtons = [nbInsert, nbDelete, nbEdit, nbRefresh]
+          Height = 755
           Align = alLeft
-          Flat = True
-          Ctl3D = False
-          Kind = dbnVertical
-          ParentCtl3D = False
           TabOrder = 2
-          BeforeAction = DBNavigatorCompetitorsBeforeAction
+          OnClick = PanelCompetitorsGridButtonsClick
+          object DBNavigatorCompetitors: TDBNavigator
+            Left = 1
+            Top = 1
+            Width = 28
+            Height = 100
+            Margins.Bottom = 600
+            DataSource = DataSourceCompetitors
+            VisibleButtons = [nbInsert, nbDelete, nbEdit, nbRefresh]
+            Align = alTop
+            Flat = True
+            Ctl3D = False
+            Kind = dbnVertical
+            ParentCtl3D = False
+            TabOrder = 0
+            BeforeAction = DBNavigatorCompetitorsBeforeAction
+          end
         end
       end
       object TabSheetTiming: TTabSheet
@@ -398,7 +425,7 @@ object FormMain: TFormMain
         object Splitter1: TSplitter
           Left = 185
           Top = 0
-          Height = 757
+          Height = 796
           Color = clBlack
           ParentColor = False
           ExplicitLeft = 272
@@ -406,9 +433,9 @@ object FormMain: TFormMain
           ExplicitHeight = 100
         end
         object Splitter2: TSplitter
-          Left = 956
+          Left = 709
           Top = 0
-          Height = 757
+          Height = 796
           Align = alRight
           Color = clBlack
           ParentColor = False
@@ -419,15 +446,16 @@ object FormMain: TFormMain
           Left = 0
           Top = 0
           Width = 185
-          Height = 757
+          Height = 796
           Align = alLeft
           BevelOuter = bvNone
           TabOrder = 0
+          ExplicitHeight = 783
           object ListBoxRaces: TListBox
             Left = 0
             Top = 0
             Width = 185
-            Height = 744
+            Height = 784
             Style = lbOwnerDrawFixed
             AutoComplete = False
             Align = alClient
@@ -444,26 +472,28 @@ object FormMain: TFormMain
             TabOrder = 0
             OnClick = ListBoxRacesTimingClick
             OnDrawItem = ListBoxRacesDrawItem
+            ExplicitHeight = 764
           end
         end
         object PanelPassings: TPanel
           Left = 188
           Top = 0
-          Width = 768
-          Height = 757
+          Width = 521
+          Height = 796
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 1
+          ExplicitHeight = 783
           object PanelRaceControls: TPanel
             Left = 0
             Top = 0
-            Width = 768
+            Width = 521
             Height = 41
             Align = alTop
             BevelOuter = bvNone
             TabOrder = 0
             DesignSize = (
-              768
+              521
               41)
             object ButtonNeutralize: TBitBtn
               Left = 104
@@ -534,7 +564,7 @@ object FormMain: TFormMain
               OnClick = ButtonStopClick
             end
             object CheckBoxAutoScrollPassings: TCheckBox
-              Left = 662
+              Left = 415
               Top = 13
               Width = 88
               Height = 17
@@ -558,20 +588,44 @@ object FormMain: TFormMain
           object PanelPassingGrid: TPanel
             Left = 0
             Top = 41
-            Width = 768
-            Height = 716
+            Width = 521
+            Height = 755
             Align = alClient
+            Anchors = [akLeft, akTop, akBottom]
             BevelOuter = bvNone
             TabOrder = 1
+            ExplicitHeight = 742
           end
         end
         object PanelStandings: TPanel
-          Left = 959
+          Left = 712
           Top = 0
-          Width = 510
-          Height = 757
+          Width = 763
+          Height = 796
           Align = alRight
+          Anchors = [akLeft, akTop, akRight, akBottom]
           TabOrder = 2
+          ExplicitWidth = 761
+          ExplicitHeight = 783
+          object PanelStandingsControls: TPanel
+            Left = 1
+            Top = 1
+            Width = 761
+            Height = 41
+            Align = alTop
+            BevelOuter = bvNone
+            TabOrder = 0
+            ExplicitWidth = 759
+            object CheckBoxRankingGroupedByClass: TCheckBox
+              Left = 16
+              Top = 12
+              Width = 145
+              Height = 17
+              Caption = 'Nach Klasse gruppiert'
+              TabOrder = 0
+              OnClick = CheckBoxRankingGroupedByClassClick
+            end
+          end
         end
       end
       object TabSheetResults: TTabSheet
@@ -581,7 +635,7 @@ object FormMain: TFormMain
           Left = 0
           Top = 0
           Width = 185
-          Height = 757
+          Height = 796
           Align = alLeft
           BevelEdges = []
           BevelOuter = bvNone
@@ -590,8 +644,8 @@ object FormMain: TFormMain
         object PanelResults: TPanel
           Left = 185
           Top = 0
-          Width = 1284
-          Height = 757
+          Width = 1290
+          Height = 796
           Align = alClient
           BevelEdges = []
           BevelOuter = bvNone
@@ -599,7 +653,7 @@ object FormMain: TFormMain
           object PanelResultControls: TPanel
             Left = 0
             Top = 0
-            Width = 1284
+            Width = 1290
             Height = 41
             Align = alTop
             BevelEdges = []
@@ -633,8 +687,8 @@ object FormMain: TFormMain
           object PanelResultGrid: TPanel
             Left = 0
             Top = 41
-            Width = 1284
-            Height = 716
+            Width = 1290
+            Height = 755
             Align = alClient
             BevelEdges = []
             BevelOuter = bvNone
@@ -654,8 +708,8 @@ object FormMain: TFormMain
   object PanelStatus: TPanel
     AlignWithMargins = True
     Left = 0
-    Top = 868
-    Width = 1477
+    Top = 907
+    Width = 1483
     Height = 49
     Margins.Left = 0
     Margins.Top = 0
@@ -667,6 +721,8 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 2
+    ExplicitTop = 894
+    ExplicitWidth = 1481
     object Splitter4: TSplitter
       Left = 753
       Top = 0
@@ -726,10 +782,11 @@ object FormMain: TFormMain
     object PanelTemperatureChart: TPanel
       Left = 756
       Top = 0
-      Width = 717
+      Width = 723
       Height = 45
       Align = alClient
       TabOrder = 2
+      ExplicitWidth = 721
       object LabelDecoderTemperature: TLabel
         Left = 6
         Top = 4
@@ -810,6 +867,7 @@ object FormMain: TFormMain
     end
   end
   object SQLDataSetCompetitors: TSQLDataSet
+    AfterOpen = ClientDataSetCompetitorsAfterOpen
     CommandText = 'SELECT * FROM COMPETITORS'
     DataSource = DataSourceCompetitors
     MaxBlobSize = -1
@@ -820,7 +878,8 @@ object FormMain: TFormMain
   end
   object DataSetProviderCompetitors: TDataSetProvider
     DataSet = SQLDataSetCompetitors
-    Options = [poAutoRefresh, poUseQuoteChar]
+    Options = [poIncFieldProps, poCascadeUpdates, poAutoRefresh, poUseQuoteChar]
+    UpdateMode = upWhereKeyOnly
     Left = 280
     Top = 411
   end
@@ -829,11 +888,13 @@ object FormMain: TFormMain
     DisableStringTrim = True
     Params = <>
     ProviderName = 'DataSetProviderCompetitors'
+    AfterOpen = ClientDataSetCompetitorsAfterOpen
     BeforeRefresh = ClientDataSetRacesBeforeRefresh
     Left = 280
     Top = 485
   end
   object DataSourceCompetitors: TDataSource
+    AutoEdit = False
     DataSet = ClientDataSetCompetitors
     Left = 272
     Top = 550
@@ -841,133 +902,133 @@ object FormMain: TFormMain
   object ImageListButtons: TImageList
     Left = 384
     Bitmap = {
-      494C010101000800040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010102000800040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000008F8F8FFF020202FF313131FF3333
+      33FF343434FF343434FF343434FF333333FF2F2F2FFF303030FF313131FF3131
+      31FF313131FF313131FF313131FF000000FF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000008B8B8BFF424242FFFFFFFFFFFFFF
+      FFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFEFEFFFFFFFFFFFBFBFBFFFFFFFFFFFFFF
+      FFFFFFFFFFFFFFFFFFFFFFFFFFFF303030FF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000006D6D
       98006D6D98000000000000000000000000000000000000000000000000006D6D
-      98006D6D98000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      98006D6D98000000000000000000000000008A8A8AFF424242FFF8F8F8FF4C4C
+      4CFF1F1F1FFF252525FF252525FF1F1F1FFFC3C3C3FF252525FF252525FF2626
+      26FF262626FF4A4A4AFFFFFFFFFF303030FF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00000000000000000000000000000000000000000000000000006D6D98000B0B
       86000A0A85006D6D9800000000000000000000000000000000006D6D98000101
-      8200000082006D6D980000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      8200000082006D6D980000000000000000008B8B8BFF404040FFFAFAFAFF8585
+      85FF646464FF696969FF696969FF636363FFD9D9D9FF686868FF696969FF6A6A
+      6AFF6B6B6BFF808080FFFFFFFFFF2F2F2FFF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00000000000000000000000000000000000000000000000000006D6D98000D0D
       86001717B5000A0A85006D6D980000000000000000006D6D9800040483000505
-      AF00020283006D6D980000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      AF00020283006D6D980000000000000000008B8B8BFF434343FFF9F9F9FF6C6C
+      6CFF474747FF4B4B4BFF4B4B4BFF464646FFCECECEFF494949FF4B4B4BFF4C4C
+      4CFF4C4C4CFF6B6B6BFFFEFEFEFF303030FF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000006D6D
       98000D0D86001717B5000B0B85006D6D98006D6D9800070784000B0BB1000505
-      83006D6D98000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      83006D6D98000000000000000000000000008B8B8BFF434343FFFDFDFDFFFFFF
+      FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+      FFFFFFFFFFFFFFFFFFFFFFFFFFFF2D2D2DFF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00006D6D98000E0E86001818B5000B0B85000A0A85001111B300070784006D6D
-      9800000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      9800000000000000000000000000000000008B8B8BFF404040FFFEFEFEFFFFFF
+      FFFF757575FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+      FFFF7F7F7FFFFFFFFFFFFFFFFFFF2C2C2CFF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000006D6D98000E0E86001919B5001616B5000A0A85006D6D98000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000008A8A8AFF3F3F3FFFF8F8F8FF5B5B
+      5BFF121212FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFEFEFFFFFF
+      FFFFD5D5D5FF4E4E4EFFFFFFFFFF2D2D2DFF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000006D6D98000F0F87001C1CB6001919B6000C0C86006D6D98000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000008B8B8BFF3F3F3FFFFFFFFFFFFFFF
+      FFFF414141FFFFFFFFFFFFFFFFFFFFFFFFFFFEFEFEFFFEFEFEFFFEFEFEFFFCFC
+      FCFF5E5E5EFFF5F5F5FFFFFFFFFF2E2E2EFF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00006D6D98000909C5001010DD00101089000E0E87001A1AB6000C0C86006D6D
-      9800000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      9800000000000000000000000000000000008C8C8CFF444444FFFAFAFAFFFFFF
+      FFFFF6F6F6FFFFFFFFFFFFFFFFFFFFFFFFFFFDFDFDFFFDFDFDFFFDFDFDFFFFFF
+      FFFFF0F0F0FFFFFFFFFFFFFFFFFF2D2D2DFF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000006D6D
       98000A0AC6000000FF000909C4006D6D98006D6D98000F0F89001717C1000B0B
-      8C006D6D98000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      8C006D6D9800000000000000000000000000909090FF131313FF5D5D5DFF5959
+      59FF5C5C5CFF595959FF5A5A5AFF595959FF595959FF595959FF5A5A5AFF5858
+      58FF5F5F5FFF5B5B5BFF5E5E5EFF090909FF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00000000000000000000000000000000000000000000000000006D6D98000C0C
       C5000000FF000A0AC4006D6D980000000000000000006D6D98000707C3000000
-      FF000606C3006D6D980000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      FF000606C3006D6D980000000000000000008C8C8CFF434343FFFFFFFFFFC7C7
+      C7FFC6C6C6FFABABABFFE5E5E5FFEFEFEFFFA2A2A2FFA1A1A1FFA1A1A1FFA1A1
+      A1FFA1A1A1FFC6C6C6FFFFFFFFFF323232FF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00000000000000000000000000000000000000000000000000006D6D98000C0C
       C5000C0CC5006D6D9800000000000000000000000000000000006D6D98000707
-      C3000707C3006D6D980000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      C3000707C3006D6D980000000000000000008B8B8BFF3F3F3FFFFBFBFBFF6A6A
+      6AFF626262FF323232FFA8A8A8FFCACACAFF161616FF191919FF1B1B1BFF1B1B
+      1BFF1B1B1BFF6A6A6AFFFFFFFFFF2D2D2DFF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000006D6D
       98006D6D98000000000000000000000000000000000000000000000000006D6D
-      98006D6D98000000000000000000000000000000000000000000000000000000
+      98006D6D98000000000000000000000000008B8B8BFF3F3F3FFFFBFBFBFFFBFB
+      FBFFF9F9F9FFF8F8F8FFFBFBFBFFFDFDFDFFFBFBFBFFF9F9F9FFFCFCFCFFFBFB
+      FBFFFCFCFCFFFBFBFBFFFFFFFFFF2C2C2CFF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
+      000000000000000000000000000000000000919191FF0C0C0CFF414141FF3E3E
+      3EFF3F3F3FFF3F3F3FFF3D3D3DFF404040FF414141FF3F3F3FFF3E3E3EFF3E3E
+      3EFF3E3E3EFF3D3D3DFF404040FF010101FF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      000000000000000000000000000000000000E9E9E9FF969696FF909090FF9090
+      90FF909090FF909090FF909090FF909090FF909090FF909090FF909090FF9090
+      90FF909090FF909090FF929292FF979797FF0000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -982,8 +1043,8 @@ object FormMain: TFormMain
   end
   object PopupMenuCompetitorActions: TPopupMenu
     OnPopup = PopupMenuCompetitorActionsPopup
-    Left = 698
-    Top = 93
+    Left = 602
+    Top = 173
     object PopupMenuCompetitorAssignToRace: TMenuItem
       Caption = 'Zu Rennen zuweisen'
     end

@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
 	<Transactions>
-    <Transaction>1899.12.30 00:00:00.000.065,C:\Users\michael.jenc\Documents\Embarcadero\Studio\Projekte\ProjectGroup1.groupproj=D:\Projects\SmartTiming\Source\SmartTimingAndWatchdog.groupproj</Transaction>
-    <Transaction>2024.01.02 13:40:03.884,D:\Projects\SmartTiming\Source\SmartTimingEtc.groupproj=D:\Projects\SmartTiming\Source\SmartTimingAndWatchdog.groupproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.884,D:\Projects\SmartTiming\Source\SmartTimingAndWatchdog.groupproj=D:\Projects\SmartTiming\Source\SmartTimingEtc.groupproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.065,D:\Projects\SmartTiming\Source\SmartTimingAndWatchdog.groupproj=C:\Users\michael.jenc\Documents\Embarcadero\Studio\Projekte\ProjectGroup1.groupproj</Transaction>
   </Transactions>
 	<Default.Personality>
-		<Projects ActiveProject="D:\Projects\SmartTiming\Source\SmartStarting.dproj"/>
+		<Projects ActiveProject="D:\Projects\SmartTiming\Source\SmartTiming.dproj"/>
 	</Default.Personality>
 </BorlandProject>

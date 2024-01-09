@@ -74,6 +74,7 @@ end;
 procedure TFormCompetitorDetails.FormCreate(Sender: TObject);
 begin
   DBComboBoxClass.DataSource := FDataSource;
+
   DBComboBoxClass.DataField := 'CLASS';
   MainDataModule.FillWithDistinctValues('COMPETITORS', 'CLASS', DBComboBoxClass.Items);
   DBCompetitorID.DataSource := FDataSource;
@@ -136,7 +137,7 @@ begin
   end;
 
   FDataSource.DataSet.Post;
-  TClientDataSet(FDataSource.DataSet).ApplyUpdates(-1);
+  TClientDataSet(FDataSource.DataSet).ApplyUpdates(0);
 end;
 
 

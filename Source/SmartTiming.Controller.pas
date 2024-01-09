@@ -5,7 +5,7 @@ interface
 uses
   Windows, MMSystem, SysUtils, Generics.Collections,
   SmartTiming.Consts, SmartTiming.DecoderEngine, DecoderInterface, SmartTiming.Tools,
-  DataModule, SmartTiming.Event,
+  DataModule, SmartTiming.Event, SmartTiming.WebService,
   RaceEngine.Custom;
 
 type
@@ -16,6 +16,7 @@ type
     FDatabasePath: string;
     FEventDataObject: TEventDataObject;
     FRaceList: TDictionary<integer, TRaceItem>;
+    FServlet: TSmartTimingServlet;
 
     procedure OnStatusReceived(AStatus: TDecoderStatus);
     procedure OnPassingReceived(APassing: TPassing);
@@ -57,6 +58,9 @@ begin
   LoadSettings;
 
   FRaceList := TDictionary<integer, TRaceItem>.Create;
+
+  FServlet := TSmartTimingServlet.Create(cWebServicePort);
+  FServlet.StartService(cWebServicePort);
 end;
 
 {==============================================================================}
@@ -65,6 +69,7 @@ var
   lRaceItem: TRaceItem;
 begin
   try
+    FreeAndNil(FServlet);
     for lRaceItem in FRaceList.Values do
       FreeAndNil(lRaceItem);
     FreeAndNil(FRaceList);

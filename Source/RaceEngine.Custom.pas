@@ -3,7 +3,7 @@ unit RaceEngine.Custom;
 interface
 
 uses
-  Controls, StdCtrls, ComCtrls, SysUtils, Graphics, Types, UITypes, Classes,
+  Controls, StdCtrls, ComCtrls, SysUtils, Graphics, Types, UITypes, Classes, Grids,
   DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages,
   SmartTiming.Consts, DecoderInterface, SmartTiming.Event, Report.ExcelTemplateFiller;
 
@@ -21,6 +21,8 @@ type
     MinLapDuration: integer;
     Status: TRaceStatus;
     RaceEngine: TCustomRaceEngine;
+  public
+    destructor Destroy; override;
   end;
 
   TCustomRaceEngine = class
@@ -31,7 +33,9 @@ type
     FRaceItem: TRaceItem;
     FPassingDisplay: TWinControl;
     FRankingGrid: TDBGrid;
+    FRankingGroupedByClass: boolean;
     FAvailableRaceStates: TRaceStates;
+    FRankingQuery: string;
 
     FSQLDataSetRankings: TSQLDataSet;
     FDataSetProviderRankings: TDataSetProvider;
@@ -47,7 +51,10 @@ type
     procedure AddColumnToDisplay(const ACaption: string);
     function GetRankingGrid: TDBGrid; virtual;
     function GetRankingDataSet: TDataSet; virtual;
+    procedure SetRankingGroupedByClass(AValue: boolean); virtual;
     procedure UpdateParticipationTable(ACurrentPassingId: integer); virtual; abstract;
+    procedure AfterOpenRankingResultSet(ADataSet: TDataSet); virtual; abstract;
+    procedure OnColorizePodium(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
 
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem); virtual;
@@ -65,19 +72,29 @@ type
     procedure RefreshRankingDisplay;
     property RankingDisplay: TDBGrid read GetRankingGrid;
     property RankingDataSet: TDataSet read GetRankingDataSet;
-
+    property RankingGroupedByClass: boolean read FRankingGroupedByClass write SetRankingGroupedByClass;
     // corrections
 
     // Reports
-    procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual;
+    procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual; abstract;
     procedure ExportResultsToExcelTemplate(const AOutputFile: string); virtual; abstract;
   end;
 
 implementation
 
 uses
-  SmartTiming.Tools, Math, SmartTiming.Controller,
+  SmartTiming.Tools, Math, SmartTiming.Controller, SmartTiming.GridFormatProvider,
   DataModule;
+
+{==============================================================================}
+destructor TRaceItem.Destroy;
+begin
+  try
+    FreeAndNil(RaceEngine);
+  finally
+    inherited Destroy;
+  end;
+end;
 
 {==============================================================================}
 constructor TCustomRaceEngine.Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem);
@@ -199,16 +216,48 @@ begin
 end;
 
 {==============================================================================}
+procedure TCustomRaceEngine.OnColorizePodium(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
+var
+  lBgColor: TColor;
+  lFGColor: TColor;
+  lSender: TDBGrid;
+  lLeft: Integer;
+begin
+  if not (Sender is TDBGrid) then
+    Exit;
+  lSender := Sender as TDBGrid;
+  if not SameText(Field.DisplayName, 'Platz') then
+    Exit;
+  if Field.AsInteger > 3 then
+    Exit;
+
+  SmartTimingTools.GetColorsForPodium(Field.AsInteger, lBgColor, lFgColor);
+
+  lSender.Canvas.Brush.Color := lBgColor;
+  lSender.Canvas.Font.Color := lFgColor;
+  lSender.Canvas.FillRect(Rect);
+
+  if Field.Alignment = taRightJustify then
+    lLeft := Rect.Right - lSender.Canvas.TextWidth(Field.DisplayText) - 3
+  else
+    lLeft := Rect.Left + (Rect.Right - Rect.Left) div 2 - (lSender.Canvas.TextWidth(Field.DisplayText) div 2);
+  lSender.Canvas.TextRect(Rect, lLeft, Rect.Top + 2, Field.DisplayText);
+end;
+
+{==============================================================================}
 function TCustomRaceEngine.GetRankingGrid: TDBGrid;
 begin
   if FRankingGrid <> nil then
     Exit(FRankingGrid);
 
   FRankingGrid := TDBGrid.CreateParented(FParent.Handle);
+  FRankingGrid.Name := 'DBGridRanking';
   FRankingGrid.Visible := false;
   FRankingGrid.Align := alNone;
   FRankingGrid.DataSource := FDataSourceRankings;
+  FRankingGrid.OnDrawDataCell := OnColorizePodium;
   result := FRankingGrid;
+  AfterOpenRankingResultSet(FSQLDataSetRankings);
 end;
 
 {==============================================================================}
@@ -218,20 +267,30 @@ begin
 end;
 
 {==============================================================================}
+procedure TCustomRaceEngine.SetRankingGroupedByClass(AValue: boolean);
+begin
+  FRankingGroupedByClass := AValue;
+  FLastChangeTimestamp := Now;
+  RefreshRankingDisplay;
+end;
+
+{==============================================================================}
 procedure TCustomRaceEngine.RefreshRankingDisplay;
 var
   i: integer;
   lColumn: TColumn;
-  s: string;
 begin
   if FLastRefreshTimestamp >= FLastChangeTimestamp then
     Exit;
 
-  FClientDataSetRankings.Active := false;
   FSQLDataSetRankings.Active := false;
-
+  FSQLDataSetRankings.CommandText := FRankingQuery;
   FSQLDataSetRankings.Active := true;
-  FClientDataSetRankings.Active := True;
+
+  if FClientDataSetRankings.Active then
+    FClientDataSetRankings.Refresh
+  else
+    FClientDataSetRankings.Active := True;
   FLastRefreshTimestamp := Now;
 
   if FRankingGrid = nil then
@@ -242,7 +301,6 @@ begin
     lColumn := FRankingGrid.Columns[i];
     SmartTimingTools.SetColumnProperties('RANKING', lColumn);
   end;
-// TODO SmartTimingTools.SortGridColumns(FRankingGrid, 'RANKING');
 end;
 
 {==============================================================================}
@@ -280,33 +338,6 @@ begin
       Continue;
     TMemo(FPassingDisplay).Lines.Delete(i);
     Exit;
-  end;
-end;
-
-{==============================================================================}
-procedure TCustomRaceEngine.ExportParticipantsToExcelTemplate(const AOutputFile: string);
-var
-  lExcelFiller: TExcelFiller;
-  lResultSet: TSQLDataSet;
-begin
-//  lResultSet := TSQLDataSet.Create(nil);
-  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
-  try
-    lExcelFiller.TemplateFile := cStdTemplatePath + 'StartListTT.xlsx';
-    lExcelFiller.OutputFile := cStdDataPath + Format('StartList-%s.xlsx', [FRaceItem.Title]);
-
-    lResultSet := nil;
-    MainDataModule.FillReadOnlyDataSetForSQL(
-      'SELECT C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, C.TEAM, C.CLUB ' +
-      'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
-      'WHERE RACEID = ' + FRaceItem.Id.ToString + ' ' +
-      'ORDER BY C.BIB',
-      lResultSet);
-
-    lExcelFiller.FillDataRows(lResultSet);
-  finally
-    FreeAndNil(lExcelFiller);
-    FreeAndNil(lResultSet);
   end;
 end;
 

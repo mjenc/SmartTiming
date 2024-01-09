@@ -4,9 +4,9 @@ interface
 
 uses
   Classes, SysUtils, DateUtils, Windows, Dialogs, Forms,
-  Registry, DBGrids, Controls, Graphics, Variants,
+  Registry, DBGrids, Controls, Graphics, Variants, Buttons,
   Generics.Defaults, UITypes, DB, SmartTiming.Event,
-  uSuperObject, SmartTiming.Consts, RaceEngine.Custom;
+  Tools.SuperObject, SmartTiming.Consts, RaceEngine.Custom;
 
 type
   SmartTimingTools = class
@@ -24,9 +24,9 @@ type
     class function GetRaceStatusEnumFromString(const AValue: string): TRaceStatus;
     class function GetRaceStatusStringFromEnum(ARaceStatus: TRaceStatus): string;
     class procedure GetColorsForRaceStatus(ARaceStatus: TRaceStatus; ASelected: boolean; var ABgColor, AFgColor: TColor);
+    class procedure GetColorsForPodium(ARank: Integer; var ABgColor, AFgColor: TColor);
     class procedure FillRaceItemFromDataSet(ADataSet: TDataSet; ARaceItem: TRaceItem);
     class function GetFlagNameFromRaceStatus(ARaceStatus: TRaceStatus): string;
-    class procedure SortGridColumns(ADBGrid: TDBGrid; const ATableName: string);
     class procedure SetColumnProperties(const ATable: string; AColumn: TColumn);
     class procedure OnGetDefaultColumnText(ASender: TField; var AText: string; ADisplayText: Boolean);
     class procedure OnGetDateTimeFromValue(ASender: TField; var AText: string; ADisplayText: Boolean);
@@ -36,7 +36,7 @@ type
     class procedure OnGetRaceStatus(ASender: TField; var AText: string; ADisplayText: Boolean);
     class procedure OnGetTxId(ASender: TField; var AText: string; ADisplayText: Boolean);
     class procedure InitFieldDescriptions;
-    class function ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]): TModalResult;
+    class function ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]; ADefaultButton: TTaskDialogCommonButton = tcbCancel): TModalResult;
   end;
 
   TRaceEngineFactory = class
@@ -51,7 +51,8 @@ implementation
 uses
   RaceEngine.TimeTrial, SmartTiming.Cache;
 
-class function SmartTimingTools.ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]): TModalResult;
+{==============================================================================}
+class function SmartTimingTools.ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]; ADefaultButton: TTaskDialogCommonButton = tcbCancel): TModalResult;
 var
   lTaskDialog : TTaskDialog;
 begin
@@ -63,6 +64,8 @@ begin
       lTaskDialog.Title := ATitle;
     lTaskDialog.Text := AMessage;
     lTaskDialog.CommonButtons := AButtons;
+    if ADefaultButton in AButtons then
+      lTaskDialog.DefaultButton := ADefaultButton;
     lTaskDialog.Execute;
     result := lTaskDialog.ModalResult;
   finally
@@ -325,6 +328,28 @@ begin
 end;
 
 {==============================================================================}
+class procedure SmartTimingTools.GetColorsForPodium(ARank: Integer; var ABgColor, AFgColor: TColor);
+begin
+  case ARank of
+  1:
+    begin
+      ABgColor := TColorRec.Goldenrod;
+      AFgColor := TColorRec.White;
+    end;
+  2:
+    begin
+      ABgColor := TColorRec.Silver;
+      AFgColor := TColorRec.Black;
+    end;
+  3:
+    begin
+      ABgColor := TColorRec.Saddlebrown;
+      AFgColor := TColorRec.White;
+    end;
+  end;
+end;
+
+{==============================================================================}
 class function SmartTimingTools.FieldAsDatetime(AField: TField): TDatetime;
 begin
   if AField.IsNull then
@@ -349,46 +374,6 @@ begin
   ARaceItem.FirstPassingIsLap := ADataSet.FieldByName('FIRSTPASSINGISLAP').AsInteger <> 0;
   ARaceItem.MinLapDuration := ADataSet.FieldByName('MINLAPDURATION').AsInteger;
   ARaceItem.Status := TRaceStatus(ADataSet.FieldByName('STATUS').AsInteger);
-end;
-
-{==============================================================================}
-class procedure SmartTimingTools.SortGridColumns(ADBGrid: TDBGrid; const ATableName: string);
-var
-  lTables: TSuperArray;
-  lColumns: TSuperArray;
-  i: integer;
-  j: integer;
-  k: integer;
-  lGridColumn: TColumn;
-  lPosition: integer;
-begin
-  lTables := GFieldDescriptionsSuperObject.A['tables'];
-  if lTables = nil then
-    Exit;
-
-  for i := 0 to lTables.Length - 1 do
-  begin
-    if lTables.O[i].S['tablename'] <> ATableName then
-      Continue;
-
-    lColumns := lTables.O[i].A['columns'];
-    if lColumns = nil then
-      Exit;
-
-    for j := ADBGrid.Columns.Count - 1 downto 0 do
-    begin
-      lGridColumn := ADBGrid.Columns[j];
-      for k := 0 to lColumns.Length - 1 do
-      begin
-        if SameText(lColumns.O[k].S['columnname'], lGridColumn.FieldName) then
-        begin
-          lPosition := lColumns.O[k].I['position'];
-          lGridColumn.Index := lPosition;
-          break;
-        end;
-      end;
-    end;
-  end;
 end;
 
 {==============================================================================}
@@ -440,12 +425,6 @@ begin
         Continue;
 
       lColumn := lColumns.O[j];
-      AColumn.Visible := not lColumn.B['invisible'];
-      AColumn.Title.Caption := lColumn.S['caption'];
-      if Length(AColumn.Title.Caption) = 0 then
-        AColumn.Title.Caption := AColumn.FieldName;
-      AColumn.Width := lColumn.I['width'];
-      AColumn.Alignment := GetAlignmentFromString(lColumn.S['align']);
       lFieldType := GetFieldTypeFromString(lColumn.S['fieldtype']);
       if lFieldType <> ftUnknown then
         AColumn.Field.SetFieldType(lFieldType);
@@ -517,7 +496,7 @@ begin
   if ASender.IsNull then
     AText := ''
   else
-    AText := TimeToStr(ASender.AsFloat);
+    AText := ASender.Value;
 end;
 
 {==============================================================================}
@@ -581,7 +560,5 @@ begin
     Exit(TCustomRaceEngine.Create(AParent, AEvent, ARaceItem));
   end;
 end;
-
-
 
 end.

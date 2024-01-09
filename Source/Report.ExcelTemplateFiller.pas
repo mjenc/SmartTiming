@@ -64,7 +64,6 @@ var
   lExcelSheet: _Worksheet;
   lRowIndex: Integer;
   lColumnIndex: integer;
-  lColumnName: string;
 begin
   ADataSet.First;
   if ADataSet.Eof then
@@ -77,31 +76,26 @@ begin
       EmptyParam, EmptyParam, EmptyParam,
       EmptyParam, EmptyParam, EmptyParam, 0);
 
-//    lExcelWorkbook := FExcelApp.Workbooks.Open(FTemplateFile, false, false,
-//      EmptyParam, EmptyParam, EmptyParam,
-//      EmptyParam, EmptyParam, EmptyParam,
-//      true, false, EmptyParam, true, true, true, 0);
+    try
+      lExcelSheet := lExcelWorkbook.Sheets[1] as _Worksheet;
 
-  //    function Open(const Filename: WideString; UpdateLinks: OleVariant; ReadOnly: OleVariant;
-  //                  Format: OleVariant; Password: OleVariant; WriteResPassword: OleVariant;
-  //                  IgnoreReadOnlyRecommended: OleVariant; Origin: OleVariant; Delimiter: OleVariant;
-  //                  Editable: OleVariant; Notify: OleVariant; Converter: OleVariant;
-  //                  AddToMru: OleVariant; Local: OleVariant; CorruptLoad: OleVariant; lcid: Integer): ExcelWorkbook; safecall;
+      lRowIndex := 2; // Start from the second row assuming the first row is for headers
+      while not ADataSet.Eof do
+      begin
+        for lColumnIndex := 0 to ADataSet.FieldCount - 1 do
+          lExcelSheet.Cells.Item[lRowIndex, lColumnIndex + 1].Value := ADataSet.FieldList[lColumnIndex].AsString;
 
-    lExcelSheet := lExcelWorkbook.Sheets[1] as _Worksheet;
+        Inc(lRowIndex);
+        ADataSet.Next;
+      end;
 
-    lRowIndex := 2; // Start from the second row assuming the first row is for headers
-    while not ADataSet.Eof do
-    begin
-      for lColumnIndex := 0 to ADataSet.FieldCount - 1 do
-        lExcelSheet.Cells.Item[lRowIndex, lColumnIndex + 1].Value := ADataSet.FieldList[lColumnIndex].AsString;
-
-      Inc(lRowIndex);
-      ADataSet.Next;
+//      lExcelWorkbook.PrintPreview(true, 0);
+      lExcelWorkbook.SaveAs(FOutputFile, EmptyParam, EmptyParam, EmptyParam, EmptyParam,
+        EmptyParam, xlNoChange, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
+    finally
+      lExcelWorkbook.Close(false, '', EmptyParam, 0);
     end;
 
-    lExcelWorkbook.SaveAs(FOutputFile, EmptyParam, EmptyParam, EmptyParam, EmptyParam,
-      EmptyParam, xlNoChange, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
   except
     on E: Exception do
       ShowMessage(E.Message);
