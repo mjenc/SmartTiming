@@ -51,6 +51,9 @@ type
     FStdPanelCompetitorInfoHeight: integer;
     FTimerCalibration: boolean;
     FNow: TDatetime;
+    FStartSeconds: set of Byte;
+    FLastSeconds: set of Byte;
+    FNextCompetitorSecond: set of Byte;
 
     FIntervalSeconds: integer;
     FStartListServer: string;
@@ -87,18 +90,26 @@ uses
 
 resourcestring
 {$IFDEF ANDROID}
-  cMessageSureAboutExiting = 'Programm wirklich beenden?';
-{$ELSE}
   cMessageSureAboutExiting = 'App wirklich beenden?';
+{$ELSE}
+  cMessageSureAboutExiting = 'Programm wirklich beenden?';
 {$ENDIF}
   cMessageImportDeletesActualList = 'Der Import löscht die aktuelle Starterliste. Sind Sie sicher?';
+
+const
+  cLastSeconds30 = [25,26,27,28,29,55,56,57,58,59];
+  cStartSeconds30 = [0,30];
+  cNextCompetitor30 = [2,32];
+  cLastSeconds60 = [55,56,57,58,59];
+  cStartSeconds60 = [0];
+  cNextCompetitor60 = [2];
 
 {$R *.fmx}
 
 {==============================================================================}
 procedure TSmartStartingForm.ButtonExitClick(Sender: TObject);
 begin
-  TApplication.Confirm(cMessageSureAboutExiting, //confirmation done only at the action level //Note: could also use Application.Confirm since Confirm is defined as a class function in ApplicationHelper (and those can be called on object instances of the respective class too)
+  TApplication.Confirm(cMessageSureAboutExiting,
     procedure(AConfirmed: Boolean)
     begin
       if AConfirmed  then
@@ -139,6 +150,10 @@ begin
   FStdFormWidth := 1440;
   FStdFormHeight := 900;
   FStdPanelCompetitorInfoHeight := 360;
+
+  FStartSeconds := cStartSeconds60;
+  FLastSeconds := cLastSeconds60;
+  FNextCompetitorSecond := cNextCompetitor60;
 
   CalibrateTimer;
   FCompetitors := TDictionary<TDatetime, TCompetitorInfo>.Create;
@@ -295,6 +310,19 @@ begin
   lPref.SetString('StartListServer', FStartListServer);
   lPref.GetBoolean('PlaySound', FPlaySound);
   lPref.Save;
+
+  if FIntervalSeconds = 30 then
+  begin
+    FLastSeconds := cLastSeconds30;
+    FStartSeconds := cStartSeconds30;
+    FNextCompetitorSecond := cNextCompetitor30;
+  end
+  else
+  begin
+    FLastSeconds := cLastSeconds60;
+    FStartSeconds := cStartSeconds60;
+    FNextCompetitorSecond := cNextCompetitor60;
+  end;
 end;
 
 {==============================================================================}
@@ -369,14 +397,14 @@ begin
   lSeconds := DateUtils.SecondOfTheMinute(FNow);
   if FPlaySound then
   begin
-    if (lSeconds = 50) or (lSeconds > 54)  then
+    if lSeconds in FLastSeconds then
       PlayLastSecondsBeep;
-    if lSeconds = 0 then
+    if lSeconds in FStartSeconds then
       PlayStartBeep;
   end;
 
   LabelTime.Text := FormatDatetime('hh:mm:ss', FNow);
-  if lSeconds = 2 then
+  if lSeconds in FNextCompetitorSecond then
     DisplayNextCompetitor;
 end;
 

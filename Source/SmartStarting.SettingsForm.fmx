@@ -33,9 +33,7 @@ object FormSettings: TFormSettings
   object ComboBoxStartInterval: TComboBox
     Items.Strings = (
       '30'
-      '60'
-      '120')
-    ItemIndex = 1
+      '60')
     Position.X = 184.000000000000000000
     Position.Y = 95.000000000000000000
     Size.Width = 57.000000000000000000
@@ -47,7 +45,7 @@ object FormSettings: TFormSettings
       StyledSettings = []
       Position.X = -160.000000000000000000
       Position.Y = 2.000000000000000000
-      Size.Width = 155.199996948242200000
+      Size.Width = 156.000000000000000000
       Size.Height = 16.000000000000000000
       Size.PlatformDefault = False
       Text = 'Startintervall (in Sekunden)'
