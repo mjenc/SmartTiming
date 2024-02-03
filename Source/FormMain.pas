@@ -7,7 +7,7 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Data.DB, Data.SqlExpr, Data.DbxSqlite,
   Data.FMTBcd, Datasnap.DBClient, Datasnap.Provider, Vcl.Grids, Vcl.DBGrids,
   Vcl.ComCtrls, Vcl.Menus, AdvMenus, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.WinXPickers,
-  SQLite,
+  SQLite, Math, UITypes,
   MMSystem, Generics.Collections, Generics.Defaults,
   DecoderInterface, SmartTiming.DecoderEngine, Vcl.Buttons,
   FormRaceDetails, FormSettings, FormCompetitorDetails,
@@ -281,6 +281,11 @@ end;
 {==============================================================================}
 procedure TFormMain.DBGridCompetitorsKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
+  if Key = vkDelete then
+  begin
+    DBNavigatorCompetitorsBeforeAction(DBNavigatorCompetitors, nbDelete);
+    Exit;
+  end;
   if not ((Shift = [ssCtrl]) and (Key in [Ord('A'), Ord('a')])) then
     Exit;
 
@@ -384,6 +389,9 @@ end;
 procedure TFormMain.DBNavigatorCompetitorsBeforeAction(Sender: TObject;  Button: TNavigateBtn);
 var
   lCompetitorDetailsForm: TFormCompetitorDetails;
+  i: integer;
+  lCompetitorIDs: TArray<Integer>;
+  lCurrentRecord: Integer;
 begin
   case Button of
   nbInsert:
@@ -392,7 +400,25 @@ begin
     DataSourceCompetitors.DataSet.Edit;
   nbDelete:
     begin
-      DataSourceCompetitors.DataSet.Delete;
+      if SmartTimingTools.ShowDialog(Format(cMessagesComptitorDeleteConfirm, [DBGridCompetitors.SelectedRows.Count]), '', [tcbYes,tcbNo], tcbNo) <> mrYes then
+        Exit;
+      SetLength(lCompetitorIDs, DBGridCompetitors.SelectedRows.Count);
+      i := 0;
+      lCurrentRecord := DBGridCompetitors.SelectedIndex;
+      DBGridCompetitors.DataSource.DataSet.First;
+      while not DBGridCompetitors.DataSource.DataSet.Eof do
+      begin
+        if DBGridCompetitors.SelectedRows.CurrentRowSelected then
+        begin
+          lCompetitorIDs[i] := DBGridCompetitors.DataSource.DataSet.FieldByName('COMPETITORID').AsInteger;
+          Inc(i);
+        end;
+        DBGridCompetitors.DataSource.DataSet.Next;
+      end;
+      MainDataModule.RemoveCompetitors(FCurrentEventId, lCompetitorIDs);
+      DBGridCompetitors.SelectedRows.Clear;
+      DataSourceCompetitors.DataSet.Refresh;
+      DBGridCompetitors.SelectedIndex := Min(lCurrentRecord, DBGridCompetitors.DataSource.DataSet.RecordCount);
       Exit;
     end
   else

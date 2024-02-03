@@ -32,7 +32,6 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 0
-    ExplicitWidth = 1481
     DesignSize = (
       1479
       55)
@@ -89,8 +88,6 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 1
-    ExplicitWidth = 1481
-    ExplicitHeight = 835
     object PageControlMain: TPageControl
       AlignWithMargins = True
       Left = 0
@@ -107,8 +104,6 @@ object FormMain: TFormMain
       TabOrder = 0
       StyleElements = [seFont, seClient]
       OnChange = PageControlMainChange
-      ExplicitWidth = 1481
-      ExplicitHeight = 823
       object TabSheetEvent: TTabSheet
         Caption = 'Veranstaltung'
         object PanelEventInfo: TPanel
@@ -328,7 +323,6 @@ object FormMain: TFormMain
           Align = alTop
           BevelOuter = bvNone
           TabOrder = 0
-          ExplicitWidth = 1473
           object Label5: TLabel
             Left = 42
             Top = 15
@@ -414,6 +408,7 @@ object FormMain: TFormMain
             Ctl3D = False
             Kind = dbnVertical
             ParentCtl3D = False
+            ConfirmDelete = False
             TabOrder = 0
             BeforeAction = DBNavigatorCompetitorsBeforeAction
           end
@@ -450,7 +445,6 @@ object FormMain: TFormMain
           Align = alLeft
           BevelOuter = bvNone
           TabOrder = 0
-          ExplicitHeight = 783
           object ListBoxRaces: TListBox
             Left = 0
             Top = 0
@@ -472,7 +466,6 @@ object FormMain: TFormMain
             TabOrder = 0
             OnClick = ListBoxRacesTimingClick
             OnDrawItem = ListBoxRacesDrawItem
-            ExplicitHeight = 764
           end
         end
         object PanelPassings: TPanel
@@ -483,7 +476,6 @@ object FormMain: TFormMain
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 1
-          ExplicitHeight = 783
           object PanelRaceControls: TPanel
             Left = 0
             Top = 0
@@ -594,7 +586,6 @@ object FormMain: TFormMain
             Anchors = [akLeft, akTop, akBottom]
             BevelOuter = bvNone
             TabOrder = 1
-            ExplicitHeight = 742
           end
         end
         object PanelStandings: TPanel
@@ -605,8 +596,6 @@ object FormMain: TFormMain
           Align = alRight
           Anchors = [akLeft, akTop, akRight, akBottom]
           TabOrder = 2
-          ExplicitWidth = 761
-          ExplicitHeight = 783
           object PanelStandingsControls: TPanel
             Left = 1
             Top = 1
@@ -615,7 +604,6 @@ object FormMain: TFormMain
             Align = alTop
             BevelOuter = bvNone
             TabOrder = 0
-            ExplicitWidth = 759
             object CheckBoxRankingGroupedByClass: TCheckBox
               Left = 16
               Top = 12
@@ -721,8 +709,6 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 2
-    ExplicitTop = 894
-    ExplicitWidth = 1481
     object Splitter4: TSplitter
       Left = 753
       Top = 0
@@ -786,7 +772,6 @@ object FormMain: TFormMain
       Height = 45
       Align = alClient
       TabOrder = 2
-      ExplicitWidth = 721
       object LabelDecoderTemperature: TLabel
         Left = 6
         Top = 4

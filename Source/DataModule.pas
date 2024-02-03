@@ -52,6 +52,7 @@ type
 
     procedure AssignCompetitorsToRace(AEventId, ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
     procedure RemoveCompetitorsFromRace(AEventId, ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
+    procedure RemoveCompetitors(AEventId: Integer; const ACompetitorIDs: TArray<Integer>);
     function IsCompetitorAssignedToRace(ARaceId, ACompetitorId: Integer): Boolean;
     function GetCompetitorID(ARaceId: integer; AChipId: string): integer;
     function GetRaceIdForPassing(APassing: TPassing; var ACompetitorId: integer): integer;
@@ -655,6 +656,31 @@ begin
     FreeAndNil(lIDs);
   end;
   SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+procedure TMainDataModule.RemoveCompetitors(AEventId: Integer; const ACompetitorIDs: TArray<Integer>);
+var
+  lCmd: string;
+  i: integer;
+  lIDs: TStringList;
+begin
+  if Length(ACompetitorIDs) = 0 then
+    Exit;
+
+  lIDs := TStringList.Create;
+  try
+    for i := 0 to High(ACompetitorIDs) do
+      lIDs.Add(ACompetitorIDs[i].ToString);
+    lCmd := Format('DELETE FROM PARTICIPATION WHERE COMPETITORID IN (%s)', [lIDs.CommaText]);
+    SQLConnection.Execute(lCmd, nil);
+    lCmd := Format('DELETE FROM TEAMMEMBERS WHERE COMPETITORID IN (%s)', [lIDs.CommaText]);
+    SQLConnection.Execute(lCmd, nil);
+    lCmd := Format('DELETE FROM COMPETITORS WHERE COMPETITORID IN (%s)', [lIDs.CommaText]);
+    SQLConnection.Execute(lCmd, nil);
+  finally
+    FreeAndNil(lIDs);
+  end;
 end;
 
 {==============================================================================}

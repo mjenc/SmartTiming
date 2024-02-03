@@ -119,6 +119,7 @@ resourcestring
   cMessagesBackupFailed = 'Das Erstellen eines Datenbank-Backup ist fehlgeschlagen.';
   cMessagesNoTxMapping = 'Es ist noch keine Transponder-Mapping-Tabelle importiert.'#13#10'Möchten Sie diese nun importieren?';
   cMessagesRaceNotFinishedYet = 'Das Rennen ist noch nicht beendet.';
+  cMessagesComptitorDeleteConfirm = '%d Teilnehmer wirklich löschen?';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
