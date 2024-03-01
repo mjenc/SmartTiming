@@ -46,6 +46,12 @@ type
     FLastConsideredPassingId: integer;
     FExcelFiller: TExcelFiller;
 
+    FRankingSQLFormat: string;
+    FResultSQLFormat: string;
+    FRankingSQLClassGrouping: string;
+    FFormatSuffix: string;
+    FDefaultListFormatRanking: string;
+
     function GetPassingDisplay: TWinControl; virtual;
     procedure OnDrawListItem(ASender: TCustomListView; AItem: TListItem; AState: TCustomDrawState; var ADefaultDraw: Boolean);
     procedure AddColumnToDisplay(const ACaption: string);
@@ -55,7 +61,6 @@ type
     procedure UpdateParticipationTable(ACurrentPassingId: integer); virtual; abstract;
     procedure AfterOpenRankingResultSet(ADataSet: TDataSet); virtual; abstract;
     procedure OnColorizePodium(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
-
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem); virtual;
     destructor Destroy; override;
@@ -77,7 +82,9 @@ type
 
     // Reports
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual; abstract;
-    procedure ExportResultsToExcelTemplate(const AOutputFile: string); virtual; abstract;
+    procedure ExportResultsToExcelTemplate(const AOutputFile: string; AGroupByClass: boolean); virtual; abstract;
+    procedure PrintResults(AGroupByClass: boolean); virtual; abstract;
+    procedure ExportResultsToCSV; virtual;
   end;
 
 implementation
@@ -338,6 +345,42 @@ begin
       Continue;
     TMemo(FPassingDisplay).Lines.Delete(i);
     Exit;
+  end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.ExportResultsToCSV;
+var
+  lResultSet: TSQLDataSet;
+  lColumnIndex: integer;
+  lFieldName: string;
+  lValue: string;
+begin
+  lResultSet := nil;
+  try
+    MainDataModule.FillReadOnlyDataSetForSQL(
+      Format(FResultSQLFormat, [FRaceItem.Id.ToString, '']),
+      lResultSet);
+
+    lResultSet.First;
+    if lResultSet.Eof then
+      Exit;
+
+    // TODO Write titles
+
+    while not lResultSet.Eof do
+    begin
+      for lColumnIndex := 0 to lResultSet.FieldCount - 1 do
+      begin
+        lFieldName := lResultSet.FieldList[lColumnIndex].FieldName;
+        lValue := lResultSet.FieldList[lColumnIndex].AsString;
+
+        // TODO Write field value
+      end;
+      lResultSet.Next;
+    end;
+  finally
+    FreeAndNil(lResultSet);
   end;
 end;
 

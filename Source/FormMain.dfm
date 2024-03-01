@@ -98,7 +98,7 @@ object FormMain: TFormMain
       Margins.Top = 6
       Margins.Right = 0
       Margins.Bottom = 6
-      ActivePage = TabSheetCompetitors
+      ActivePage = TabSheetResults
       Align = alClient
       TabHeight = 30
       TabOrder = 0
@@ -648,28 +648,52 @@ object FormMain: TFormMain
             BevelOuter = bvNone
             TabOrder = 0
             object ButtonExportToExelTemplate: TButton
-              Left = 16
-              Top = 8
-              Width = 145
+              Left = 137
+              Top = 7
+              Width = 98
               Height = 25
-              Caption = 'Export Excel Vorlage'
+              Caption = 'Export Excel'
+              Enabled = False
               TabOrder = 0
+              OnClick = ButtonExportToExelTemplateClick
             end
             object ButtonResultExportCSV: TButton
-              Left = 167
-              Top = 8
-              Width = 146
+              Left = 241
+              Top = 7
+              Width = 113
               Height = 25
               Caption = 'Export CSV'
+              Enabled = False
               TabOrder = 1
             end
             object ButtonResultExportHTML: TButton
-              Left = 319
-              Top = 8
-              Width = 146
+              Left = 360
+              Top = 7
+              Width = 105
               Height = 25
               Caption = 'Export HTML'
+              Enabled = False
               TabOrder = 2
+            end
+            object CheckBoxResultsGroupByClass: TCheckBox
+              Left = 471
+              Top = 11
+              Width = 145
+              Height = 17
+              Caption = 'Nach Klasse gruppiert'
+              Enabled = False
+              TabOrder = 3
+              OnClick = CheckBoxRankingGroupedByClassClick
+            end
+            object ButtonPrintResults: TButton
+              Left = 33
+              Top = 7
+              Width = 98
+              Height = 25
+              Caption = 'Drucken'
+              Enabled = False
+              TabOrder = 4
+              OnClick = ButtonPrintResultsClick
             end
           end
           object PanelResultGrid: TPanel

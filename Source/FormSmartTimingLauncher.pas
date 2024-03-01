@@ -93,6 +93,7 @@ end;
 {==============================================================================}
 procedure TFormAppLauncher.FormCreate(Sender: TObject);
 begin
+  LabelCopyright.Caption := cCopyright;
   LabelVersion.Caption := GetAppVersion;
   FEventPath := cStdDataPath + cStdDatabaseName;
 

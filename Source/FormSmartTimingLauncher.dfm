@@ -2561,7 +2561,6 @@ object FormAppLauncher: TFormAppLauncher
     ModalResult = 1
     TabOrder = 3
     OnClick = ButtonNewClick
-    ExplicitLeft = 421
   end
   object ButtonLoad: TButton
     Left = 419
@@ -2574,7 +2573,6 @@ object FormAppLauncher: TFormAppLauncher
     ModalResult = 1
     TabOrder = 1
     OnClick = ButtonLoadClick
-    ExplicitLeft = 421
   end
   object ButtonNewWithTemplate: TButton
     Left = 419
@@ -2586,7 +2584,6 @@ object FormAppLauncher: TFormAppLauncher
     ModalResult = 1
     TabOrder = 2
     OnClick = ButtonNewWithTemplateClick
-    ExplicitLeft = 421
   end
   object ButtonFromBackup: TButton
     Left = 419
@@ -2598,7 +2595,6 @@ object FormAppLauncher: TFormAppLauncher
     ModalResult = 1
     TabOrder = 4
     OnClick = ButtonFromBackupClick
-    ExplicitLeft = 421
   end
   object ButtonCancel: TButton
     Left = 419
@@ -2609,7 +2605,6 @@ object FormAppLauncher: TFormAppLauncher
     Caption = 'Beenden'
     ModalResult = 2
     TabOrder = 5
-    ExplicitLeft = 421
   end
   object FileOpenDialog: TFileOpenDialog
     FavoriteLinks = <>

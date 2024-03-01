@@ -8,6 +8,9 @@ uses
   SmartTiming.Event, SmartTiming.Consts, Generics.Collections;
 
 type
+  TExcelAction = (eaSave, eaPrint);
+
+  TFNFillerOnGetFieldValue = procedure(ACol: Integer; ADataSet: TDataSet; var AValue: string) of object;
   TExcelFiller = class
   private
     FEvent: TEventDataObject;
@@ -17,15 +20,20 @@ type
     FOutputFile: string;
 
   protected
+    FOnGetFieldValue: TFNFillerOnGetFieldValue;
     procedure FillTitle; virtual;
-
+    procedure GenerateRankValue(const AFieldName: string; var AValue: string);
+    function IsOutputField(const AFieldName: string): boolean;
+    function GetGroupedFileName(const AClass: string): string;
+    procedure FillDataRows(ADataSet: TDataSet; AGroupByClass: boolean; AAction: TExcelAction);
   public
     constructor Create(AEvent: TEventDataObject; const ARaceTitle: string);
     destructor Destroy; override;
-    procedure FillDataRows(ADataSet: TDataSet);
+    procedure FillDataRowsAndPrint(ADataSet: TDataSet; AGroupByClass: boolean);
+    procedure FillDataRowsAndSave(const AFileName: string; ADataSet: TDataSet; AGroupByClass: boolean);
 
     property TemplateFile: string read FTemplateFile write FTemplateFile;
-    property OutputFile: string read FOutputFile write FOutputFile;
+    property OnGetFieldValue: TFNFillerOnGetFieldValue read FOnGetFieldValue write FOnGetFieldValue;
   end;
 
 implementation
@@ -58,12 +66,79 @@ begin
 end;
 
 {==============================================================================}
-procedure TExcelFiller.FillDataRows(ADataSet: TDataSet);
+function TExcelFiller.GetGroupedFileName(const AClass: string): string;
+var
+  lFileNameParts: TArray<string>;
+  lPrefix: string;
+  lExt: string;
+  i: integer;
+begin
+  if AClass.IsEmpty then
+    Exit(FOutputFile);
+  lFileNameParts := FOutputFile.Split(['.']);
+  lExt := lFileNameParts[High(lFileNameParts)];
+  for i := 0 to High(lFileNameParts) - 1 do
+    result := result + lFileNameParts[i];
+  result.TrimRight(['.']);
+  result := result + '-' + AClass + '.' + lExt;
+end;
+
+{==============================================================================}
+procedure TExcelFiller.GenerateRankValue(const AFieldName: string; var AValue: string);
+begin
+  if SameText(AFieldName, 'DNS') or SameText(AFieldName, 'DNF') or SameText(AFieldName, 'DSQ') then
+    AValue := AFieldName;
+end;
+
+{==============================================================================}
+function TExcelFiller.IsOutputField(const AFieldName: string): boolean;
+begin
+  result := not (SameText(AFieldName, 'DNS') or SameText(AFieldName, 'DNF') or SameText(AFieldName, 'DSQ')  or SameText(AFieldName, 'CLASS'));
+end;
+
+{==============================================================================}
+procedure TExcelFiller.FillDataRowsAndPrint(ADataSet: TDataSet; AGroupByClass: boolean);
+begin
+  FillDataRows(ADataSet, AGroupByClass, eaPrint);
+end;
+
+{==============================================================================}
+procedure TExcelFiller.FillDataRowsAndSave(const AFileName: string; ADataSet: TDataSet; AGroupByClass: boolean);
+begin
+  FOutputFile := AFileName;
+  FillDataRows(ADataSet, AGroupByClass, eaSave);
+end;
+
+{==============================================================================}
+procedure TExcelFiller.FillDataRows(ADataSet: TDataSet; AGroupByClass: boolean; AAction: TExcelAction);
 var
   lExcelWorkbook: _Workbook;
   lExcelSheet: _Worksheet;
   lRowIndex: Integer;
   lColumnIndex: integer;
+  lFieldName: string;
+  lValue: string;
+  lCurrentClass: string;
+  lCenterHeaderBase: string;
+  lOutput: boolean;
+  lCellColIdx: Integer;
+const
+  cDataRowStartIndex = 2; // Start from the second row assuming the first row is for headers
+
+  procedure DoAction;
+  begin
+    case AAction of
+    eaSave:
+      lExcelWorkbook.SaveAs(GetGroupedFileName(lCurrentClass), EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, xlNoChange, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
+    eaPrint:
+      begin
+        FExcelApp.Visible[0] := true;
+        lExcelWorkbook.PrintOut(EmptyParam, EmptyParam, EmptyParam, True, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
+        FExcelApp.Visible[0] := false;
+      end;
+    end;
+  end;
+
 begin
   ADataSet.First;
   if ADataSet.Eof then
@@ -77,21 +152,62 @@ begin
       EmptyParam, EmptyParam, EmptyParam, 0);
 
     try
+      lExcelWorkbook.Author[0] := cSmartTimingAppName + ' ' + cCopyright;
+
       lExcelSheet := lExcelWorkbook.Sheets[1] as _Worksheet;
 
-      lRowIndex := 2; // Start from the second row assuming the first row is for headers
+      lCenterHeaderBase := lExcelSheet.PageSetup.CenterHeader;
+      lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle;
+      lCurrentClass := '';
+      lRowIndex := cDataRowStartIndex;
+
       while not ADataSet.Eof do
       begin
+        lCellColIdx := 1;
+
+        if AGroupByClass then
+        begin
+          lValue := ADataSet.FindField('CLASS').AsString;
+           if not lCurrentClass.IsEmpty and (lValue <> lCurrentClass) then
+           begin
+             lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lValue;
+
+             // Save the file so far and clear it a new one
+             DoAction;
+             lExcelSheet.Cells.Clear;
+             lRowIndex := cDataRowStartIndex;
+           end;
+          lCurrentClass := lValue;
+        end;
+
         for lColumnIndex := 0 to ADataSet.FieldCount - 1 do
-          lExcelSheet.Cells.Item[lRowIndex, lColumnIndex + 1].Value := ADataSet.FieldList[lColumnIndex].AsString;
+        begin
+          lFieldName := ADataSet.FieldList[lColumnIndex].FieldName;
+          lValue := ADataSet.FieldList[lColumnIndex].AsString;
+          lOutput := IsOutputField(lFieldName);
+
+          if Assigned(FOnGetFieldValue) then
+          begin
+            if not lOutput then
+              Continue;
+            FOnGetFieldValue(lColumnIndex, ADataSet, lValue);
+          end;
+
+          if not lOutput then
+            Continue;
+
+          lExcelSheet.Cells.Item[lRowIndex, lCellColIdx].Value := lValue;
+          Inc(lCellColIdx);
+        end;
 
         Inc(lRowIndex);
         ADataSet.Next;
       end;
 
-//      lExcelWorkbook.PrintPreview(true, 0);
-      lExcelWorkbook.SaveAs(FOutputFile, EmptyParam, EmptyParam, EmptyParam, EmptyParam,
-        EmptyParam, xlNoChange, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
+      if AGroupByClass then
+        lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lCurrentClass;
+
+      DoAction;
     finally
       lExcelWorkbook.Close(false, '', EmptyParam, 0);
     end;

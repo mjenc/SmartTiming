@@ -9,6 +9,7 @@ const
   cManufacturer = 'MJ';
   cSmartStartingAppName = 'SmartStarting';
   cSmartTimingAppName = 'SmartTiming';
+  cCopyright = '© Michael Jenc 2024';
 
   // Database
   cStdDataPath = 'd:\projects\SmartTiming\Data\';
@@ -74,6 +75,8 @@ const
     '{"Alignment":0,"Fieldname":"ADDITIONAL2","Visible":0,"Width":-1,"Title":"Zus\u00e4tzlich 2","Index":14},' +
     '{"Alignment":0,"Fieldname":"ADDITIONAL3","Visible":0,"Width":-1,"Title":"Zus\u00e4tzlich 3","Index":15}]}';
 
+  CRLF = #13#10;
+
 resourcestring
   cRaceTypeNameUnknown = 'Unbestimmt';
   cRaceTypeNameITT = 'Einzelzeitfahren';
@@ -120,13 +123,14 @@ resourcestring
   cMessagesNoTxMapping = 'Es ist noch keine Transponder-Mapping-Tabelle importiert.'#13#10'Möchten Sie diese nun importieren?';
   cMessagesRaceNotFinishedYet = 'Das Rennen ist noch nicht beendet.';
   cMessagesComptitorDeleteConfirm = '%d Teilnehmer wirklich löschen?';
+  cMessagesOpenDirectory = 'Verzeichnis öffnen?';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
   TRaceTypes = set of TRaceType;
   TRaceStatus = (rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped);
   TRaceStates = set of TRaceStatus;
-
+  TFinishStatus = (fsFinished, fsDNS, fsDNF, fsDSQ);
   TNOnGetColumnText = procedure (ASender: TField; var AText: string; ADisplayText: Boolean) of object;
 
 implementation

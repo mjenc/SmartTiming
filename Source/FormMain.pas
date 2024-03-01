@@ -118,6 +118,8 @@ type
     PanelCompetitorsGridButtons: TPanel;
     PanelStandingsControls: TPanel;
     CheckBoxRankingGroupedByClass: TCheckBox;
+    CheckBoxResultsGroupByClass: TCheckBox;
+    ButtonPrintResults: TButton;
     procedure DatePickerFromChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -162,6 +164,8 @@ type
     procedure PanelCompetitorsGridButtonsClick(Sender: TObject);
     procedure DBGridCompetitorsMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure CheckBoxRankingGroupedByClassClick(Sender: TObject);
+    procedure ButtonExportToExelTemplateClick(Sender: TObject);
+    procedure ButtonPrintResultsClick(Sender: TObject);
 
   private
     FCurrentEventId: integer;
@@ -182,6 +186,7 @@ type
     procedure RaceButtonStatusChange(ARaceStatus: TRaceStatus);
     procedure RefreshFlagButtons(ARaceItem: TRaceItem);
     procedure RefreshAddCompetitorToRaceMenu;
+    procedure EnableResultPanelControls(AEnable: boolean);
 
   protected
     procedure OnGetRaceType(ASender: TField; var AText: string; ADisplayText: Boolean);
@@ -212,7 +217,7 @@ begin
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
   if lRaceItem = nil then
     Exit;
-  lRaceItem.RaceEngine.RankingGroupedByClass := CheckBoxRankingGroupedByClass.Checked;
+  lRaceItem.RaceEngine.RankingGroupedByClass := TCheckBox(Sender).Checked;
 end;
 
 {==============================================================================}
@@ -595,20 +600,32 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.EnableResultPanelControls(AEnable: boolean);
+begin
+  ButtonPrintResults.Enabled := AEnable;
+  ButtonResultExportCSV.Enabled := AEnable;
+  ButtonResultExportHTML.Enabled := AEnable;
+  ButtonExportToExelTemplate.Enabled := AEnable;
+  CheckBoxResultsGroupByClass.Enabled := AEnable;
+end;
+
+{==============================================================================}
 procedure TFormMain.ListBoxRacesResultClick(Sender: TObject);
 var
   lRaceItem: TRaceItem;
   lRankingGrid: TDBGrid;
 begin
+  EnableResultPanelControls(ListBoxRaces.ItemIndex >= 0);
+
   if ListBoxRaces.ItemIndex < 0 then
     Exit;
 
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
-  if lRaceItem.Status <> rsFinished then
-  begin
-    PanelResultGrid.Caption := cMessagesRaceNotFinishedYet;
-    Exit;
-  end;
+//  if lRaceItem.Status <> rsFinished then
+//  begin
+//    PanelResultGrid.Caption := cMessagesRaceNotFinishedYet;
+//    Exit;
+//  end;
   PanelResultGrid.Caption := '';
 
   lRankingGrid := lRaceItem.RaceEngine.RankingDisplay;
@@ -927,6 +944,28 @@ end;
 procedure TFormMain.ButtonAbortClick(Sender: TObject);
 begin
   RaceButtonStatusChange(rsAborted);
+end;
+
+{==============================================================================}
+procedure TFormMain.ButtonExportToExelTemplateClick(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
+begin
+  if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
+    Exit;
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  lRaceItem.RaceEngine.ExportResultsToExcelTemplate('', CheckBoxResultsGroupByClass.Checked);
+end;
+
+{==============================================================================}
+procedure TFormMain.ButtonPrintResultsClick(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
+begin
+  if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
+    Exit;
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  lRaceItem.RaceEngine.PrintResults(CheckBoxResultsGroupByClass.Checked);
 end;
 
 {==============================================================================}

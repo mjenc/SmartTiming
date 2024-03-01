@@ -14,41 +14,11 @@ type
     FRankingGridFormatInitialized: boolean;
     FSQLGroupingString: string;
 
-    const
-      cRankingSQLFormat =
-        'SELECT ROW_NUMBER() OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME) CURRENTRANKING, '+
-        'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, IFNULL(C.TEAM, C.CLUB) TEAM, P.RANKINGTIME, ' +
-        'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
-        'OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
-        'P.FINISHTIME, P.STARTTIME, P.DNS, P.DNF, P.DSQ, P.PENALTIES, P.PARTICIPATIONID ' +
-        'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
-        'WHERE RACEID = %0:s ' +
-        'ORDER BY %1:s P.RANKINGTIME IS NULL, P.LAPS DESC, P.RANKINGTIME, P.STARTTIME';
-      cRankingSQLClassGrouping = 'C.CLASS,';
-
-      cFormatSuffix = '.TimeTrial';
-      cDefaultListFormatRanking =
-        '{"columns":[' +
-        '{"Alignment":0,"Fieldname":"CLASS","Visible":1,"Width":100,"Title":"Klasse","Index":0},' +
-        '{"Alignment":0,"Fieldname":"Column0","Visible":1,"Width":30,"Title":"Platz","Index":1,"Alignment":2},' +
-        '{"Alignment":1,"Fieldname":"BIB","Visible":1,"Width":35,"Title":"Start#","Index":2,"Alignment":2},' +
-        '{"Alignment":0,"Fieldname":"Column3","Visible":1,"Width":130,"Title":"Name","Index":3,"Alignment":0},' +
-        '{"Alignment":0,"Fieldname":"Column4","Visible":1,"Width":130,"Title":"Team","Index":4,"Alignment":0},' +
-        '{"Alignment":0,"Fieldname":"RANKINGTIME","Visible":1,"Width":100,"Title":"Wertungszeit","Index":5,"Alignment":2},' +
-        '{"Alignment":0,"Fieldname":"Column6","Visible":1,"Width":64,"Title":"Diff","Index":6,"Alignment":2},' +
-        '{"Alignment":0,"Fieldname":"FINISHTIME","Visible":1,"Width":100,"Title":"Zielzeit","Index":7,"Alignment":2},' +
-        '{"Alignment":1,"Fieldname":"STARTTIME","Visible":0,"Width":-1,"Title":"Startzeit","Index":8,"Alignment":2},' +
-        '{"Alignment":1,"Fieldname":"DNS","Visible":1,"Width":30,"Index":9},' +
-        '{"Alignment":1,"Fieldname":"DNF","Visible":1,"Width":30,"Index":10},' +
-        '{"Alignment":1,"Fieldname":"DSQ","Visible":1,"Width":30,"Index":11},' +
-        '{"Alignment":1,"Fieldname":"PENALTIES","Visible":0,"Width":-1,"Title":"Strafen","Index":12,"Alignment":0},' +
-        '{"Alignment":1,"Fieldname":"PARTICIPATIONID","Visible":0,"Width":-1,"Index":13}]}';
-
   protected
     procedure UpdateParticipationTable(ACurrentPassingId: integer); override;
     procedure AfterOpenRankingResultSet(ADataSet: TDataSet); override;
     procedure SetRankingGroupedByClass(AValue: boolean); override;
-
+    procedure OnGetResultFieldValue(ACol: Integer; ADataSet: TDataSet; var AValue: string);
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem); override;
     destructor Destroy; override;
@@ -57,7 +27,8 @@ type
     procedure ClearAllPassings; override;
 
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); override;
-    procedure ExportResultsToExcelTemplate(const AOutputFile: string); override;
+    procedure ExportResultsToExcelTemplate(const AOutputFile: string; AGroupByClass: boolean); override;
+    procedure PrintResults(AGroupByClass: boolean); override;
   end;
 
   TTeamTimeTrialRaceEngine = class(TTimeTrialRaceEngine)
@@ -71,12 +42,51 @@ uses
 {==============================================================================}
 constructor TTimeTrialRaceEngine.Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem);
 begin
+  FRankingSQLFormat :=
+    'SELECT ROW_NUMBER() OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME) CURRENTRANKING, '+
+    'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, IFNULL(C.TEAM, C.CLUB) TEAM, P.RANKINGTIME, ' +
+    'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
+    'OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
+    'P.FINISHTIME, P.STARTTIME, P.DNS, P.DNF, P.DSQ, P.PENALTIES, P.PARTICIPATIONID ' +
+    'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+    'WHERE RACEID = %0:s ' +
+    'ORDER BY %1:s P.RANKINGTIME IS NULL, P.LAPS DESC, P.RANKINGTIME, P.STARTTIME';
+  FResultSQLFormat :=
+    'SELECT ROW_NUMBER() OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME) CURRENTRANKING, '+
+    'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, C.CLUB, C.TEAM, C.UCIID, P.RANKINGTIME, ' +
+    'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
+    'OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
+    'P.DNS, P.DNF, P.DSQ ' + //, P.PENALTIES, P.PARTICIPATIONID ' +
+    'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+    'WHERE RACEID = %0:s ' +
+    'ORDER BY %1:s P.DNF, P.DSQ, P.DNS, P.RANKINGTIME IS NULL, P.LAPS DESC, P.RANKINGTIME, P.STARTTIME';
+
+  FRankingSQLClassGrouping := 'C.CLASS,';
+
+  FFormatSuffix := '.TimeTrial';
+  FDefaultListFormatRanking :=
+    '{"columns":[' +
+    '{"Alignment":0,"Fieldname":"CLASS","Visible":1,"Width":100,"Title":"Klasse","Index":0},' +
+    '{"Alignment":0,"Fieldname":"Column0","Visible":1,"Width":30,"Title":"Platz","Index":1,"Alignment":2},' +
+    '{"Alignment":1,"Fieldname":"BIB","Visible":1,"Width":35,"Title":"Start#","Index":2,"Alignment":2},' +
+    '{"Alignment":0,"Fieldname":"Column3","Visible":1,"Width":130,"Title":"Name","Index":3,"Alignment":0},' +
+    '{"Alignment":0,"Fieldname":"Column4","Visible":1,"Width":130,"Title":"Team","Index":4,"Alignment":0},' +
+    '{"Alignment":0,"Fieldname":"RANKINGTIME","Visible":1,"Width":100,"Title":"Wertungszeit","Index":5,"Alignment":2},' +
+    '{"Alignment":0,"Fieldname":"Column6","Visible":1,"Width":64,"Title":"Diff","Index":6,"Alignment":2},' +
+    '{"Alignment":0,"Fieldname":"FINISHTIME","Visible":1,"Width":100,"Title":"Zielzeit","Index":7,"Alignment":2},' +
+    '{"Alignment":1,"Fieldname":"STARTTIME","Visible":0,"Width":-1,"Title":"Startzeit","Index":8,"Alignment":2},' +
+    '{"Alignment":1,"Fieldname":"DNS","Visible":1,"Width":30,"Index":9},' +
+    '{"Alignment":1,"Fieldname":"DNF","Visible":1,"Width":30,"Index":10},' +
+    '{"Alignment":1,"Fieldname":"DSQ","Visible":1,"Width":30,"Index":11},' +
+    '{"Alignment":1,"Fieldname":"PENALTIES","Visible":0,"Width":-1,"Title":"Strafen","Index":12,"Alignment":0},' +
+    '{"Alignment":1,"Fieldname":"PARTICIPATIONID","Visible":0,"Width":-1,"Index":13}]}';
+
   inherited Create(AParent, AEvent, ARaceItem);
 
   FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsStopped];
 
-  FRankingQuery := Format(cRankingSQLFormat, [ARaceItem.Id.ToString, '']);
-  FSQLDataSetRankings.CommandText := Format(cRankingSQLFormat, [ARaceItem.Id.ToString, '']);
+  FRankingQuery := Format(FRankingSQLFormat, [ARaceItem.Id.ToString, '']);
+  FSQLDataSetRankings.CommandText := Format(FRankingSQLFormat, [ARaceItem.Id.ToString, '']);
 
   FRankingGridFormatInitialized := false;
   FSQLDataSetRankings.AfterOpen := AfterOpenRankingResultSet;
@@ -86,7 +96,7 @@ end;
 destructor TTimeTrialRaceEngine.Destroy;
 begin
   try
-    TGridFormatProvider.SaveSettings(FRankingGrid, cFormatSuffix);
+    TGridFormatProvider.SaveSettings(FRankingGrid, FFormatSuffix);
   finally
     inherited Destroy;
   end;
@@ -99,7 +109,7 @@ begin
     Exit;
   if FRankingGrid.Columns.Count <= 1 then
     Exit;
-  FRankingGridFormatInitialized := TGridFormatProvider.LoadSettings(FRankingGrid, cDefaultListFormatRanking, cFormatSuffix);
+  FRankingGridFormatInitialized := TGridFormatProvider.LoadSettings(FRankingGrid, FDefaultListFormatRanking, FFormatSuffix);
 end;
 
 {==============================================================================}
@@ -109,11 +119,11 @@ begin
     Exit;
 
   if AValue then
-    FSQLGroupingString := cRankingSQLClassGrouping
+    FSQLGroupingString := FRankingSQLClassGrouping
   else
     FSQLGroupingString := '';
 
-  FRankingQuery := Format(cRankingSQLFormat, [FRaceItem.Id.ToString, FSQLGroupingString]);
+  FRankingQuery := Format(FRankingSQLFormat, [FRaceItem.Id.ToString, FSQLGroupingString]);
   FRankingGridFormatInitialized := false;
   inherited SetRankingGroupedByClass(AValue);
 end;
@@ -228,7 +238,6 @@ begin
   lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
   try
     lExcelFiller.TemplateFile := cStdTemplatePath + 'StartListTT.xlsx';
-    lExcelFiller.OutputFile := cStdDataPath + Format('StartList-%s.xlsx', [FRaceItem.Title]);
 
     lResultSet := nil;
     MainDataModule.FillReadOnlyDataSetForSQL(
@@ -238,7 +247,9 @@ begin
       'ORDER BY C.BIB',
       lResultSet);
 
-    lExcelFiller.FillDataRows(lResultSet);
+    lExcelFiller.FillDataRowsAndSave(cStdDataPath + Format('StartList-%s.xlsx', [FRaceItem.Title]),
+                                     lResultSet,
+                                     FRankingGroupedByClass);
   finally
     FreeAndNil(lExcelFiller);
     FreeAndNil(lResultSet);
@@ -246,9 +257,88 @@ begin
 end;
 
 {==============================================================================}
-procedure TTimeTrialRaceEngine.ExportResultsToExcelTemplate(const AOutputFile: string);
+procedure TTimeTrialRaceEngine.PrintResults(AGroupByClass: boolean);
+var
+  lExcelFiller: TExcelFiller;
+  lResultSet: TSQLDataSet;
+  lGroupByClassString: string;
 begin
-  inherited;
+  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
+  try
+    lExcelFiller.TemplateFile := cStdTemplatePath + 'ResultListTT.xlsx';
+    lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
+    lResultSet := nil;
+    if AGroupByClass then
+      lGroupByClassString := FRankingSQLClassGrouping
+    else
+      lGroupByClassString := '';
+    MainDataModule.FillReadOnlyDataSetForSQL(
+      Format(FResultSQLFormat, [FRaceItem.Id.ToString, lGroupByClassString]),
+      lResultSet);
+
+    lExcelFiller.FillDataRowsAndPrint(lResultSet, FRankingGroupedByClass);
+  finally
+    FreeAndNil(lExcelFiller);
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+procedure TTimeTrialRaceEngine.ExportResultsToExcelTemplate(const AOutputFile: string; AGroupByClass: boolean);
+var
+  lExcelFiller: TExcelFiller;
+  lResultSet: TSQLDataSet;
+  lGroupByClassString: string;
+begin
+  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
+  try
+    lExcelFiller.TemplateFile := cStdTemplatePath + 'ResultListTT.xlsx';
+    lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
+    lResultSet := nil;
+    if AGroupByClass then
+      lGroupByClassString := FRankingSQLClassGrouping
+    else
+      lGroupByClassString := '';
+    MainDataModule.FillReadOnlyDataSetForSQL(
+      Format(FResultSQLFormat, [FRaceItem.Id.ToString, lGroupByClassString]),
+      lResultSet);
+
+    lExcelFiller.FillDataRowsAndSave(cStdDataPath + Format('Results-%s.xlsx', [FRaceItem.Title]),
+                                     lResultSet,
+                                     FRankingGroupedByClass);
+  finally
+    FreeAndNil(lExcelFiller);
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+procedure TTimeTrialRaceEngine.OnGetResultFieldValue(ACol: Integer; ADataSet: TDataSet; var AValue: string);
+var
+  lField: TField;
+begin
+  if ACol <> 0 then
+    Exit;
+  lField := ADataSet.FieldByName('DNS');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
+  begin
+    AValue := 'DNS';
+    Exit;
+  end;
+
+  lField := ADataSet.FieldByName('DNF');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
+  begin
+    AValue := 'DNF';
+    Exit;
+  end;
+
+  lField := ADataSet.FieldByName('DSQ');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
+  begin
+    AValue := 'DNS';
+    Exit;
+  end;
 end;
 
 end.
