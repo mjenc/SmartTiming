@@ -20,8 +20,6 @@ object FormSettings: TFormSettings
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 424
-    ExplicitWidth = 630
     DesignSize = (
       632
       41)
@@ -35,7 +33,6 @@ object FormSettings: TFormSettings
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonOKClick
-      ExplicitLeft = 456
     end
     object ButtonCancel: TButton
       Left = 546
@@ -47,7 +44,6 @@ object FormSettings: TFormSettings
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
-      ExplicitLeft = 544
     end
   end
   object PanelMain: TPanel
@@ -58,8 +54,6 @@ object FormSettings: TFormSettings
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 630
-    ExplicitHeight = 424
     object PageControlSettings: TPageControl
       AlignWithMargins = True
       Left = 5
@@ -70,12 +64,10 @@ object FormSettings: TFormSettings
       Margins.Top = 5
       Margins.Right = 5
       Margins.Bottom = 5
-      ActivePage = TabSheetGridFormatEditor
+      ActivePage = TabSheetCommon
       Align = alClient
       TabOrder = 0
       OnChange = PageControlSettingsChange
-      ExplicitWidth = 620
-      ExplicitHeight = 414
       object TabSheetCommon: TTabSheet
         Caption = 'Allgemein'
         object Label2: TLabel
@@ -84,6 +76,13 @@ object FormSettings: TFormSettings
           Width = 64
           Height = 15
           Caption = 'Farbschema'
+        end
+        object Label3: TLabel
+          Left = 24
+          Top = 95
+          Width = 156
+          Height = 15
+          Caption = 'Decodersystem-Subnetmasks'
         end
         object CheckBoxPassingBeep: TCheckBox
           Left = 24
@@ -98,11 +97,18 @@ object FormSettings: TFormSettings
         end
         object ComboBoxStyle: TComboBox
           Left = 200
-          Top = 47
+          Top = 56
           Width = 193
           Height = 23
           TabOrder = 1
           OnChange = ComboBoxStyleChange
+        end
+        object MemoSubnetMasks: TMemo
+          Left = 200
+          Top = 92
+          Width = 89
+          Height = 89
+          TabOrder = 2
         end
       end
       object TabSheetCompetitorImport: TTabSheet
@@ -168,7 +174,6 @@ object FormSettings: TFormSettings
           Anchors = [akLeft, akTop, akRight]
           TabOrder = 0
           OnChange = ComboBoxGridFormatsChange
-          ExplicitWidth = 606
         end
         object MemoConfig: TMemo
           Left = 0
@@ -274,8 +279,8 @@ object FormSettings: TFormSettings
     ResolveToDataSet = True
     Exported = False
     Options = [poReadOnly, poDisableInserts, poDisableEdits, poDisableDeletes, poAutoRefresh, poUseQuoteChar]
-    Left = 261
-    Top = 149
+    Left = 229
+    Top = 229
   end
   object SQLQueryDictionary: TSQLQuery
     MaxBlobSize = -1

@@ -20,14 +20,15 @@ type
     FDecoderFoundCount: integer;
     FNewStatusReceived: TDecoderStatusReceivedEvent;
     FNewPassingReceived: TDecoderPassingReceivedEvent;
+    FOnDecoderFound: TDecoderFoundEvent;
 
   protected
     procedure OnStatusReceived(AStatus: TDecoderStatus);
     procedure OnPassingReceived(APassing: TPassing);
-    procedure OnDecoderFound(ADecoder: TDecoder);
+    procedure DecoderFound(ADecoder: TDecoder);
     function GetIsConnected: boolean;
     procedure SetActiveDecoder(ADecoder: TDecoder);
-    constructor Create(const ADatabaseName: string); reintroduce;
+    constructor Create; reintroduce;
 
   public
     class function GetSingleton: TDecoderEngine;
@@ -38,6 +39,7 @@ type
     property ActiveDecoder: TDecoder read FDecoder write SetActiveDecoder;
     property NewStatusReceived: TDecoderStatusReceivedEvent read FNewStatusReceived write FNewStatusReceived;
     property NewPassingReceived: TDecoderPassingReceivedEvent read FNewPassingReceived write FNewPassingReceived;
+    property OnDecoderFound: TDecoderFoundEvent read FOnDecoderFound write FOnDecoderFound;
   end;
 
 implementation
@@ -53,7 +55,7 @@ begin
   try
     if gTheDecoderEngine <> nil then
       Exit(gTheDecoderEngine);
-    gTheDecoderEngine := Create('Temp.db');
+    gTheDecoderEngine := Create;
     Exit(gTheDecoderEngine);
   finally
     gCriticalSection.Leave;
@@ -61,14 +63,13 @@ begin
 end;
 
 {==============================================================================}
-constructor TDecoderEngine.Create(const ADatabaseName: string);
+constructor TDecoderEngine.Create;
 begin
   FTimingBias := SmartTimingTools.ReadTimingBiasFromRegistry;
 
   FListener := nil;
   FDecoderFoundCount := 0;
-  FDecoderFinder := TDecoderFinder.Create(OnDecoderFound);
-  RefreshDecoderList;
+  FDecoderFinder := TDecoderFinder.Create(DecoderFound);
 end;
 
 
@@ -144,10 +145,12 @@ begin
 end;
 
 {==============================================================================}
-procedure TDecoderEngine.OnDecoderFound(ADecoder: TDecoder);
+procedure TDecoderEngine.DecoderFound(ADecoder: TDecoder);
 begin
   FDecoderFoundCount := TDecoderStore.GetSingleton.AddDecoder(ADecoder);
   SetActiveDecoder(ADecoder);
+  if Assigned(FOnDecoderFound) then
+    FOnDecoderFound(ADecoder);
 end;
 
 

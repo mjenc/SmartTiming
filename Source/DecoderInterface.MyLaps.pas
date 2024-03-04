@@ -4,7 +4,7 @@ interface
 
 uses
 //  DataStructures,
-  Classes, SysUtils, StrUtils,
+  Classes, SysUtils, StrUtils, Windows,
   IdTCPConnection, IdTCPClient, IdBaseComponent, IdComponent, IdCustomTCPServer, IdTCPServer, IdUdpServer,
   IdGlobal, IdSocketHandle,
   DecoderInterface;
@@ -82,6 +82,9 @@ type
   end;
 
 implementation
+
+uses
+  SmartTiming.Consts, SmartTiming.Tools;
 
 const
 
@@ -816,10 +819,12 @@ end;
 
 {==============================================================================}
 procedure TMyLapsDecoderFinder.Refresh;
-var i: integer;
-    sReq: string;
-    s: string;
-    ReqBuf: TIdBytes;
+var
+  i: integer;
+  sReq: string;
+  s: string;
+  ReqBuf: TIdBytes;
+  lSubnetMasks: TStringList;
 begin
   sReq := FParser.GetDecoderSearchPhrase;
   setlength(ReqBuf, trunc(length(sReq)/2));
@@ -828,7 +833,15 @@ begin
     s := MidStr(sReq, 2*i+1, 2);
     ReqBuf[i] := StrToInt('$' + s);
   end;
-  FUdpServer.SendBuffer('255.255.255.255', cMyLapsDefaultOperatingPort, ReqBuf);
+
+  lSubnetMasks := TStringList.Create;
+  try
+    lSubnetMasks.Text := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'DecoderSubnetMasks', '192.168.255.255');
+    for i := 0 to lSubnetMasks.Count - 1 do
+      FUdpServer.SendBuffer(lSubnetMasks[i], cMyLapsDefaultOperatingPort, ReqBuf);
+  finally
+    FreeAndNil(lSubnetMasks);
+  end;
 end;
 
 end.

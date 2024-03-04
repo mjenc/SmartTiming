@@ -33,6 +33,8 @@ type
     ComboBoxGridFormats: TComboBox;
     MemoConfig: TMemo;
     ButtonResetFormatToStandard: TButton;
+    MemoSubnetMasks: TMemo;
+    Label3: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure ButtonOKClick(Sender: TObject);
     procedure ComboBoxStyleChange(Sender: TObject);
@@ -71,6 +73,7 @@ begin
     ComboBoxStyle.Items.Add(lStylename);
 
   ComboBoxStyle.Text := TStyleManager.ActiveStyle.Name;
+  MemoSubnetMasks.Text := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'DecoderSubnetMasks', cDefaultDecoderSystemSubnetMasks);
 end;
 
 {==============================================================================}
@@ -86,6 +89,7 @@ begin
   SaveCurrentFormat;
   SmartTimingTools.RegistryWriteBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'BeepOnPassing', CheckBoxPassingBeep.Checked);
   SmartTimingTools.RegistryWriteString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'Theme', ComboBoxStyle.Text);
+  SmartTimingTools.RegistryWriteString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'DecoderSubnetMasks', MemoSubnetMasks.Text);
 end;
 
 {==============================================================================}

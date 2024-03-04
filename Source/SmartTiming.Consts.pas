@@ -6,6 +6,8 @@ uses
   Generics.Collections, SysUtils, System.UITypes, DB;
 
 const
+  CRLF = #13#10;
+
   cManufacturer = 'MJ';
   cSmartStartingAppName = 'SmartStarting';
   cSmartTimingAppName = 'SmartTiming';
@@ -39,6 +41,8 @@ const
   cColorInactiveDark = TColor($404040);
 
   cRecalcRankingMilliSeconds = 2000;
+
+  cDefaultDecoderSystemSubnetMasks = '192.168.181.255' + CRLF + '192.168.182.255';
 
   // WebService
   cWebServicePort = 9768;
@@ -75,7 +79,6 @@ const
     '{"Alignment":0,"Fieldname":"ADDITIONAL2","Visible":0,"Width":-1,"Title":"Zus\u00e4tzlich 2","Index":14},' +
     '{"Alignment":0,"Fieldname":"ADDITIONAL3","Visible":0,"Width":-1,"Title":"Zus\u00e4tzlich 3","Index":15}]}';
 
-  CRLF = #13#10;
 
 resourcestring
   cRaceTypeNameUnknown = 'Unbestimmt';

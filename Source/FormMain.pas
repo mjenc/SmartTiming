@@ -28,7 +28,7 @@ type
     PanelStatus: TPanel;
     PanelDecoder: TPanel;
     LabelDecoderIpAddress: TLabel;
-    LabelDecoderId: TLabel;
+    LabelDecoderManufacturer: TLabel;
     MainMenu: TMainMenu;
     PageControlMain: TPageControl;
     TabSheetEvent: TTabSheet;
@@ -120,6 +120,7 @@ type
     CheckBoxRankingGroupedByClass: TCheckBox;
     CheckBoxResultsGroupByClass: TCheckBox;
     ButtonPrintResults: TButton;
+    LabelDecoderId: TLabel;
     procedure DatePickerFromChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -155,7 +156,7 @@ type
     procedure MenuItemCheckBatteryStatusClick(Sender: TObject);
     procedure MenuItemBackupClick(Sender: TObject);
     procedure ToggleAutoScrollClick(Sender: TObject);
-    procedure LabelDecoderIdClick(Sender: TObject);
+    procedure LabelDecoderManufacturerClick(Sender: TObject);
     procedure MenuItemReportsClick(Sender: TObject);
     procedure PopupMenuCompetitorActionsPopup(Sender: TObject);
     procedure ButtonPrintParticipantListClick(Sender: TObject);
@@ -194,6 +195,7 @@ type
   public
     procedure AddDecoderStatus(ADecoderStatus: TDecoderStatus);
     procedure AddPassingForRaceId(ARaceId: integer; APassing: TPassing);
+    procedure DecoderConnected(ADecoder: TDecoder);
     function GetAllRaceIds: TArray<integer>;
     procedure RefreshControlsFromEventDataObject(AEvent: TEventDataObject);
   end;
@@ -553,7 +555,7 @@ begin
 end;
 
 {==============================================================================}
-procedure TFormMain.LabelDecoderIdClick(Sender: TObject);
+procedure TFormMain.LabelDecoderManufacturerClick(Sender: TObject);
 begin
   TDecoderEngine.GetSingleton.RefreshDecoderList;
 end;
@@ -1084,8 +1086,16 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.DecoderConnected(ADecoder: TDecoder);
+begin
+  LabelDecoderManufacturer.Caption := ADecoder.DecoderManufacturer;
+  LabelDecoderIpAddress.Caption := ADecoder.Address;
+end;
+
+{==============================================================================}
 procedure TFormMain.AddDecoderStatus(ADecoderStatus: TDecoderStatus);
 begin
+  LabelDecoderId.Caption := ADecoderStatus.DecoderId;
   LabelDecoderNoiseLevel.Caption := 'Störungslevel: ' + ADecoderStatus.Noise.ToString;
   LabelDecoderTemperature.Caption := 'Temperatur: ' + ADecoderStatus.Temperature.ToString;
 end;

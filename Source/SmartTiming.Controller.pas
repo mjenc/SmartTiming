@@ -18,6 +18,7 @@ type
     FRaceList: TDictionary<integer, TRaceItem>;
     FServlet: TSmartTimingServlet;
 
+    procedure OnDecoderFound(ADecoder: TDecoder);
     procedure OnStatusReceived(AStatus: TDecoderStatus);
     procedure OnPassingReceived(APassing: TPassing);
   public
@@ -49,13 +50,15 @@ uses
 {==============================================================================}
 constructor TSmartTimingController.Create;
 begin
+  LoadSettings;
+
   FEventDataObject := TEventDataObject.Create;
 
   FDecoderEngine := TDecoderEngine.GetSingleton;
+  FDecoderEngine.OnDecoderFound := OnDecoderFound;
   FDecoderEngine.NewPassingReceived := OnPassingReceived;
   FDecoderEngine.NewStatusReceived := OnStatusReceived;
-
-  LoadSettings;
+  FDecoderEngine.RefreshDecoderList;
 
   FRaceList := TDictionary<integer, TRaceItem>.Create;
 
@@ -209,6 +212,12 @@ begin
   MainDataModule.AddPassingToDatabase(lPassing, ARaceId);
 
   GFormMain.AddPassingForRaceId(ARaceId, lPassing);
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.OnDecoderFound(ADecoder: TDecoder);
+begin
+  GFormMain.DecoderConnected(ADecoder);
 end;
 
 {==============================================================================}

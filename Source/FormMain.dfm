@@ -757,13 +757,19 @@ object FormMain: TFormMain
         Height = 15
         Caption = 'IP-Adresse'
       end
-      object LabelDecoderId: TLabel
+      object LabelDecoderManufacturer: TLabel
         Left = 8
         Top = 2
         Width = 134
         Height = 15
         Caption = 'Decoder nicht verbunden'
-        OnClick = LabelDecoderIdClick
+        OnClick = LabelDecoderManufacturerClick
+      end
+      object LabelDecoderId: TLabel
+        Left = 148
+        Top = 2
+        Width = 3
+        Height = 15
       end
     end
     object PanelNoiseChart: TPanel
@@ -776,7 +782,7 @@ object FormMain: TFormMain
       TabOrder = 1
       object LabelDecoderNoiseLevel: TLabel
         Left = 6
-        Top = 4
+        Top = 2
         Width = 71
         Height = 15
         Caption = 'St'#246'rungslevel'
@@ -798,7 +804,7 @@ object FormMain: TFormMain
       TabOrder = 2
       object LabelDecoderTemperature: TLabel
         Left = 6
-        Top = 4
+        Top = 2
         Width = 60
         Height = 15
         Caption = 'Temperatur'
