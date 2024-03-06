@@ -31,7 +31,8 @@ uses
   Report.ExcelTemplateFiller in 'Report.ExcelTemplateFiller.pas',
   SmartTiming.Event in 'SmartTiming.Event.pas',
   SmartTiming.WebService in 'SmartTiming.WebService.pas',
-  SmartTiming.GridFormatProvider in 'SmartTiming.GridFormatProvider.pas';
+  SmartTiming.GridFormatProvider in 'SmartTiming.GridFormatProvider.pas',
+  FormProgress in 'FormProgress.pas' {FormProgressIndicator};
 
 {$R *.res}
 

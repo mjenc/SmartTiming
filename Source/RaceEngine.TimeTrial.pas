@@ -89,7 +89,7 @@ begin
   FSQLDataSetRankings.CommandText := Format(FRankingSQLFormat, [ARaceItem.Id.ToString, '']);
 
   FRankingGridFormatInitialized := false;
-  FSQLDataSetRankings.AfterOpen := AfterOpenRankingResultSet;
+//  FSQLDataSetRankings.AfterOpen := AfterOpenRankingResultSet;
 end;
 
 {==============================================================================}
@@ -105,9 +105,9 @@ end;
 {==============================================================================}
 procedure TTimeTrialRaceEngine.AfterOpenRankingResultSet(ADataSet: TDataSet);
 begin
-  if (FRankingGrid = nil) or FRankingGridFormatInitialized then
+   if (FRankingGrid = nil) or FRankingGridFormatInitialized then
     Exit;
-  if FRankingGrid.Columns.Count <= 1 then
+  if ADataSet.Fields.Count <= 1 then
     Exit;
   FRankingGridFormatInitialized := TGridFormatProvider.LoadSettings(FRankingGrid, FDefaultListFormatRanking, FFormatSuffix);
 end;

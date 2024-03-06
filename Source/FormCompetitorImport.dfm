@@ -21,8 +21,6 @@ object FormCompetitorImport: TFormCompetitorImport
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 447
-    ExplicitWidth = 819
     DesignSize = (
       821
       41)
@@ -43,7 +41,6 @@ object FormCompetitorImport: TFormCompetitorImport
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonOKClick
-      ExplicitLeft = 645
     end
     object ButtonCancel: TButton
       Left = 735
@@ -55,7 +52,6 @@ object FormCompetitorImport: TFormCompetitorImport
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
-      ExplicitLeft = 733
     end
     object ProgressBar: TProgressBar
       Left = 16
@@ -74,7 +70,6 @@ object FormCompetitorImport: TFormCompetitorImport
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitHeight = 447
     DesignSize = (
       249
       455)
@@ -101,7 +96,6 @@ object FormCompetitorImport: TFormCompetitorImport
       TabOrder = 0
       OnGetEditText = StringGridFieldMappingGetEditText
       OnSelectCell = StringGridFieldMappingSelectCell
-      ExplicitHeight = 401
     end
   end
   object ComboBoxFileColumns: TComboBox
@@ -130,8 +124,6 @@ object FormCompetitorImport: TFormCompetitorImport
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 3
-    ExplicitWidth = 570
-    ExplicitHeight = 447
     DesignSize = (
       572
       455)
@@ -151,8 +143,6 @@ object FormCompetitorImport: TFormCompetitorImport
       ColCount = 8
       FixedCols = 0
       TabOrder = 0
-      ExplicitWidth = 540
-      ExplicitHeight = 401
     end
   end
   object FileOpenDialog: TFileOpenDialog

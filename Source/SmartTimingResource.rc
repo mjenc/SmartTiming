@@ -3,3 +3,6 @@ WarnSound SOUND "..\Resources\WarnSound.wav"
 AlertSound SOUND "..\Resources\AlertSound.wav"
 
 MyLapsDecoderActive BITMAP "..\Resources\Decoder44x44.bmp"
+
+GEARS AVI "..\Resources\AVIs\GEARS.avi"
+

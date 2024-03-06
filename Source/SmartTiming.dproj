@@ -151,6 +151,10 @@
         <DCCReference Include="SmartTiming.Event.pas"/>
         <DCCReference Include="SmartTiming.WebService.pas"/>
         <DCCReference Include="SmartTiming.GridFormatProvider.pas"/>
+        <DCCReference Include="FormProgress.pas">
+            <Form>FormProgressIndicator</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <None Include="ModelSupport_SmartTiming\default.txaPackage"/>
         <None Include="ModelSupport_SmartTiming\default.txvpck"/>
         <None Include="..\Resources\PassingBeep.wav"/>

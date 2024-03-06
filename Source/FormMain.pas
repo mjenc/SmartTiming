@@ -605,8 +605,8 @@ end;
 procedure TFormMain.EnableResultPanelControls(AEnable: boolean);
 begin
   ButtonPrintResults.Enabled := AEnable;
-  ButtonResultExportCSV.Enabled := AEnable;
-  ButtonResultExportHTML.Enabled := AEnable;
+  ButtonResultExportCSV.Enabled := false; // TODO
+  ButtonResultExportHTML.Enabled := false; // TODO
   ButtonExportToExelTemplate.Enabled := AEnable;
   CheckBoxResultsGroupByClass.Enabled := AEnable;
 end;

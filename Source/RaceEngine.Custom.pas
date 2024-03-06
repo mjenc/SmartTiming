@@ -264,7 +264,7 @@ begin
   FRankingGrid.DataSource := FDataSourceRankings;
   FRankingGrid.OnDrawDataCell := OnColorizePodium;
   result := FRankingGrid;
-  AfterOpenRankingResultSet(FSQLDataSetRankings);
+//  AfterOpenRankingResultSet(FSQLDataSetRankings);
 end;
 
 {==============================================================================}
@@ -308,6 +308,7 @@ begin
     lColumn := FRankingGrid.Columns[i];
     SmartTimingTools.SetColumnProperties('RANKING', lColumn);
   end;
+  AfterOpenRankingResultSet(FClientDataSetRankings);
 end;
 
 {==============================================================================}
@@ -351,10 +352,14 @@ end;
 {==============================================================================}
 procedure TCustomRaceEngine.ExportResultsToCSV;
 var
+  lFileName: string;
   lResultSet: TSQLDataSet;
   lColumnIndex: integer;
   lFieldName: string;
   lValue: string;
+  lCSVFile: TextFile;
+  lField: TField;
+  lRow: string;
 begin
   lResultSet := nil;
   try
@@ -366,22 +371,43 @@ begin
     if lResultSet.Eof then
       Exit;
 
-    // TODO Write titles
+    AssignFile(lCSVFile, lFileName);
+    try
+      Rewrite(lCSVFile);
 
-    while not lResultSet.Eof do
-    begin
-      for lColumnIndex := 0 to lResultSet.FieldCount - 1 do
+      // Write header row
+      for lField in lResultSet.Fields do
       begin
-        lFieldName := lResultSet.FieldList[lColumnIndex].FieldName;
-        lValue := lResultSet.FieldList[lColumnIndex].AsString;
+        if not lField.Visible then
+          continue;
 
-        // TODO Write field value
+        Write(lCSVFile, '"' + lField.FieldName + '"');
+        if lField.Index < lResultSet.FieldCount - 1 then
+          Write(lCSVFile, ',');
       end;
-      lResultSet.Next;
+      Writeln(lCSVFile);
+
+      while not lResultSet.Eof do
+      begin
+        for lField in lResultSet.Fields do
+        begin
+          if not lField.Visible then
+            continue;
+
+          lFieldName := lResultSet.FieldList[lColumnIndex].FieldName;
+          lValue := lResultSet.FieldList[lColumnIndex].AsString;
+
+          // TODO Write field value
+        end;
+        lResultSet.Next;
+      end;
+    finally
+      CloseFile(lCSVFile);
     end;
   finally
     FreeAndNil(lResultSet);
   end;
+
 end;
 
 end.

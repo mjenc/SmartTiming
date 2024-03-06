@@ -81,7 +81,7 @@ begin
   StringGridFieldMapping.Cells[0, 8] := cFieldTitleStarttime;
   StringGridFieldMapping.Cells[0, 9] := cFieldTitleTransponder;
 
-  StringGridPreview.ColCount := 9;
+  StringGridPreview.ColCount := 10;
   StringGridPreview.Cells[0, 0] := cFieldTitleBib;
   StringGridPreview.Cells[1, 0] := cFieldTitleClass;
   StringGridPreview.Cells[2, 0] := cFieldTitleFirstName;

@@ -39,7 +39,7 @@ type
 implementation
 
 uses
-  Variants, DataModule, Dialogs;
+  Variants, DataModule, Dialogs, FormProgress;
 
 {==============================================================================}
 constructor TExcelFiller.Create(AEvent: TEventDataObject; const ARaceTitle: string);
@@ -122,14 +122,27 @@ var
   lCenterHeaderBase: string;
   lOutput: boolean;
   lCellColIdx: Integer;
+  lProgressForm: TFormProgressIndicator;
 const
   cDataRowStartIndex = 2; // Start from the second row assuming the first row is for headers
 
   procedure DoAction;
+  var
+    lSaveDialog: TFileSaveDialog;
   begin
     case AAction of
     eaSave:
-      lExcelWorkbook.SaveAs(GetGroupedFileName(lCurrentClass), EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, xlNoChange, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
+      begin
+        lSaveDialog := TFileSaveDialog.Create(nil);
+        try
+          lSaveDialog.FileName := GetGroupedFileName(lCurrentClass);
+          lSaveDialog.DefaultFolder := ExtractFilePath(lSaveDialog.FileName);
+          if lSaveDialog.Execute then
+            lExcelWorkbook.SaveAs(lSaveDialog.FileName, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, xlNoChange, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
+        finally
+          FreeAndNil(lSaveDialog);
+        end;
+      end;
     eaPrint:
       begin
         FExcelApp.Visible[0] := true;
@@ -145,71 +158,78 @@ begin
     Exit;
 
   try
-    lExcelWorkbook := FExcelApp.Workbooks.Open(FTemplateFile, EmptyParam, EmptyParam,
-      EmptyParam, EmptyParam, EmptyParam,
-      EmptyParam, EmptyParam, EmptyParam,
-      EmptyParam, EmptyParam, EmptyParam,
-      EmptyParam, EmptyParam, EmptyParam, 0);
-
+    lProgressForm := TFormProgressIndicator.Create(nil);
     try
-      lExcelWorkbook.Author[0] := cSmartTimingAppName + ' ' + cCopyright;
+      lProgressForm.Show;
 
-      lExcelSheet := lExcelWorkbook.Sheets[1] as _Worksheet;
+      lExcelWorkbook := FExcelApp.Workbooks.Open(FTemplateFile, EmptyParam, EmptyParam,
+        EmptyParam, EmptyParam, EmptyParam,
+        EmptyParam, EmptyParam, EmptyParam,
+        EmptyParam, EmptyParam, EmptyParam,
+        EmptyParam, EmptyParam, EmptyParam, 0);
 
-      lCenterHeaderBase := lExcelSheet.PageSetup.CenterHeader;
-      lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle;
-      lCurrentClass := '';
-      lRowIndex := cDataRowStartIndex;
+      try
+        lExcelWorkbook.Author[0] := cSmartTimingAppName + ' ' + cCopyright;
 
-      while not ADataSet.Eof do
-      begin
-        lCellColIdx := 1;
+        lExcelSheet := lExcelWorkbook.Sheets[1] as _Worksheet;
 
-        if AGroupByClass then
+        lCenterHeaderBase := lExcelSheet.PageSetup.CenterHeader;
+        lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle;
+        lCurrentClass := '';
+        lRowIndex := cDataRowStartIndex;
+
+        while not ADataSet.Eof do
         begin
-          lValue := ADataSet.FindField('CLASS').AsString;
-           if not lCurrentClass.IsEmpty and (lValue <> lCurrentClass) then
-           begin
-             lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lValue;
+          lCellColIdx := 1;
 
-             // Save the file so far and clear it a new one
-             DoAction;
-             lExcelSheet.Cells.Clear;
-             lRowIndex := cDataRowStartIndex;
-           end;
-          lCurrentClass := lValue;
-        end;
-
-        for lColumnIndex := 0 to ADataSet.FieldCount - 1 do
-        begin
-          lFieldName := ADataSet.FieldList[lColumnIndex].FieldName;
-          lValue := ADataSet.FieldList[lColumnIndex].AsString;
-          lOutput := IsOutputField(lFieldName);
-
-          if Assigned(FOnGetFieldValue) then
+          if AGroupByClass then
           begin
-            if not lOutput then
-              Continue;
-            FOnGetFieldValue(lColumnIndex, ADataSet, lValue);
+            lValue := ADataSet.FindField('CLASS').AsString;
+             if not lCurrentClass.IsEmpty and (lValue <> lCurrentClass) then
+             begin
+               lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lValue;
+
+               // Save the file so far and clear it a new one
+               DoAction;
+               lExcelSheet.Cells.Clear;
+               lRowIndex := cDataRowStartIndex;
+             end;
+            lCurrentClass := lValue;
           end;
 
-          if not lOutput then
-            Continue;
+          for lColumnIndex := 0 to ADataSet.FieldCount - 1 do
+          begin
+            lFieldName := ADataSet.FieldList[lColumnIndex].FieldName;
+            lValue := ADataSet.FieldList[lColumnIndex].AsString;
+            lOutput := IsOutputField(lFieldName);
 
-          lExcelSheet.Cells.Item[lRowIndex, lCellColIdx].Value := lValue;
-          Inc(lCellColIdx);
+            if Assigned(FOnGetFieldValue) then
+            begin
+              if not lOutput then
+                Continue;
+              FOnGetFieldValue(lColumnIndex, ADataSet, lValue);
+            end;
+
+            if not lOutput then
+              Continue;
+
+            lExcelSheet.Cells.Item[lRowIndex, lCellColIdx].Value := lValue;
+            Inc(lCellColIdx);
+          end;
+
+          Inc(lRowIndex);
+          ADataSet.Next;
         end;
 
-        Inc(lRowIndex);
-        ADataSet.Next;
+        if AGroupByClass then
+          lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lCurrentClass;
+
+        DoAction;
+      finally
+        lExcelWorkbook.Close(false, '', EmptyParam, 0);
       end;
-
-      if AGroupByClass then
-        lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lCurrentClass;
-
-      DoAction;
     finally
-      lExcelWorkbook.Close(false, '', EmptyParam, 0);
+      FreeAndNil(lProgressForm);
     end;
 
   except

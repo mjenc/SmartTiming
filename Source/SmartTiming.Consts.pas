@@ -55,7 +55,7 @@ const
     '{"Alignment":0,"Fieldname":"STARTTIME","Visible":1,"Width":120,"Title":"Startzeit","Index":3},' +
     '{"Alignment":0,"Fieldname":"RACETYPE","Visible":1,"Width":120,"Title":"Art","Index":4},' +
     '{"Alignment":1,"Fieldname":"LAPS","Visible":1,"Width":50,"Title":"Runden","Index":5},' +
-    '{"Alignment":1,"Fieldname":"DISTANCE","Visible":1,"Width":50,"Title":"Distianz","Index":6},' +
+    '{"Alignment":1,"Fieldname":"DISTANCE","Visible":1,"Width":50,"Title":"Distanz","Index":6},' +
     '{"Alignment":1,"Fieldname":"FIRSTPASSINGISLAP","Visible":1,"Width":145,"Title":"Erste Passage als Runde","Index":7},' +
     '{"Alignment":1,"Fieldname":"MINLAPDURATION","Visible":1,"Width":100,"Title":"Min. Rundenzeit","Index":8},' +
     '{"Alignment":0,"Fieldname":"STATUS","Visible":1,"Width":100,"Title":"Status","Index":9}]}';
@@ -135,6 +135,9 @@ type
   TRaceStates = set of TRaceStatus;
   TFinishStatus = (fsFinished, fsDNS, fsDNF, fsDSQ);
   TNOnGetColumnText = procedure (ASender: TField; var AText: string; ADisplayText: Boolean) of object;
+
+var
+  gHInstResDll: HINST = 0;
 
 implementation
 
