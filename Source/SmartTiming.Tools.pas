@@ -3,7 +3,7 @@ unit SmartTiming.Tools;
 interface
 
 uses
-  Classes, SysUtils, DateUtils, Windows, Dialogs, Forms,
+  Classes, SysUtils, DateUtils, Windows, Dialogs, Forms, Winapi.Messages,
   Registry, DBGrids, Controls, Graphics, Variants, Buttons,
   Generics.Defaults, UITypes, DB, SmartTiming.Event,
   Tools.SuperObject, SmartTiming.Consts, RaceEngine.Custom;
@@ -41,6 +41,12 @@ type
 
   TRaceEngineFactory = class
     class function CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
+  end;
+
+  TDBGrid = class(DBGrids.TDBGrid)
+  private
+    procedure WMVScroll(var Msg: TWMVScroll); message WM_VSCROLL;
+    procedure UpdateScrollBar; override;
   end;
 
 var
@@ -561,4 +567,55 @@ begin
   end;
 end;
 
+{==============================================================================}
+procedure TDBGrid.WMVScroll(var Msg: TWMVScroll);
+Var
+ dataset: TDataSet;
+ si: TScrollInfo;
+Begin
+ If (Msg.ScrollCode = SB_THUMBTRACK) Or
+    (Msg.ScrollCode = SB_THUMBPOSITION) Then
+ Begin
+   dataset := Self.DataSource.DataSet;
+   If Assigned(dataset) Then
+   Begin
+     si.cbSize := SizeOf(si);
+     si.fMask := SIF_ALL;
+     If Not GetScrollInfo(Self.Handle, SB_VERT, si) Then
+       RaiseLastOSError;
+     dataset.MoveBy(si.nTrackPos - dataset.RecNo);
+     Msg.Result := 0;
+   End
+   Else
+     inherited;
+ End
+ Else
+   inherited;end;
+
+Procedure TDBGrid.UpdateScrollBar;
+Var
+ dataset: TDataSet;
+ si: TScrollInfo;
+Begin
+ dataset := Self.DataSource.DataSet;
+ If Assigned(dataset) Then
+ Begin
+   If Not dataset.Active Or (dataset.RecordCount <= Self.RowCount - 1) Then
+     ShowScrollBar(Self.Handle, SB_VERT, False)
+   Else
+     Begin
+       ShowScrollBar(Self.Handle, SB_VERT, True);
+       If Win32MajorVersion >= 6 Then
+         SetWindowPos(Self.Handle, 0, 0, 0, 0, 0, SWP_NOSIZE Or SWP_NOMOVE Or SWP_NOZORDER Or SWP_NOACTIVATE Or SWP_NOOWNERZORDER Or SWP_NOSENDCHANGING Or SWP_FRAMECHANGED);
+       si.cbSize := sizeof(si);
+       si.nMin := 1;
+       si.nMax := dataset.RecordCount;
+       si.nPos := dataset.RecNo;
+       si.fMask := SIF_POS Or SIF_RANGE;
+       SetScrollInfo(Self.Handle, SB_VERT, si, True);
+     End;
+   End
+ Else
+   ShowScrollBar(Self.Handle, SB_VERT, False);
+End;
 end.

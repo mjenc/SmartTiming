@@ -3,9 +3,10 @@ unit RaceEngine.TimeTrial;
 interface
 
 uses
+  SmartTiming.Tools,
   Classes, Controls, ComCtrls, SysUtils, Types, UITypes, Graphics, Windows, Variants,
   Winapi.Messages, Forms, DB, Data.SqlExpr, DateUtils, Generics.Collections,
-  SmartTiming.Consts, DecoderInterface, SmartTiming.Tools, SmartTiming.Cache,
+  SmartTiming.Consts, DecoderInterface, SmartTiming.Cache,
   RaceEngine.Custom, DataModule, SmartTiming.Event, SmartTiming.Controller;
 
 type
@@ -47,13 +48,13 @@ begin
     'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, IFNULL(C.TEAM, C.CLUB) TEAM, P.RANKINGTIME, ' +
     'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
     'OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
-    'P.FINISHTIME, P.STARTTIME, P.DNS, P.DNF, P.DSQ, P.PENALTIES, P.PARTICIPATIONID ' +
+    'P.FINISHTIME, P.STARTTIME, P.DNS, P.DNF, P.DSQ, P.PENALTIES, P.PARTICIPATIONID, P.COMPETITORID ' +
     'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
     'WHERE RACEID = %0:s ' +
     'ORDER BY %1:s P.RANKINGTIME IS NULL, P.LAPS DESC, P.RANKINGTIME, P.STARTTIME';
   FResultSQLFormat :=
     'SELECT ROW_NUMBER() OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME) CURRENTRANKING, '+
-    'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, C.CLUB, C.TEAM, C.UCIID, P.RANKINGTIME, ' +
+    'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, IFNULL(C.TEAM, C.CLUB) TEAM, C.UCIID, P.RANKINGTIME, ' +
     'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
     'OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
     'P.DNS, P.DNF, P.DSQ ' + //, P.PENALTIES, P.PARTICIPATIONID ' +

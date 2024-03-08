@@ -3,6 +3,7 @@ unit FormMain;
 interface
 
 uses
+  SmartTiming.Tools,
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Data.DB, Data.SqlExpr, Data.DbxSqlite,
   Data.FMTBcd, Datasnap.DBClient, Datasnap.Provider, Vcl.Grids, Vcl.DBGrids,
@@ -12,11 +13,12 @@ uses
   DecoderInterface, SmartTiming.DecoderEngine, Vcl.Buttons,
   FormRaceDetails, FormSettings, FormCompetitorDetails,
   FormCompetitorImport, FormPassingSimulator, FormGenerateTransponderMappings,
-  SmartTiming.Consts, SmartTiming.Tools, Vcl.DBCtrls,
+  SmartTiming.Consts, Vcl.DBCtrls,
   DataModule, SimpleDS, uSuperObject, System.ImageList, Vcl.ImgList,
   SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
   VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
-  VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider;
+  VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider,
+  System.Actions, Vcl.ActnList;
 
 type
   TFormMain = class(TForm)
@@ -167,6 +169,7 @@ type
     procedure CheckBoxRankingGroupedByClassClick(Sender: TObject);
     procedure ButtonExportToExelTemplateClick(Sender: TObject);
     procedure ButtonPrintResultsClick(Sender: TObject);
+    procedure PopupMenuCompetitorAssignToRaceClick(Sender: TObject);
 
   private
     FCurrentEventId: integer;
@@ -576,7 +579,7 @@ begin
     lRaceItem.RaceEngine.PassingDisplay.Visible := false;
     lRaceItem.RaceEngine.PassingDisplay.Align := alNone;
 
-    lRankingGrid := lRaceItem.RaceEngine.RankingDisplay;
+    lRankingGrid := TDBGrid(lRaceItem.RaceEngine.RankingDisplay);
     lRaceItem.RaceEngine.RefreshRankingDisplay;
     lRankingGrid.Visible := false;
     lRankingGrid.Align := alNone;
@@ -594,7 +597,7 @@ begin
   lPassingDisplay.Align := alClient;
   lPassingDisplay.Visible := true;
 
-  lRankingGrid := lRaceItem.RaceEngine.RankingDisplay;
+  lRankingGrid := TDBGrid(lRaceItem.RaceEngine.RankingDisplay);
   lRaceItem.RaceEngine.RefreshRankingDisplay;
   lRankingGrid.Parent := PanelStandings;
   lRankingGrid.Align := alClient;
@@ -623,14 +626,10 @@ begin
     Exit;
 
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
-//  if lRaceItem.Status <> rsFinished then
-//  begin
-//    PanelResultGrid.Caption := cMessagesRaceNotFinishedYet;
-//    Exit;
-//  end;
+
   PanelResultGrid.Caption := '';
 
-  lRankingGrid := lRaceItem.RaceEngine.RankingDisplay;
+  lRankingGrid := TDBGrid(lRaceItem.RaceEngine.RankingDisplay);
   lRaceItem.RaceEngine.RefreshRankingDisplay;
   lRankingGrid.Parent := PanelResultGrid;
   lRankingGrid.Align := alClient;
@@ -1079,6 +1078,11 @@ begin
   RefreshAddCompetitorToRaceMenu;
 end;
 
+procedure TFormMain.PopupMenuCompetitorAssignToRaceClick(Sender: TObject);
+begin
+
+end;
+
 {==============================================================================}
 procedure TFormMain.PopupMenuCompetitorDeleteClick(Sender: TObject);
 begin
@@ -1182,7 +1186,7 @@ begin
   end;
   MainDataModule.AssignCompetitorsToRace(FCurrentEventId, lRaceId, lCompetitorIds);
   if GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) then
-    lRaceItem.RaceEngine.RankingDisplay.DataSource.DataSet.Refresh;
+    TDBGrid(lRaceItem.RaceEngine.RankingDisplay).DataSource.DataSet.Refresh;
   DBGridCompetitors.SelectedIndex := lSelected;
 end;
 
@@ -1214,7 +1218,7 @@ begin
   end;
   MainDataModule.RemoveCompetitorsFromRace(FCurrentEventId, lRaceId, lCompetitorIds);
   if GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) then
-    lRaceItem.RaceEngine.RankingDisplay.DataSource.DataSet.Refresh;
+    TDBGrid(lRaceItem.RaceEngine.RankingDisplay).DataSource.DataSet.Refresh;
   DBGridCompetitors.SelectedIndex := lSelected;
 end;
 

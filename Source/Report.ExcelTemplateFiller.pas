@@ -26,6 +26,9 @@ type
     function IsOutputField(const AFieldName: string): boolean;
     function GetGroupedFileName(const AClass: string): string;
     procedure FillDataRows(ADataSet: TDataSet; AGroupByClass: boolean; AAction: TExcelAction);
+    function GetRecordCountOfDataSet(ADataSet: TDataSet): Integer;
+    function GetVisibleFieldCountOfDataSet(ADataSet: TDataSet): Integer;
+
   public
     constructor Create(AEvent: TEventDataObject; const ARaceTitle: string);
     destructor Destroy; override;
@@ -39,7 +42,7 @@ type
 implementation
 
 uses
-  Variants, DataModule, Dialogs, FormProgress;
+  Variants, DataModule, Dialogs;
 
 {==============================================================================}
 constructor TExcelFiller.Create(AEvent: TEventDataObject; const ARaceTitle: string);
@@ -110,10 +113,35 @@ begin
 end;
 
 {==============================================================================}
+function TExcelFiller.GetRecordCountOfDataSet(ADataSet: TDataSet): Integer;
+begin
+  result := 0;
+  ADataSet.First;
+  while not ADataSet.Eof do
+  begin
+    Inc(result);
+    ADataSet.Next;
+  end;
+end;
+
+{==============================================================================}
+function TExcelFiller.GetVisibleFieldCountOfDataSet(ADataSet: TDataSet): Integer;
+var
+  i: integer;
+begin
+  result := 0;
+  for i := 0 to ADataSet.FieldCount - 1 do
+  begin
+    if ADataSet.Fields[i].Visible and IsOutputField(ADataSet.Fields[i].FieldName) then
+      Inc(result);
+  end;
+end;
+
+{==============================================================================}
 procedure TExcelFiller.FillDataRows(ADataSet: TDataSet; AGroupByClass: boolean; AAction: TExcelAction);
 var
-  lExcelWorkbook: _Workbook;
-  lExcelSheet: _Worksheet;
+  lExcelWorkbook: TExcelWorkbook;
+  lExcelSheet: TExcelWorksheet;
   lRowIndex: Integer;
   lColumnIndex: integer;
   lFieldName: string;
@@ -122,7 +150,11 @@ var
   lCenterHeaderBase: string;
   lOutput: boolean;
   lCellColIdx: Integer;
-  lProgressForm: TFormProgressIndicator;
+  lRecordCount: integer;
+  lVisibleFieldCount: integer;
+  lCellRange: OleVariant;
+  lStartCell: string;
+  lEndCell: string;
 const
   cDataRowStartIndex = 2; // Start from the second row assuming the first row is for headers
 
@@ -138,7 +170,7 @@ const
           lSaveDialog.FileName := GetGroupedFileName(lCurrentClass);
           lSaveDialog.DefaultFolder := ExtractFilePath(lSaveDialog.FileName);
           if lSaveDialog.Execute then
-            lExcelWorkbook.SaveAs(lSaveDialog.FileName, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, xlNoChange, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
+            lExcelSheet.SaveAs(lSaveDialog.FileName);
         finally
           FreeAndNil(lSaveDialog);
         end;
@@ -146,41 +178,56 @@ const
     eaPrint:
       begin
         FExcelApp.Visible[0] := true;
-        lExcelWorkbook.PrintOut(EmptyParam, EmptyParam, EmptyParam, True, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
+        lExcelSheet.PrintPreview; // PrintOut(EmptyParam, EmptyParam, EmptyParam, True, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
         FExcelApp.Visible[0] := false;
       end;
     end;
   end;
 
+  procedure GetRangeCellNames(AStartField: Char; AStartRow, AFieldCount, ARecordCount: Integer; out AStartCell, AEndCell: string);
+  var
+    lByte: Byte;
+  begin
+    AStartCell := AStartField + IntToStr(AStartRow);
+
+    lByte := Ord(AStartField) + AFieldCount - 1;
+    AEndCell := Char(lByte) + IntToStr(AStartRow + ARecordCount - 1);
+  end;
 begin
   ADataSet.First;
   if ADataSet.Eof then
     Exit;
 
   try
-    lProgressForm := TFormProgressIndicator.Create(nil);
+    lExcelWorkbook := TExcelWorkbook.Create(nil);
     try
-      lProgressForm.Show;
-
-      lExcelWorkbook := FExcelApp.Workbooks.Open(FTemplateFile, EmptyParam, EmptyParam,
-        EmptyParam, EmptyParam, EmptyParam,
-        EmptyParam, EmptyParam, EmptyParam,
-        EmptyParam, EmptyParam, EmptyParam,
-        EmptyParam, EmptyParam, EmptyParam, 0);
+      lExcelWorkbook.ConnectTo(
+        FExcelApp.Workbooks.Open(FTemplateFile, EmptyParam, EmptyParam,
+          EmptyParam, EmptyParam, EmptyParam,
+          EmptyParam, EmptyParam, EmptyParam,
+          EmptyParam, EmptyParam, EmptyParam,
+          EmptyParam, EmptyParam, EmptyParam, 0)
+        );
 
       try
         lExcelWorkbook.Author[0] := cSmartTimingAppName + ' ' + cCopyright;
 
-        lExcelSheet := lExcelWorkbook.Sheets[1] as _Worksheet;
-
+        lExcelSheet := TExcelWorksheet.Create(nil);
+        lExcelSheet.ConnectTo(lExcelWorkbook.Sheets[1] as _Worksheet);
         lCenterHeaderBase := lExcelSheet.PageSetup.CenterHeader;
         lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle;
         lCurrentClass := '';
-        lRowIndex := cDataRowStartIndex;
+        lRowIndex := 0;
 
+        lRecordCount := GetRecordCountOfDataSet(ADataSet);
+        lVisibleFieldCount := GetVisibleFieldCountOfDataSet(ADataSet);
+
+        lCellRange := VarArrayCreate([0, lRecordCount - 1, 0, lVisibleFieldCount - 1], varVariant);
+
+        ADataSet.First;
         while not ADataSet.Eof do
         begin
-          lCellColIdx := 1;
+          lCellColIdx := 0;
 
           if AGroupByClass then
           begin
@@ -210,16 +257,21 @@ begin
               FOnGetFieldValue(lColumnIndex, ADataSet, lValue);
             end;
 
+            if not ADataSet.FieldList[lColumnIndex].Visible then
+              Continue;
             if not lOutput then
               Continue;
 
-            lExcelSheet.Cells.Item[lRowIndex, lCellColIdx].Value := lValue;
+            lCellRange[lRowIndex, lCellColIdx] := lValue;
             Inc(lCellColIdx);
           end;
 
           Inc(lRowIndex);
           ADataSet.Next;
         end;
+
+        GetRangeCellNames('A', 2, lVisibleFieldCount, lRecordCount, lStartCell, lEndCell);
+        lExcelSheet.Cells.Range[lStartCell, lEndCell].Value[xlRangeValueDefault] := lCellRange;
 
         if AGroupByClass then
           lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lCurrentClass;
@@ -229,9 +281,8 @@ begin
         lExcelWorkbook.Close(false, '', EmptyParam, 0);
       end;
     finally
-      FreeAndNil(lProgressForm);
+      FreeAndNil(lExcelWorkbook);
     end;
-
   except
     on E: Exception do
       ShowMessage(E.Message);

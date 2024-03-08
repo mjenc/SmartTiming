@@ -60,6 +60,8 @@ type
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
     procedure GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
 
+    procedure SetParticipantState(ARaceId: Integer; ACompetitorIDs: TArray<Integer>; AParticipantState: TParticipantState);
+
     function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer; var AStartTime: TDatetime): integer;
     procedure UpdateParticipationValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
 
@@ -315,8 +317,6 @@ end;
 
 {==============================================================================}
 procedure TMainDataModule.FillReadOnlyDataSetForSQL(const ASQL: string; var ADataSet: TSQLDataSet);
-var
-  lRecordCount: integer;
 begin
   if ADataSet = nil then
     ADataSet := TSQLDataSet.Create(nil);
@@ -652,6 +652,41 @@ begin
     for i := 0 to High(ACompetitorIDs) do
       lIDs.Add(ACompetitorIDs[i].ToString);
     lCmd := Format('DELETE FROM PARTICIPATION WHERE RACEID = %d AND COMPETITORID IN (%s)', [ARaceId, lIDs.CommaText]);
+  finally
+    FreeAndNil(lIDs);
+  end;
+  SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+procedure TMainDataModule.SetParticipantState(ARaceId: Integer; ACompetitorIDs: TArray<Integer>; AParticipantState: TParticipantState);
+var
+  lCmd: string;
+  i: integer;
+  lIDs: TStringList;
+  lSet: String;
+begin
+  if Length(ACompetitorIDs) = 0 then
+    Exit;
+
+  case AParticipantState of
+  psActive:
+    lSet := 'DNS = 0,DNF = 0,DSQ = 0';
+  psDNS:
+    lSet := 'DNS = 1,DNF = 0,DSQ = 0';
+  psDNF:
+    lSet := 'DNS = 0,DNF = 1,DSQ = 0';
+  psDSQ:
+    lSet := 'DNS = 0,DNF = 0,DSQ = 1';
+  else
+    Exit;
+  end;
+
+  lIDs := TStringList.Create;
+  try
+    for i := 0 to High(ACompetitorIDs) do
+      lIDs.Add(ACompetitorIDs[i].ToString);
+    lCmd := Format('UPDATE PARTICIPATION SET %s WHERE RACEID = %d AND COMPETITORID IN (%s)', [lSet, ARaceId, lIDs.CommaText]);
   finally
     FreeAndNil(lIDs);
   end;

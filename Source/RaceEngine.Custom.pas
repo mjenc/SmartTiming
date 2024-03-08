@@ -4,7 +4,7 @@ interface
 
 uses
   Controls, StdCtrls, ComCtrls, SysUtils, Graphics, Types, UITypes, Classes, Grids,
-  DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages,
+  Menus, DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages,
   SmartTiming.Consts, DecoderInterface, SmartTiming.Event, Report.ExcelTemplateFiller;
 
 type
@@ -26,6 +26,10 @@ type
   end;
 
   TCustomRaceEngine = class
+  private
+    function GetSelectedCompetitorIds: TArray<integer>;
+    procedure SetParticipantState(AState: TParticipantState);
+
   protected
     FOwner: TComponent;
     FParent: TWinControl;
@@ -36,6 +40,7 @@ type
     FRankingGroupedByClass: boolean;
     FAvailableRaceStates: TRaceStates;
     FRankingQuery: string;
+    FPopupMenuRanking: TPopupMenu;
 
     FSQLDataSetRankings: TSQLDataSet;
     FDataSetProviderRankings: TDataSetProvider;
@@ -55,12 +60,22 @@ type
     function GetPassingDisplay: TWinControl; virtual;
     procedure OnDrawListItem(ASender: TCustomListView; AItem: TListItem; AState: TCustomDrawState; var ADefaultDraw: Boolean);
     procedure AddColumnToDisplay(const ACaption: string);
-    function GetRankingGrid: TDBGrid; virtual;
+    function GetRankingGrid: TCustomGrid; virtual;
     function GetRankingDataSet: TDataSet; virtual;
     procedure SetRankingGroupedByClass(AValue: boolean); virtual;
     procedure UpdateParticipationTable(ACurrentPassingId: integer); virtual; abstract;
     procedure AfterOpenRankingResultSet(ADataSet: TDataSet); virtual; abstract;
     procedure OnColorizePodium(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
+    procedure CreateAndInitializePopupMenu;
+
+    procedure OnRemoveParticipant(ASender: TObject); virtual;
+    procedure OnDNS(ASender: TObject); virtual;
+    procedure OnDNF(ASender: TObject); virtual;
+    procedure OnDSQ(ASender: TObject); virtual;
+    procedure OnActivateParticipant(ASender: TObject); virtual;
+    procedure OnPenalties(ASender: TObject); virtual;
+    procedure OnEditTime(ASender: TObject); virtual;
+
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem); virtual;
     destructor Destroy; override;
@@ -75,7 +90,7 @@ type
 
     // ranking
     procedure RefreshRankingDisplay;
-    property RankingDisplay: TDBGrid read GetRankingGrid;
+    property RankingDisplay: TCustomGrid read GetRankingGrid;
     property RankingDataSet: TDataSet read GetRankingDataSet;
     property RankingGroupedByClass: boolean read FRankingGroupedByClass write SetRankingGroupedByClass;
     // corrections
@@ -91,7 +106,7 @@ implementation
 
 uses
   SmartTiming.Tools, Math, SmartTiming.Controller, SmartTiming.GridFormatProvider,
-  DataModule;
+  DataModule, FormMain, FormCompetitorDetails, FormPenalty, FormTime;
 
 {==============================================================================}
 destructor TRaceItem.Destroy;
@@ -113,6 +128,8 @@ begin
   FEvent := AEvent;
   FRaceItem := ARaceItem;
   FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped];
+
+  CreateAndInitializePopupMenu;
 
   FSQLDataSetRankings := TSQLDataSet.Create(FOwner);
   FSQLDataSetRankings.SQLConnection := MainDataModule.SQLConnection;
@@ -142,9 +159,35 @@ begin
     FreeAndNil(FDataSetProviderRankings);
     FreeAndNil(FSQLDataSetRankings);
     FreeAndNil(FOwner);
+    FreeAndNil(FPopupMenuRanking);
   finally
     inherited Destroy;
   end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.CreateAndInitializePopupMenu;
+
+  procedure AddMenuItem(const ACaption: string; AOnClickEvent: TNotifyEvent);
+  var
+    lMenuItem: TMenuItem;
+  begin
+    lMenuItem := TMenuItem.Create(nil);
+    lMenuItem.Caption := ACaption;
+    lMenuItem.OnClick := AOnClickEvent;
+    FPopupMenuRanking.Items.Add(lMenuItem);
+  end;
+
+begin
+  FPopupMenuRanking := TPopupMenu.Create(nil);
+
+  AddMenuItem('Entfernen', OnRemoveParticipant);
+  AddMenuItem('DNS', OnDNS);
+  AddMenuItem('DNF', OnDNF);
+  AddMenuItem('DSQ', OnDSQ);
+  AddMenuItem('Reaktivieren', OnActivateParticipant);
+  AddMenuItem('Strafen', OnPenalties);
+  AddMenuItem('Zielzeit ändern', OnEditTime);
 end;
 
 {==============================================================================}
@@ -233,7 +276,7 @@ begin
   if not (Sender is TDBGrid) then
     Exit;
   lSender := Sender as TDBGrid;
-  if not SameText(Field.DisplayName, 'Platz') then
+  if Field.IsNull or (not SameText(Field.DisplayName, 'Platz')) then
     Exit;
   if Field.AsInteger > 3 then
     Exit;
@@ -252,17 +295,20 @@ begin
 end;
 
 {==============================================================================}
-function TCustomRaceEngine.GetRankingGrid: TDBGrid;
+function TCustomRaceEngine.GetRankingGrid: TCustomGrid;
 begin
   if FRankingGrid <> nil then
     Exit(FRankingGrid);
 
   FRankingGrid := TDBGrid.CreateParented(FParent.Handle);
   FRankingGrid.Name := 'DBGridRanking';
+  FRankingGrid.ParentFont := false;
   FRankingGrid.Visible := false;
   FRankingGrid.Align := alNone;
   FRankingGrid.DataSource := FDataSourceRankings;
+  FRankingGrid.Options := [dgTitles, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgRowSelect,dgMultiSelect, dgTitleClick, dgTitleHotTrack];
   FRankingGrid.OnDrawDataCell := OnColorizePodium;
+  FRankingGrid.PopupMenu := FPopupMenuRanking;
   result := FRankingGrid;
 //  AfterOpenRankingResultSet(FSQLDataSetRankings);
 end;
@@ -407,7 +453,103 @@ begin
   finally
     FreeAndNil(lResultSet);
   end;
+end;
 
+{==============================================================================}
+function TCustomRaceEngine.GetSelectedCompetitorIds: TArray<integer>;
+var
+  i: Integer;
+begin
+  FRankingGrid.BeginUpdate;
+  try
+    for i := 0 to FRankingGrid.SelectedRows.Count -1 do
+    begin
+      SetLength(result, Length(result) + 1);
+      FRankingGrid.DataSource.DataSet.GotoBookmark(TBookmark(FRankingGrid.SelectedRows[i]));
+      result[High(result)] := FRankingGrid.DataSource.DataSet.FieldByName('COMPETITORID').Value;
+    end;
+  finally
+    FRankingGrid.EndUpdate;
+  end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.SetParticipantState(AState: TParticipantState);
+var
+  lCompetitorIDs: TArray<integer>;
+begin
+  lCompetitorIDs := GetSelectedCompetitorIds;
+  MainDataModule.SetParticipantState(FRaceItem.Id, lCompetitorIDs, AState);
+  FLastChangeTimestamp := Now;
+  RefreshRankingDisplay;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnRemoveParticipant(ASender: TObject);
+var
+  lCompetitorIDs: TArray<integer>;
+begin
+  lCompetitorIDs := GetSelectedCompetitorIds;
+  MainDataModule.RemoveCompetitorsFromRace(GSmartTimingController.Event.EventId, FRaceItem.Id, lCompetitorIDs);
+  FLastChangeTimestamp := Now;
+  RefreshRankingDisplay;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnDNS(ASender: TObject);
+begin
+  SetParticipantState(psDNS);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnDNF(ASender: TObject);
+begin
+  SetParticipantState(psDNF);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnDSQ(ASender: TObject);
+begin
+  SetParticipantState(psDSQ);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnActivateParticipant(ASender: TObject);
+begin
+  SetParticipantState(psActive);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnPenalties(ASender: TObject);
+var
+  lForm: TFormEditPenalty;
+begin
+  lForm := TFormEditPenalty.Create(nil);
+  try
+    lForm.MemoPenalty.Text := '';
+    if not lForm.ShowModal = mrOK then
+      Exit;
+
+  finally
+    FreeAndNil(lForm);
+  end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnEditTime(ASender: TObject);
+var
+  lForm: TFormEditTime;
+  lTime: TDatetime;
+begin
+  lForm := TFormEditTime.Create(nil);
+  try
+    lForm.Time := Frac(Now);
+    if not lForm.ShowModal = mrOK then
+      Exit;
+    lTime := lForm.Time;
+  finally
+    FreeAndNil(lForm);
+  end;
 end;
 
 end.

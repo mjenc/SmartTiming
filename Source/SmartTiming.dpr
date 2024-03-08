@@ -3,6 +3,7 @@ program SmartTiming;
 {$R 'SmartTimingResource.res' 'SmartTimingResource.rc'}
 
 uses
+  SmartTiming.Tools,
   Vcl.Forms,
   Controls,
   Windows,
@@ -12,7 +13,6 @@ uses
   Vcl.Themes,
   Vcl.Styles,
   SmartTiming.Consts in 'SmartTiming.Consts.pas',
-  SmartTiming.Tools in 'SmartTiming.Tools.pas',
   SmartTiming.Controller in 'SmartTiming.Controller.pas',
   FormSmartTimingLauncher in 'FormSmartTimingLauncher.pas',
   DecoderInterface.MyLaps in 'DecoderInterface.MyLaps.pas',
@@ -32,7 +32,8 @@ uses
   SmartTiming.Event in 'SmartTiming.Event.pas',
   SmartTiming.WebService in 'SmartTiming.WebService.pas',
   SmartTiming.GridFormatProvider in 'SmartTiming.GridFormatProvider.pas',
-  FormProgress in 'FormProgress.pas' {FormProgressIndicator};
+  FormPenalty in 'FormPenalty.pas' {FormEditPenalty},
+  FormTime in 'FormTime.pas' {FormEditTime};
 
 {$R *.res}
 

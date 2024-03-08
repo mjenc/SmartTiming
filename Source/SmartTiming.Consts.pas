@@ -136,6 +136,8 @@ type
   TFinishStatus = (fsFinished, fsDNS, fsDNF, fsDSQ);
   TNOnGetColumnText = procedure (ASender: TField; var AText: string; ADisplayText: Boolean) of object;
 
+  TParticipantState = (psActive, psDNS, psDNF, psDSQ);
+
 var
   gHInstResDll: HINST = 0;
 

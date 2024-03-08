@@ -20,6 +20,9 @@ type
     class procedure SaveSettings(AGrid: TDBGrid; const AFormatSuffix: string = '');
   end;
 
+const
+  cGridFormatApplied = 123;
+
 implementation
 
 uses
@@ -119,6 +122,8 @@ begin
 
     for i := 0 to lColumnsArray.Length - 1 do
       ApplyColumnSetting(AGrid.Columns, lColumnsArray.O[i]);
+
+    AGrid.Tag := cGridFormatApplied;
   finally
     FreeAndNil(lReg);
   end;
@@ -135,6 +140,9 @@ var
   lText: string;
 begin
   if AGrid = nil then
+    Exit;
+
+  if not (AGrid.Tag = cGridFormatApplied) then
     Exit;
 
   if AFormatSuffix.IsEmpty then

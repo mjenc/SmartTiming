@@ -117,7 +117,6 @@
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <DCCReference Include="SmartTiming.Consts.pas"/>
-        <DCCReference Include="SmartTiming.Tools.pas"/>
         <DCCReference Include="SmartTiming.Controller.pas"/>
         <DCCReference Include="FormSmartTimingLauncher.pas"/>
         <DCCReference Include="DecoderInterface.MyLaps.pas"/>
@@ -151,8 +150,12 @@
         <DCCReference Include="SmartTiming.Event.pas"/>
         <DCCReference Include="SmartTiming.WebService.pas"/>
         <DCCReference Include="SmartTiming.GridFormatProvider.pas"/>
-        <DCCReference Include="FormProgress.pas">
-            <Form>FormProgressIndicator</Form>
+        <DCCReference Include="FormPenalty.pas">
+            <Form>FormEditPenalty</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="FormTime.pas">
+            <Form>FormEditTime</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <None Include="ModelSupport_SmartTiming\default.txaPackage"/>

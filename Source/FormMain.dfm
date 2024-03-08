@@ -98,7 +98,7 @@ object FormMain: TFormMain
       Margins.Top = 6
       Margins.Right = 0
       Margins.Bottom = 6
-      ActivePage = TabSheetResults
+      ActivePage = TabSheetCompetitors
       Align = alClient
       TabHeight = 30
       TabOrder = 0
@@ -366,7 +366,6 @@ object FormMain: TFormMain
           Height = 755
           Align = alClient
           DataSource = DataSourceCompetitors
-          DrawingStyle = gdsGradient
           FixedColor = clBtnShadow
           GradientEndColor = cl3DLight
           GradientStartColor = cl3DLight
@@ -377,6 +376,7 @@ object FormMain: TFormMain
           Font.Style = []
           Options = [dgTitles, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgRowSelect, dgConfirmDelete, dgCancelOnExit, dgMultiSelect, dgTitleClick, dgTitleHotTrack]
           ParentFont = False
+          PopupMenu = PopupMenuCompetitorActions
           TabOrder = 1
           TitleFont.Charset = DEFAULT_CHARSET
           TitleFont.Color = clWindowText
@@ -1062,6 +1062,7 @@ object FormMain: TFormMain
     Top = 173
     object PopupMenuCompetitorAssignToRace: TMenuItem
       Caption = 'Zu Rennen zuweisen'
+      OnClick = PopupMenuCompetitorAssignToRaceClick
     end
     object PopupMenuCompetitorRemoveFromRace: TMenuItem
       Caption = 'Aus Rennen entfernen'
