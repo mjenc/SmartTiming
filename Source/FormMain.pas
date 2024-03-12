@@ -18,7 +18,7 @@ uses
   SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
   VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
   VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider,
-  System.Actions, Vcl.ActnList;
+  FormAddPassing;
 
 type
   TFormMain = class(TForm)
@@ -170,12 +170,15 @@ type
     procedure ButtonExportToExelTemplateClick(Sender: TObject);
     procedure ButtonPrintResultsClick(Sender: TObject);
     procedure PopupMenuCompetitorAssignToRaceClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 
   private
     FCurrentEventId: integer;
     FDBCheckBoxRacesFirstPassing: TDBCheckbox;
     FFormPassingSimulator: TFormPassingSimulator;
     FFormGenerateTransponderMappings: TFormGenerateTransponderMappings;
+    FFormManuallyAddPassing: TFormManuallyAddPassing;
+
     FAutoScrollPassingList: boolean;
     FRangeSelectStart: Integer;
 
@@ -536,9 +539,35 @@ end;
 {==============================================================================}
 procedure TFormMain.FormDestroy(Sender: TObject);
 begin
+  FreeAndNil(FFormManuallyAddPassing);
   FreeAndNil(FDBCheckBoxRacesFirstPassing);
   FreeAndNil(FFormPassingSimulator);
   FreeAndNil(GSmartTimingController);
+end;
+
+{==============================================================================}
+procedure TFormMain.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  case Key of
+  VK_F4:
+    ButtonWarmUpClick(nil);
+  VK_F5:
+    ButtonStartClick(nil);
+  VK_F6:
+    ButtonNeutralizeClick(nil);
+  VK_F7:
+    ButtonAbortClick(nil);
+  VK_F8:
+    ButtonFinishClick(nil);
+  VK_F10:
+    begin
+      if FFormManuallyAddPassing = nil then
+        FFormManuallyAddPassing := TFormManuallyAddPassing.Create(self)
+      else
+        FFormManuallyAddPassing.Reset;
+      FFormManuallyAddPassing.Show;
+    end;
+  end;
 end;
 
 {==============================================================================}
@@ -1118,6 +1147,7 @@ begin
     lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[i]);
     if lRaceItem.Id = ARaceId then
     begin
+      APassing.RaceId := ARaceId;
       lRaceItem.RaceEngine.AddPassingToDisplay(APassing, FAutoScrollPassingList);
       lRaceItem.RaceEngine.RefreshRankingDisplay;
       Exit;

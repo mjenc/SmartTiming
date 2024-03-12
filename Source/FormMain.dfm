@@ -14,6 +14,7 @@ object FormMain: TFormMain
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyDown = FormKeyDown
   OnShow = FormShow
   TextHeight = 15
   object PanelTitle: TPanel
@@ -98,7 +99,7 @@ object FormMain: TFormMain
       Margins.Top = 6
       Margins.Right = 0
       Margins.Bottom = 6
-      ActivePage = TabSheetCompetitors
+      ActivePage = TabSheetTiming
       Align = alClient
       TabHeight = 30
       TabOrder = 0

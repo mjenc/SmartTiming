@@ -33,7 +33,8 @@ uses
   SmartTiming.WebService in 'SmartTiming.WebService.pas',
   SmartTiming.GridFormatProvider in 'SmartTiming.GridFormatProvider.pas',
   FormPenalty in 'FormPenalty.pas' {FormEditPenalty},
-  FormTime in 'FormTime.pas' {FormEditTime};
+  FormTime in 'FormTime.pas' {FormEditTime},
+  FormAddPassing in 'FormAddPassing.pas' {FormManuallyAddPassing};
 
 {$R *.res}
 

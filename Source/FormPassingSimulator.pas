@@ -15,17 +15,13 @@ type
     ButtonClose: TButton;
     PageControlSimulator: TPageControl;
     TabSheetSinglePassings: TTabSheet;
-    TabSheetSingleSimulateRace: TTabSheet;
-    SQLDataSetCompetitorsInRace: TSQLDataSet;
-    DataSetProviderCompetitorsInRace: TDataSetProvider;
-    ClientDataSetCompetitorsInRace: TClientDataSet;
-    DataSourceCompetitorsInRace: TDataSource;
     StringGridCompetitorsInRace: TStringGrid;
     procedure FormCreate(Sender: TObject);
     procedure StringGridCompetitorsInRaceCellClick(Sender: TObject; ACol, ARow: Integer; var CanSelect: Boolean);
     procedure ButtonCloseClick(Sender: TObject);
   private
     FPassingNumber: integer;
+    FSQLDataSet: TSQLDataSet;
     procedure SetupCompetitorsInRaceGrid;
   public
     { Public-Deklarationen }
@@ -59,30 +55,35 @@ procedure TFormPassingSimulator.SetupCompetitorsInRaceGrid;
 var
   i: integer;
 begin
-  ClientDataSetCompetitorsInRace.Active := false;
-  SQLDataSetCompetitorsInRace.Active := false;
-  SQLDataSetCompetitorsInRace.CommandText :=
-    'SELECT C.BIB, C.FIRSTNAME, C.LASTNAME, C.CHIPID, C.CLUB ' +
-    'FROM ' +
-    'PARTICIPATION P ' +
+  MainDataModule.FillReadOnlyDataSetForSQL(
+    'SELECT COUNT(*) ' +
+    'FROM PARTICIPATION P ' +
     'INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID ' +
     'INNER JOIN RACES R ON P.RACEID = R.RACEID ' +
     'WHERE R.STATUS IN (1,2) ' +
-    'ORDER BY BIB';
-  SQLDataSetCompetitorsInRace.Active := true;
-  ClientDataSetCompetitorsInRace.Active := True;
+    'ORDER BY BIB', FSQLDataSet);
+  FSQLDataSet.First;
+  StringGridCompetitorsInRace.RowCount := FSQLDataSet.FieldList[0].AsInteger;
+  FSQLDataSet.Active := false;
 
-  StringGridCompetitorsInRace.RowCount := ClientDataSetCompetitorsInRace.RecordCount;
+  MainDataModule.FillReadOnlyDataSetForSQL(
+    'SELECT C.BIB, C.FIRSTNAME, C.LASTNAME, C.CHIPID, C.CLUB ' +
+    'FROM PARTICIPATION P ' +
+    'INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID ' +
+    'INNER JOIN RACES R ON P.RACEID = R.RACEID ' +
+    'WHERE R.STATUS IN (1,2) ' +
+    'ORDER BY BIB', FSQLDataSet);
+
   i := 0;
-  ClientDataSetCompetitorsInRace.First;
-  while not ClientDataSetCompetitorsInRace.Eof do
+  FSQLDataSet.First;
+  while not FSQLDataSet.Eof do
   begin
-    StringGridCompetitorsInRace.Cells[0, i] := ClientDataSetCompetitorsInRace.FieldByName('BIB').AsString;
-    StringGridCompetitorsInRace.Cells[1, i] := ClientDataSetCompetitorsInRace.FieldByName('CHIPID').AsString;
-    StringGridCompetitorsInRace.Cells[2, i] := ClientDataSetCompetitorsInRace.FieldByName('FIRSTNAME').AsString;
-    StringGridCompetitorsInRace.Cells[3, i] := ClientDataSetCompetitorsInRace.FieldByName('LASTNAME').AsString;
-    StringGridCompetitorsInRace.Cells[4, i] := ClientDataSetCompetitorsInRace.FieldByName('CLUB').AsString;
-    ClientDataSetCompetitorsInRace.Next;
+    StringGridCompetitorsInRace.Cells[0, i] := FSQLDataSet.FieldByName('BIB').AsString;
+    StringGridCompetitorsInRace.Cells[1, i] := FSQLDataSet.FieldByName('CHIPID').AsString;
+    StringGridCompetitorsInRace.Cells[2, i] := FSQLDataSet.FieldByName('FIRSTNAME').AsString;
+    StringGridCompetitorsInRace.Cells[3, i] := FSQLDataSet.FieldByName('LASTNAME').AsString;
+    StringGridCompetitorsInRace.Cells[4, i] := FSQLDataSet.FieldByName('CLUB').AsString;
+    FSQLDataSet.Next;
     Inc(i);
   end;
 end;

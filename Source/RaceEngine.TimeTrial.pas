@@ -80,7 +80,8 @@ begin
     '{"Alignment":1,"Fieldname":"DNF","Visible":1,"Width":30,"Index":10},' +
     '{"Alignment":1,"Fieldname":"DSQ","Visible":1,"Width":30,"Index":11},' +
     '{"Alignment":1,"Fieldname":"PENALTIES","Visible":0,"Width":-1,"Title":"Strafen","Index":12,"Alignment":0},' +
-    '{"Alignment":1,"Fieldname":"PARTICIPATIONID","Visible":0,"Width":-1,"Index":13}]}';
+    '{"Alignment":1,"Fieldname":"PARTICIPATIONID","Visible":0,"Width":-1,"Index":13},' +
+    '{"Alignment":1,"Fieldname":"COMPETITORID","Visible":0,"Width":-1,"Index":14}]}';
 
   inherited Create(AParent, AEvent, ARaceItem);
 

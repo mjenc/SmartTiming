@@ -10,6 +10,7 @@ object FormPassingSimulator: TFormPassingSimulator
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  Position = poMainFormCenter
   OnCreate = FormCreate
   TextHeight = 15
   object PanelButtons: TPanel
@@ -60,40 +61,8 @@ object FormPassingSimulator: TFormPassingSimulator
         FixedRows = 0
         TabOrder = 0
         OnSelectCell = StringGridCompetitorsInRaceCellClick
+        ExplicitTop = 3
       end
     end
-    object TabSheetSingleSimulateRace: TTabSheet
-      Caption = 'Rennsimulation'
-      ImageIndex = 1
-      TabVisible = False
-    end
-  end
-  object SQLDataSetCompetitorsInRace: TSQLDataSet
-    CommandText = 'SELECT * FROM COMPETITORS'
-    DataSource = DataSourceCompetitorsInRace
-    MaxBlobSize = -1
-    Params = <>
-    SQLConnection = MainDataModule.SQLConnection
-    Left = 316
-    Top = 417
-  end
-  object DataSetProviderCompetitorsInRace: TDataSetProvider
-    DataSet = SQLDataSetCompetitorsInRace
-    Options = [poAutoRefresh, poUseQuoteChar]
-    Left = 316
-    Top = 311
-  end
-  object ClientDataSetCompetitorsInRace: TClientDataSet
-    Aggregates = <>
-    DisableStringTrim = True
-    Params = <>
-    ProviderName = 'DataSetProviderCompetitorsInRace'
-    Left = 316
-    Top = 231
-  end
-  object DataSourceCompetitorsInRace: TDataSource
-    DataSet = ClientDataSetCompetitorsInRace
-    Left = 316
-    Top = 139
   end
 end
