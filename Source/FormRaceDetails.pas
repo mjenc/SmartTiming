@@ -40,7 +40,7 @@ type
     FStatus: integer;
     function GetStartDatetime: TDatetime;
   public
-    constructor Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean; AEventDate: TDatetime);
+    constructor Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean; AEventDate: TDatetime); reintroduce;
   end;
 
 var

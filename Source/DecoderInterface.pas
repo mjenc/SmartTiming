@@ -65,7 +65,6 @@ type
 
   TDecoderFinder = class
   private
-    FOnDecoderFound: TDecoderFoundEvent;
     FMyLapsFinder: TDecoderFinder;
   public
     constructor Create(AOnDecoderFound: TDecoderFoundEvent); virtual;

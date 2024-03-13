@@ -197,7 +197,7 @@ begin
   lStringValue := StringGridPreview.Cells[ACol, ARow];
   if lStringValue.IsEmpty then
     Exit('');
-  if lStringValue[1] in ['0'..'9'] then
+  if CharInSet(lStringValue[1], ['0'..'9']) then
     Exit(TTransponderMappingStore.GetSingleton.GetTransponderIdFromShortId(lStringValue.ToInteger));
   Exit(lStringValue);
 end;

@@ -46,6 +46,7 @@ type
   TDBGrid = class(DBGrids.TDBGrid)
   private
     procedure WMVScroll(var Msg: TWMVScroll); message WM_VSCROLL;
+  protected
     procedure UpdateScrollBar; override;
   end;
 
@@ -563,7 +564,7 @@ begin
   rtTeamTimeTrial:
     Exit(TTeamTimeTrialRaceEngine.Create(AParent, AEvent, ARaceItem));
   else
-    Exit(TCustomRaceEngine.Create(AParent, AEvent, ARaceItem));
+    raise Exception.Create('Race type is unknown');
   end;
 end;
 

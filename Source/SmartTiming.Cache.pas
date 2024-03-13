@@ -65,7 +65,7 @@ type
   private
     FTxIdToShortId: TDictionary<string, integer>;
     FShortIdToTxId: TDictionary<integer, string>;
-    FLockingThreadId: integer;
+    FLockingThreadId: Cardinal;
 
   protected
     constructor Create; override;

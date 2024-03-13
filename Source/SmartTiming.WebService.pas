@@ -105,8 +105,6 @@ end;
 
 {******************************************************************************}
 procedure TSmartTimingServlet.HTTPServerCommand(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
-var
-  lFileStream: TFileStream;
 begin
   if ARequestInfo = nil then
     raise Exception.Create('ARequestInfo = nil');

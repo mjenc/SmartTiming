@@ -18,7 +18,7 @@ uses
   SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
   VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
   VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider,
-  FormAddPassing;
+  FormAddPassing, Vcl.WinXPanels;
 
 type
   TFormMain = class(TForm)
@@ -49,7 +49,6 @@ type
     Splitter2: TSplitter;
     PanelStandings: TPanel;
     PanelRaceControls: TPanel;
-    PanelPassingGrid: TPanel;
     PanelEventDetails: TPanel;
     PanelEventRaces: TPanel;
     Label4: TLabel;
@@ -123,6 +122,7 @@ type
     CheckBoxResultsGroupByClass: TCheckBox;
     ButtonPrintResults: TButton;
     LabelDecoderId: TLabel;
+    CardPanelPassings: TCardPanel;
     procedure DatePickerFromChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -171,6 +171,7 @@ type
     procedure ButtonPrintResultsClick(Sender: TObject);
     procedure PopupMenuCompetitorAssignToRaceClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure StackPanel1Click(Sender: TObject);
 
   private
     FCurrentEventId: integer;
@@ -204,6 +205,7 @@ type
     procedure DecoderConnected(ADecoder: TDecoder);
     function GetAllRaceIds: TArray<integer>;
     procedure RefreshControlsFromEventDataObject(AEvent: TEventDataObject);
+    function GetNewPanelForPassings(ARaceId: Integer): TWinControl;
   end;
 
 
@@ -596,7 +598,6 @@ end;
 procedure TFormMain.ListBoxRacesTimingClick(Sender: TObject);
 var
   i: integer;
-  lPassingDisplay: TWinControl;
   lRaceItem: TRaceItem;
   lRankingGrid: TDBGrid;
 begin
@@ -605,8 +606,6 @@ begin
     if i = ListBoxRaces.ItemIndex then
       continue;
     lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[i]);
-    lRaceItem.RaceEngine.PassingDisplay.Visible := false;
-    lRaceItem.RaceEngine.PassingDisplay.Align := alNone;
 
     lRankingGrid := TDBGrid(lRaceItem.RaceEngine.RankingDisplay);
     lRaceItem.RaceEngine.RefreshRankingDisplay;
@@ -620,17 +619,31 @@ begin
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
 
   RefreshFlagButtons(lRaceItem);
-  lPassingDisplay := lRaceItem.RaceEngine.PassingDisplay;
 
-  lPassingDisplay.Parent := PanelPassingGrid;
-  lPassingDisplay.Align := alClient;
-  lPassingDisplay.Visible := true;
+  for i := 0 to CardPanelPassings.CardCount - 1 do
+  begin
+    if CardPanelPassings.Cards[i].Tag = lRaceItem.Id then
+    begin
+      CardPanelPassings.ActiveCardIndex := i;
+      break;
+    end;
+  end;
 
   lRankingGrid := TDBGrid(lRaceItem.RaceEngine.RankingDisplay);
   lRaceItem.RaceEngine.RefreshRankingDisplay;
   lRankingGrid.Parent := PanelStandings;
   lRankingGrid.Align := alClient;
   lRankingGrid.Visible := true;
+end;
+
+{==============================================================================}
+function TFormMain.GetNewPanelForPassings(ARaceId: Integer): TWinControl;
+var
+  lCard: TCard;
+begin
+  lCard := CardPanelPassings.CreateNewCard;
+  lCard.Tag := ARaceId;
+  Exit(lCard);
 end;
 
 {==============================================================================}
@@ -784,6 +797,11 @@ end;
 procedure TFormMain.SetupRankingsGrid(ARaceId: Integer);
 begin
   TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]).RaceEngine.RefreshRankingDisplay;
+end;
+
+procedure TFormMain.StackPanel1Click(Sender: TObject);
+begin
+
 end;
 
 {==============================================================================}

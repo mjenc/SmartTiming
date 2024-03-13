@@ -72,7 +72,6 @@ end;
 function TExcelFiller.GetGroupedFileName(const AClass: string): string;
 var
   lFileNameParts: TArray<string>;
-  lPrefix: string;
   lExt: string;
   i: integer;
 begin

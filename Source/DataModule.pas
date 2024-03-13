@@ -101,8 +101,6 @@ end;
 function TMainDataModule.GetNewDatabaseFileName(const APath: string = cStdDataPath; const AFileName: string = cStdDatabaseName): string;
 
   function CutNumberedFilename(const AFileNameOnly: string): string;
-  var
-    i: Integer;
   begin
     if AFileNameOnly[AFileNameOnly.Length - 4] <> '_' then
       Exit(AFileNameOnly);
@@ -535,7 +533,6 @@ end;
 function TMainDataModule.GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer; var AStartTime: TDatetime): integer;
 var
   lResultSet: TDataSet;
-  lValue: string;
 begin
   result := 0;
   AParticipationId := -1;
@@ -866,7 +863,6 @@ end;
 {==============================================================================}
 class function TMainDataModule.GetJSONFromDataSet(ADataSet: TDataSet): string;
 var
-  lRowIdx: Integer;
   lColIdx: Integer;
   lRow: ISuperObject;
   lField: TField;

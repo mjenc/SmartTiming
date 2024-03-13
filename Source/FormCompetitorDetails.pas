@@ -53,7 +53,7 @@ type
     FIsInsert: Boolean;
 
   public
-    constructor Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean);
+    constructor Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean); reintroduce;
   end;
 
 

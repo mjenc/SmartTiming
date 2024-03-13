@@ -108,7 +108,6 @@ end;
 procedure TFormSettings.FillComboBoxGridFormats;
 var
   lReg: TRegistry;
-  lRegPath: string;
 begin
   ComboBoxGridFormats.Items.Clear;
   lReg := TRegistry.Create;
@@ -125,7 +124,6 @@ end;
 procedure TFormSettings.SaveCurrentFormat;
 var
   lReg: TRegistry;
-  lRegPath: string;
 begin
   if FCurrentFormat.IsEmpty then
     Exit;
@@ -152,7 +150,6 @@ end;
 procedure TFormSettings.ComboBoxGridFormatsChange(Sender: TObject);
 var
   lReg: TRegistry;
-  lRegPath: string;
 begin
   SaveCurrentFormat;
   MemoConfig.Clear;

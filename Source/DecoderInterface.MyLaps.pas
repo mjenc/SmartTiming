@@ -75,7 +75,7 @@ type
     FOnDecoderFound: TDecoderFoundEvent;
     procedure OnUdpRead(AThread: TIdUDPListenerThread; const AData: TIdBytes; ABinding: TIdSocketHandle);
   public
-    constructor Create(AOnDecoderFound: TDecoderFoundEvent);
+    constructor Create(AOnDecoderFound: TDecoderFoundEvent); reintroduce;
     destructor Destroy; override;
     property OnDecoderFound: TDecoderFoundEvent read FOnDecoderFound write FOnDecoderFound;
     procedure Refresh; override;

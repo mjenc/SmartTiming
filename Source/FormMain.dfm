@@ -578,13 +578,12 @@ object FormMain: TFormMain
               OnClick = ButtonPrintParticipantListClick
             end
           end
-          object PanelPassingGrid: TPanel
+          object CardPanelPassings: TCardPanel
             Left = 0
             Top = 41
             Width = 521
             Height = 755
             Align = alClient
-            Anchors = [akLeft, akTop, akBottom]
             BevelOuter = bvNone
             TabOrder = 1
           end

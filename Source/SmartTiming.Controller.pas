@@ -128,7 +128,7 @@ begin
 
       SmartTimingTools.FillRaceItemFromDataSet(MainDataModule.DataSourceRaces.DataSet, lRaceItem);
       if lRaceItem.RaceEngine = nil then
-        lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(GFormMain.PanelPassingGrid, FEventDataObject, lRaceItem);
+        lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);
 
       lVisited.Add(lRaceItem.Id.ToString);
       MainDataModule.DataSourceRaces.DataSet.Next;

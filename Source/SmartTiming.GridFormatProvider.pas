@@ -91,8 +91,6 @@ var
   lRegPath: string;
   lReg : TRegistry;
   lText: string;
-  lBinaryStream: TMemoryStream;
-  lStringStream: TStringStream;
   lSO: ISuperObject;
   lColumnsArray: TSuperArray;
 begin
@@ -132,7 +130,6 @@ end;
 {==============================================================================}
 class procedure TGridFormatProvider.SaveSettings(AGrid: TDBGrid; const AFormatSuffix: string = '');
 var
-  i: Integer;
   lRegPath: string;
   lReg : TRegistry;
   lStringStream: TStringStream;

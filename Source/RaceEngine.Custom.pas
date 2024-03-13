@@ -197,8 +197,9 @@ begin
     Exit(FPassingDisplay);
 
   FPassingDisplay := TListView.CreateParented(FParent.Handle);
-  FPassingDisplay.Visible := false;
-  FPassingDisplay.Align := alNone;
+  FPassingDisplay.Parent := FParent;
+  FPassingDisplay.Visible := true;
+  FPassingDisplay.Align := alClient;
   TListView(FPassingDisplay).DragMode := TDragMode.dmAutomatic;
   TListView(FPassingDisplay).OnCustomDrawItem := OnDrawListItem;
   TListView(FPassingDisplay).ViewStyle := vsReport;
@@ -400,12 +401,10 @@ procedure TCustomRaceEngine.ExportResultsToCSV;
 var
   lFileName: string;
   lResultSet: TSQLDataSet;
-  lColumnIndex: integer;
   lFieldName: string;
   lValue: string;
   lCSVFile: TextFile;
   lField: TField;
-  lRow: string;
 begin
   lResultSet := nil;
   try
@@ -440,8 +439,8 @@ begin
           if not lField.Visible then
             continue;
 
-          lFieldName := lResultSet.FieldList[lColumnIndex].FieldName;
-          lValue := lResultSet.FieldList[lColumnIndex].AsString;
+          lFieldName := lField.FieldName;
+          lValue := lField.AsString;
 
           // TODO Write field value
         end;
