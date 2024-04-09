@@ -126,6 +126,7 @@ resourcestring
   cMessagesNoTxMapping = 'Es ist noch keine Transponder-Mapping-Tabelle importiert.'#13#10'Möchten Sie diese nun importieren?';
   cMessagesRaceNotFinishedYet = 'Das Rennen ist noch nicht beendet.';
   cMessagesComptitorDeleteConfirm = '%d Teilnehmer wirklich löschen?';
+  cMessagesPassingDeleteConfirm = 'Durchgang von %s wirklich löschen?';
   cMessagesOpenDirectory = 'Verzeichnis öffnen?';
 
 type
@@ -137,6 +138,7 @@ type
   TNOnGetColumnText = procedure (ASender: TField; var AText: string; ADisplayText: Boolean) of object;
 
   TParticipantState = (psActive, psDNS, psDNF, psDSQ);
+  TPassingState = (psValid = 0, psInvalid);
 
 var
   gHInstResDll: HINST = 0;

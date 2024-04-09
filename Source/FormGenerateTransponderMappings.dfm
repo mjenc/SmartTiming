@@ -2,8 +2,8 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
   Left = 0
   Top = 0
   Caption = #220'bersetzungstabelle generieren'
-  ClientHeight = 449
-  ClientWidth = 362
+  ClientHeight = 457
+  ClientWidth = 364
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,17 +15,19 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 408
-    Width = 362
+    Top = 416
+    Width = 364
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitTop = 408
+    ExplicitWidth = 362
     DesignSize = (
-      362
+      364
       41)
     object ButtonOK: TButton
-      Left = 188
+      Left = 190
       Top = 8
       Width = 75
       Height = 25
@@ -37,7 +39,7 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
       ExplicitLeft = 186
     end
     object ButtonCancel: TButton
-      Left = 276
+      Left = 278
       Top = 8
       Width = 75
       Height = 25
@@ -52,8 +54,8 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
   object PanelMain: TPanel
     Left = 0
     Top = 0
-    Width = 362
-    Height = 408
+    Width = 364
+    Height = 416
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1

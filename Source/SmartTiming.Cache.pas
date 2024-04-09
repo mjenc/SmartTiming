@@ -28,6 +28,9 @@ type
     destructor Destroy; override;
 
     procedure AddPassing(APassing: TPassing);
+    function GetPassing(APassingId: Integer): TPassing;
+    procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime);
+    procedure RemovePassing(APassingNumber: Integer);
     procedure FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TPassing>; AFilterOnTransponderIDs: TList<integer> = nil);
     property MaxPassingNumber: integer read FMaxPassingNumber;
   end;
@@ -157,6 +160,44 @@ begin
   try
     FPassingList.AddOrSetValue(APassing.PassingNumber, APassing);
     FMaxPassingNumber := Max(APassing.PassingNumber, FMaxPassingNumber);
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+function TPassingStore.GetPassing(APassingId: Integer): TPassing;
+begin
+  Synchronizer.BeginRead;
+  try
+    if not FPassingList.TryGetValue(APassingId, result) then
+      raise Exception.Create('Internal error Passing not found in Cache');
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+procedure TPassingStore.UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime);
+var
+  lPassing: TPassing;
+begin
+  Synchronizer.BeginWrite;
+  try
+    if not FPassingList.TryGetValue(APassingNumber, lPassing) then
+      raise Exception.Create('Internal error Passing not found in Cache');
+    lPassing.PassingTime := APassingTime;
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+procedure TPassingStore.RemovePassing(APassingNumber: Integer);
+begin
+  Synchronizer.BeginWrite;
+  try
+    FPassingList.Remove(APassingNumber);
   finally
     Synchronizer.EndWrite;
   end;

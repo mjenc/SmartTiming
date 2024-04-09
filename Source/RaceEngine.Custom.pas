@@ -31,6 +31,14 @@ type
     procedure SetParticipantState(AState: TParticipantState);
 
   protected
+    const
+      cPassingItemSubItemIdxName = 0;
+      cPassingItemSubItemIdxTime = 1;
+      cPassingItemSubItemIdxTxId = 2;
+      cPassingItemSubItemIdxChipId = 3;
+      cPassingItemSubItemIdxPassingNumber = 4;
+
+  protected
     FOwner: TComponent;
     FParent: TWinControl;
     FEvent: TEventDataObject;
@@ -41,7 +49,7 @@ type
     FAvailableRaceStates: TRaceStates;
     FRankingQuery: string;
     FPopupMenuRanking: TPopupMenu;
-
+    FPopupMenuPassings: TPopupMenu;
     FSQLDataSetRankings: TSQLDataSet;
     FDataSetProviderRankings: TDataSetProvider;
     FClientDataSetRankings: TClientDataSet;
@@ -67,6 +75,7 @@ type
     procedure AfterOpenRankingResultSet(ADataSet: TDataSet); virtual; abstract;
     procedure OnColorizePodium(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
     procedure CreateAndInitializePopupMenu;
+    procedure PassingCompare(Sender: TObject; Item1, Item2: TListItem; Data: Integer; var ACompare: Integer);
 
     procedure OnRemoveParticipant(ASender: TObject); virtual;
     procedure OnDNS(ASender: TObject); virtual;
@@ -75,6 +84,16 @@ type
     procedure OnActivateParticipant(ASender: TObject); virtual;
     procedure OnPenalties(ASender: TObject); virtual;
     procedure OnEditTime(ASender: TObject); virtual;
+
+    procedure OnInvalidatePassing(ASender: TObject);  virtual;
+    procedure OnValidatePassing(ASender: TObject); virtual;
+    procedure OnChangeCompetitorOfTransponder(ASender: TObject); virtual;
+    procedure OnChangePassingTime(ASender: TObject); virtual;
+    procedure OnRemovePassing(ASender: TObject); virtual;
+
+    procedure OnPassingItemDragDrop(ASender, ASource: TObject; AX, AY: Integer);
+    procedure OnPassingItemDragOver(ASender, ASource: TObject; AX, AY: Integer; AState: TDragState; var AAccept: Boolean);
+    procedure OnPassingItemCompare(ASender: TObject; AItem1, AItem2: TListItem; AData: Integer; var ACompare: Integer); virtual; abstract;
 
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem); virtual;
@@ -106,7 +125,8 @@ implementation
 
 uses
   SmartTiming.Tools, Math, SmartTiming.Controller, SmartTiming.GridFormatProvider,
-  DataModule, FormMain, FormCompetitorDetails, FormPenalty, FormTime;
+  DataModule, FormMain, FormCompetitorDetails, FormPenalty, FormTime,
+  SmartTiming.Cache, DateUtils, FormAssignCompetitorToTransponder;
 
 {==============================================================================}
 destructor TRaceItem.Destroy;
@@ -122,7 +142,7 @@ end;
 constructor TCustomRaceEngine.Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem);
 begin
   FPassingDisplay := nil;
-  FOwner := TComponent.Create(nil);
+  FOwner := AParent;
   FParent := AParent;
 
   FEvent := AEvent;
@@ -158,8 +178,8 @@ begin
     FreeAndNil(FClientDataSetRankings);
     FreeAndNil(FDataSetProviderRankings);
     FreeAndNil(FSQLDataSetRankings);
-    FreeAndNil(FOwner);
     FreeAndNil(FPopupMenuRanking);
+    FreeAndNil(FPopupMenuPassings);
   finally
     inherited Destroy;
   end;
@@ -168,26 +188,32 @@ end;
 {==============================================================================}
 procedure TCustomRaceEngine.CreateAndInitializePopupMenu;
 
-  procedure AddMenuItem(const ACaption: string; AOnClickEvent: TNotifyEvent);
+  procedure AddMenuItem(AMenu: TPopupMenu; const ACaption: string; AOnClickEvent: TNotifyEvent);
   var
     lMenuItem: TMenuItem;
   begin
     lMenuItem := TMenuItem.Create(nil);
     lMenuItem.Caption := ACaption;
     lMenuItem.OnClick := AOnClickEvent;
-    FPopupMenuRanking.Items.Add(lMenuItem);
+    AMenu.Items.Add(lMenuItem);
   end;
 
 begin
   FPopupMenuRanking := TPopupMenu.Create(nil);
+  AddMenuItem(FPopupMenuRanking, 'Entfernen', OnRemoveParticipant);
+  AddMenuItem(FPopupMenuRanking, 'DNS', OnDNS);
+  AddMenuItem(FPopupMenuRanking, 'DNF', OnDNF);
+  AddMenuItem(FPopupMenuRanking, 'DSQ', OnDSQ);
+  AddMenuItem(FPopupMenuRanking, 'Reaktivieren', OnActivateParticipant);
+  AddMenuItem(FPopupMenuRanking, 'Strafen', OnPenalties);
+  AddMenuItem(FPopupMenuRanking, 'Zielzeit ändern', OnEditTime);
 
-  AddMenuItem('Entfernen', OnRemoveParticipant);
-  AddMenuItem('DNS', OnDNS);
-  AddMenuItem('DNF', OnDNF);
-  AddMenuItem('DSQ', OnDSQ);
-  AddMenuItem('Reaktivieren', OnActivateParticipant);
-  AddMenuItem('Strafen', OnPenalties);
-  AddMenuItem('Zielzeit ändern', OnEditTime);
+  FPopupMenuPassings := TPopupMenu.Create(nil);
+  AddMenuItem(FPopupMenuPassings, 'Ungültig', OnInvalidatePassing);
+  AddMenuItem(FPopupMenuPassings, 'Gültig', OnValidatePassing);
+  AddMenuItem(FPopupMenuPassings, 'Fahrer ändern', OnChangeCompetitorOfTransponder);
+  AddMenuItem(FPopupMenuPassings, 'Durchfahrtszeit ändern', OnChangePassingTime);
+  AddMenuItem(FPopupMenuPassings, 'Entfernen', OnRemovePassing);
 end;
 
 {==============================================================================}
@@ -200,17 +226,35 @@ begin
   FPassingDisplay.Parent := FParent;
   FPassingDisplay.Visible := true;
   FPassingDisplay.Align := alClient;
+
+  TListView(FPassingDisplay).StateImages := GFormMain.ImageListPassingStates;
+  TListView(FPassingDisplay).PopupMenu := FPopupMenuPassings;
+  TListView(FPassingDisplay).FullDrag := True;
+  TListView(FPassingDisplay).HotTrack := True;
+  TListView(FPassingDisplay).HotTrackStyles := [htHandPoint,htUnderlineHot];
+  TListView(FPassingDisplay).RowSelect := True;
+  TListView(FPassingDisplay).HideSelection := false;
   TListView(FPassingDisplay).DragMode := TDragMode.dmAutomatic;
+  TListView(FPassingDisplay).OnDragDrop := OnPassingItemDragDrop;
+  TListView(FPassingDisplay).OnDragOver := OnPassingItemDragOver;
   TListView(FPassingDisplay).OnCustomDrawItem := OnDrawListItem;
   TListView(FPassingDisplay).ViewStyle := vsReport;
+  TListView(FPassingDisplay).OnCompare := PassingCompare;
 
   AddColumnToDisplay(cFieldTitleBib);
   AddColumnToDisplay(cFieldTitleLastName + ', ' + cFieldTitleFirstName);
   AddColumnToDisplay(cFieldTitlePassingTime);
   AddColumnToDisplay(cFieldTitleTransponder);
   AddColumnToDisplay(cFieldTitleChipID);
+  AddColumnToDisplay('PassingId');
 
   result := FPassingDisplay;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.PassingCompare(Sender: TObject; Item1, Item2: TListItem; Data: Integer; var ACompare: Integer);
+begin
+  ACompare := AnsiCompareText(Item1.SubItems[cPassingItemSubItemIdxTime], Item2.SubItems[cPassingItemSubItemIdxTime]);
 end;
 
 {==============================================================================}
@@ -549,6 +593,150 @@ begin
   finally
     FreeAndNil(lForm);
   end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnInvalidatePassing(ASender: TObject);
+var
+  lCurrentItem: TListItem;
+  lListView: TListView;
+  lPassingNumber: Integer;
+  lPassingTime: TDatetime;
+begin
+  lListView := TListView(FPassingDisplay);
+  lCurrentItem := lListView.Selected;
+  if lCurrentItem = nil then
+    Exit;
+
+  lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lPassingTime := TPassingStore.GetSingleton.GetPassing(lPassingNumber).PassingTime;
+  GSmartTimingController.UpdatePassing(lPassingNumber, lPassingTime, psInvalid);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnValidatePassing(ASender: TObject);
+var
+  lCurrentItem: TListItem;
+  lListView: TListView;
+  lPassingNumber: Integer;
+  lPassingTime: TDatetime;
+begin
+  lListView := TListView(FPassingDisplay);
+  lCurrentItem := lListView.Selected;
+  if lCurrentItem = nil then
+    Exit;
+
+  lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lPassingTime := TPassingStore.GetSingleton.GetPassing(lPassingNumber).PassingTime;
+  GSmartTimingController.UpdatePassing(lPassingNumber, lPassingTime, psValid);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnChangeCompetitorOfTransponder(ASender: TObject);
+var
+  lCurrentItem: TListItem;
+  lListView: TListView;
+  lPassingNumber: Integer;
+  lPassingTime: TDatetime;
+begin
+  lListView := TListView(FPassingDisplay);
+  lCurrentItem := lListView.Selected;
+  if lCurrentItem = nil then
+    Exit;
+
+  lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnChangePassingTime(ASender: TObject);
+var
+  lFormEditTime: TFormEditTime;
+  lCurrentItem: TListItem;
+  lListView: TListView;
+  lPassingNumber: Integer;
+  lChipId: string;
+  lFormAssignCompetitor: TFormAssignCompetitor;
+begin
+  lListView := TListView(FPassingDisplay);
+  lCurrentItem := lListView.Selected;
+  if lCurrentItem = nil then
+    Exit;
+
+  lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lChipId := TPassingStore.GetSingleton.GetPassing(lPassingNumber).ChipId;
+
+  lFormAssignCompetitor := TFormAssignCompetitor.Create(nil);
+  try
+    ShowMessage('Not implemented yet.');
+  finally
+    FreeAndNil(lFormAssignCompetitor);
+  end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnRemovePassing(ASender: TObject);
+var
+  lCurrentItem: TListItem;
+  lListView: TListView;
+  lPassingNumber: Integer;
+  lPassingTime: TDatetime;
+begin
+  lListView := TListView(FPassingDisplay);
+  lCurrentItem := lListView.Selected;
+  if lCurrentItem = nil then
+    Exit;
+
+  if SmartTimingTools.ShowDialog(Format(cMessagesPassingDeleteConfirm, [lCurrentItem.SubItems[cPassingItemSubItemIdxName]]), '', [tcbYes, tcbNo], tcbNo) <> mrYes then
+    Exit;
+
+  lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lListView.DeleteSelected;
+  GSmartTimingController.RemovePassing(lPassingNumber);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnPassingItemDragDrop(ASender, ASource: TObject; AX, AY: Integer);
+var
+  lDragItem, lDropItem, lCurrentItem, lNextItem: TListItem;
+  lListView: TListView;
+  lPassingNumber: Integer;
+  lPassingTime: TDatetime;
+begin
+  if ASender <> ASource then
+    Exit;
+
+  lListView := TListView(ASender);
+  lDropItem    := lListView.GetItemAt(AX, AY);
+  lCurrentItem := lListView.Selected;
+  while lCurrentItem <> nil do
+  begin
+    lNextItem := lListView.GetNextItem(lCurrentItem, SdAll, [IsSelected]);
+    if lDropItem = nil then
+      lDragItem := lListView.Items.Add
+    else
+      lDragItem := lListView.Items.Insert(lDropItem.Index);
+    lDragItem.SubItems.SetStrings(lCurrentItem.SubItems);
+    lDragItem.Data := lDropItem.Data;
+
+    // Set time of current item to -1 ms of the Item dropped onto
+    lPassingNumber := lDropItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+    lPassingTime := TPassingStore.GetSingleton.GetPassing(lPassingNumber).PassingTime;
+    lPassingTime.AddMilliSecond(-1);
+    lDragItem.SubItems[cPassingItemSubItemIdxTime] := FormatDatetime('hh:mm:ss.zzz', lPassingTime);
+
+    lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+    GSmartTimingController.UpdatePassing(lPassingNumber, lPassingTime, psValid);
+
+    lDragItem.Caption := lCurrentItem.Caption;
+    lCurrentItem.Free;
+    lCurrentItem := lNextItem;
+  end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnPassingItemDragOver(ASender, ASource: TObject; AX, AY: Integer; AState: TDragState; var AAccept: Boolean);
+begin
+  AAccept := ASender = FPassingDisplay;
 end;
 
 end.

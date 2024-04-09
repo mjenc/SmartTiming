@@ -35,7 +35,7 @@ implementation
 procedure TFormEditTime.SetTime(ATime: TDatetime);
 begin
   DecodeTime(ATime, FHour, FMin, FSec, FMs);
-  EditTime.Text := FormatDatetime('HH:mm:ss.ms', ATime);
+  EditTime.Text := FormatDatetime('HH:mm:ss.zzz', ATime);
 end;
 
 function TFormEditTime.GetTime: TDatetime;

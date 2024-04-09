@@ -102,7 +102,7 @@ begin
   lPassing.SignalStrength := 123;
   lpAssing.Hits := 90;
   lPassing.Flags := 0;
-  lPassing.Sport := 4;
+  lPassing.Sport := sSportsIdCycling;
   lPassing.Voltage := 9;
   lPassing.Temperature := 20;
   lPassing.DecoderId := 'STSIM';

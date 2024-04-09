@@ -31,7 +31,9 @@ type
     procedure SaveEvent(AEventDataObject: TEventDataObject); overload;
     procedure SaveEvent(const AOrganizer, ATitle: string; ADateFrom, ADateTo: TDatetime); overload;
     procedure RestorePassings;
-
+    procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
+    procedure RemovePassing(APassingNumber: Integer);
+    procedure AddManualPassing(APassing: TPassing);
     procedure ResetRacesDataSet;
     procedure ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
 
@@ -45,7 +47,7 @@ var
 implementation
 
 uses
-  FormMain;
+  FormMain, SmartTiming.Cache;
 
 {==============================================================================}
 constructor TSmartTimingController.Create;
@@ -182,7 +184,10 @@ begin
   begin
     lPassings := MainDataModule.GetAllPassingsForRaceId(lRaceId);
     for i := 0 to Length(lPassings) - 1 do
+    begin
       GFormMain.AddPassingForRaceId(lRaceId, lPassings[i]);
+      TPassingStore.GetSingleton.AddPassing(lPassings[i]);
+    end;
   end;
 end;
 
@@ -212,6 +217,7 @@ begin
   MainDataModule.AddPassingToDatabase(lPassing, ARaceId);
 
   GFormMain.AddPassingForRaceId(ARaceId, lPassing);
+  GFormMain.RefreshFlagButtonsActive(ARaceStatus);
 end;
 
 {==============================================================================}
@@ -241,5 +247,24 @@ begin
   GFormMain.AddPassingForRaceId(lRaceId, APassing);
 end;
 
+{==============================================================================}
+procedure TSmartTimingController.AddManualPassing(APassing: TPassing);
+begin
+  TDecoderEngine.GetSingleton.SendSimulatedPassing(APassing);
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
+begin
+  MainDataModule.UpdatePassingInDatabase(APassingNumber, APassingTime, APassingState);
+  TPassingStore.GetSingleton.UpdatePassing(APassingNumber, APassingTime);
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.RemovePassing(APassingNumber: Integer);
+begin
+  MainDataModule.RemovePassingFromDatabase(APassingNumber);
+  TPassingStore.GetSingleton.RemovePassing(APassingNumber);
+end;
 
 end.

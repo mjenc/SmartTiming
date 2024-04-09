@@ -123,6 +123,8 @@ type
     ButtonPrintResults: TButton;
     LabelDecoderId: TLabel;
     CardPanelPassings: TCardPanel;
+    ImageListPassingStates: TImageList;
+
     procedure DatePickerFromChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -165,7 +167,6 @@ type
     procedure DBGridCompetitorsDblClick(Sender: TObject);
     procedure ClientDataSetCompetitorsAfterOpen(DataSet: TDataSet);
     procedure PanelCompetitorsGridButtonsClick(Sender: TObject);
-    procedure DBGridCompetitorsMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure CheckBoxRankingGroupedByClassClick(Sender: TObject);
     procedure ButtonExportToExelTemplateClick(Sender: TObject);
     procedure ButtonPrintResultsClick(Sender: TObject);
@@ -181,7 +182,6 @@ type
     FFormManuallyAddPassing: TFormManuallyAddPassing;
 
     FAutoScrollPassingList: boolean;
-    FRangeSelectStart: Integer;
 
     procedure ReadSettings;
     procedure SetupRacesGrid;
@@ -192,7 +192,7 @@ type
     procedure OnAssignCompetitorsToRace(ASender: TObject);
     procedure OnRemoveCompetitorsFromRace(ASender: TObject);
     procedure RaceButtonStatusChange(ARaceStatus: TRaceStatus);
-    procedure RefreshFlagButtons(ARaceItem: TRaceItem);
+    procedure RefreshFlagButtonsVisibility(ARaceItem: TRaceItem);
     procedure RefreshAddCompetitorToRaceMenu;
     procedure EnableResultPanelControls(AEnable: boolean);
 
@@ -206,6 +206,7 @@ type
     function GetAllRaceIds: TArray<integer>;
     procedure RefreshControlsFromEventDataObject(AEvent: TEventDataObject);
     function GetNewPanelForPassings(ARaceId: Integer): TWinControl;
+    procedure RefreshFlagButtonsActive(ARaceStatus: TRaceStatus);
   end;
 
 
@@ -317,59 +318,6 @@ begin
     DBGridCompetitors.DataSource.DataSet.EnableControls;
   end;
   DBGridCompetitors.Refresh;
-end;
-
-{==============================================================================}
-procedure TFormMain.DBGridCompetitorsMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-var
-  lGridCoord: TGridCoord;
-  lLow: Integer;
-  lHigh: Integer;
-  lRow: Integer;
-begin
-  if not ((Shift = [ssShift]) and (Button = mbLeft)) then
-    Exit;
-
-  lGridCoord := DBGridCompetitors.MouseCoord(X,Y);
-  if lGridCoord.Y < 0 then
-    Exit;
-
-//  if DBGridCompetitors.SelectedRows.< 0 then
-    Exit;
-  if FRangeSelectStart < 0 then
-  begin
-    FRangeSelectStart := lGridCoord.Y;
-    Exit;
-  end;
-
-  if lGridCoord.Y >= FRangeSelectStart then
-  begin
-    lLow := FRangeSelectStart;
-    lHigh := lGridCoord.Y;
-  end
-  else
-  begin
-    lHigh := FRangeSelectStart;
-    lLow := lGridCoord.Y;
-  end;
-
-  DBGridCompetitors.DataSource.DataSet.DisableControls;
-  try
-    DBGridCompetitors.SelectedRows.Clear;
-    DBGridCompetitors.DataSource.DataSet.First;
-    lRow := 0;
-    while (lRow <= lHigh) and (not DBGridCompetitors.DataSource.DataSet.Eof) do
-    begin
-      if lRow >= lLow then
-        DBGridCompetitors.SelectedRows.CurrentRowSelected := true;
-      Inc(lRow);
-      DBGridCompetitors.DataSource.DataSet.Next;
-    end;
-  finally
-    DBGridCompetitors.DataSource.DataSet.EnableControls;
-  end;
-  DBGridCompetitors.Refresh;
-  FRangeSelectStart := -1;
 end;
 
 {==============================================================================}
@@ -564,10 +512,9 @@ begin
   VK_F10:
     begin
       if FFormManuallyAddPassing = nil then
-        FFormManuallyAddPassing := TFormManuallyAddPassing.Create(self)
-      else
-        FFormManuallyAddPassing.Reset;
+        FFormManuallyAddPassing := TFormManuallyAddPassing.Create(self);
       FFormManuallyAddPassing.Show;
+       Winapi.Windows.SetFocus(FFormManuallyAddPassing.EditBIB.Handle);
     end;
   end;
 end;
@@ -575,7 +522,6 @@ end;
 {==============================================================================}
 procedure TFormMain.FormShow(Sender: TObject);
 begin
-  FRangeSelectStart := -1;
   SetupRacesGrid;
 end;
 
@@ -618,7 +564,7 @@ begin
 
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
 
-  RefreshFlagButtons(lRaceItem);
+  RefreshFlagButtonsVisibility(lRaceItem);
 
   for i := 0 to CardPanelPassings.CardCount - 1 do
   begin
@@ -752,6 +698,7 @@ begin
       ListBoxRaces.AddItem(lText, lRaceItem);
     end;
 
+    ListBoxRaces.Sorted := true;
     // TODO Sorting
 
     ListBoxRaces.Invalidate;
@@ -874,7 +821,8 @@ var
 begin
   lFormCompetitorImport := TFormCompetitorImport.Create(nil);
   try
-    lFormCompetitorImport.ShowModal;
+    if lFormCompetitorImport.ShowModal = mrOK then
+      SetupCompetitorsGrid;
   finally
     FreeAndNil(lFormCompetitorImport);
   end;
@@ -1031,7 +979,7 @@ begin
 end;
 
 {==============================================================================}
-procedure TFormMain.RefreshFlagButtons(ARaceItem: TRaceItem);
+procedure TFormMain.RefreshFlagButtonsVisibility(ARaceItem: TRaceItem);
   function GetButtonForStatus(ARaceStatus: TRaceStatus): TControl;
   begin
     case ARaceStatus of
@@ -1076,6 +1024,76 @@ begin
     lButton.Visible := true;
     lButton.Left := lLeftPos;
     Inc(lLeftPos, lButton.Width + 6);
+  end;
+end;
+
+{==============================================================================}
+procedure TFormMain.RefreshFlagButtonsActive(ARaceStatus: TRaceStatus);
+begin
+  case ARaceStatus of
+  rsNotStarted:
+    begin
+      ButtonNeutralize.Enabled := false;
+      ButtonWarmUp.Enabled := true;
+      ButtonStart.Enabled := true;
+      ButtonAbort.Enabled := false;
+      ButtonFinish.Enabled := false;
+      ButtonStop.Enabled := false;
+    end;
+  rsWarmUp:
+    begin
+      ButtonNeutralize.Enabled := false;
+      ButtonWarmUp.Enabled := false;
+      ButtonStart.Enabled := true;
+      ButtonAbort.Enabled := true;
+      ButtonFinish.Enabled := false;
+      ButtonStop.Enabled := true;
+    end;
+  rsStarted:
+    begin
+      ButtonNeutralize.Enabled := true;
+      ButtonWarmUp.Enabled := false;
+      ButtonStart.Enabled := false;
+      ButtonAbort.Enabled := true;
+      ButtonFinish.Enabled := true;
+      ButtonStop.Enabled := true;
+    end;
+  rsNeutralized:
+    begin
+      ButtonNeutralize.Enabled := false;
+      ButtonWarmUp.Enabled := false;
+      ButtonStart.Enabled := true;
+      ButtonAbort.Enabled := true;
+      ButtonFinish.Enabled := true;
+      ButtonStop.Enabled := true;
+    end;
+  rsFinished:
+    begin
+      ButtonNeutralize.Enabled := false;
+      ButtonWarmUp.Enabled := false;
+      ButtonStart.Enabled := true;
+      ButtonAbort.Enabled := false;
+      ButtonFinish.Enabled := false;
+      ButtonStop.Enabled := true;
+    end;
+  rsAborted:
+    begin
+      ButtonNeutralize.Enabled := false;
+      ButtonWarmUp.Enabled := true;
+      ButtonStart.Enabled := true;
+      ButtonAbort.Enabled := false;
+      ButtonFinish.Enabled := false;
+      ButtonStop.Enabled := true;
+    end;
+  rsStopped:
+    begin
+      ButtonNeutralize.Enabled := false;
+      ButtonWarmUp.Enabled := true;
+      ButtonStart.Enabled := true;
+      ButtonAbort.Enabled := false;
+      ButtonFinish.Enabled := false;
+      ButtonStop.Enabled := false;
+    end;
   end;
 end;
 

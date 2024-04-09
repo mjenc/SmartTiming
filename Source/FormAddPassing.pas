@@ -5,11 +5,11 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Mask,
-  Data.SqlExpr, DataModule, Vcl.ComCtrls, Generics.Collections;
+  Data.SqlExpr, DataModule, Vcl.ComCtrls, Generics.Collections,
+  DecoderInterface, SmartTiming.Consts, SmartTiming.Cache;
 
 type
   TFormManuallyAddPassing = class(TForm)
-    PanelButtons: TPanel;
     ButtonOK: TButton;
     ButtonCancel: TButton;
     Label2: TLabel;
@@ -22,6 +22,11 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure ButtonCancelClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure ButtonOKClick(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
+    procedure ListViewCompetitorsDblClick(Sender: TObject);
   private
     FSQLDataSet: TSQLDataSet;
     FHour: Word;
@@ -30,16 +35,29 @@ type
     FMs: Word;
     FRecentlyUsed: TList<Integer>;
 
+    procedure AddPassingForBib(ABib: Integer);
     procedure SetTime(ATime: TDatetime);
     function GetTime: TDatetime;
-
-  public
-    procedure Reset;
   end;
 
 implementation
 
 {$R *.dfm}
+
+uses
+  SmartTiming.Controller;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.FormActivate(Sender: TObject);
+begin
+  EditBIB.SetFocus;
+end;
+
+procedure TFormManuallyAddPassing.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  FreeAndNil(FSQLDataSet);
+  Action := caHide;
+end;
 
 {==============================================================================}
 procedure TFormManuallyAddPassing.FormCreate(Sender: TObject);
@@ -62,8 +80,61 @@ end;
 
 {==============================================================================}
 procedure TFormManuallyAddPassing.FormShow(Sender: TObject);
+var
+  lItem: TListItem;
+  lBib: Integer;
 begin
   SetTime(Now);
+
+  ListViewCompetitors.Items.Clear;
+  for lBib in FRecentlyUsed do
+  begin
+    lItem := ListViewCompetitors.Items.Add;
+    lItem.Caption := lBib.ToString;
+  end;
+
+  EditBib.SetFocus;
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.ButtonCancelClick(Sender: TObject);
+begin
+  Close;
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.ButtonOKClick(Sender: TObject);
+var
+  lBib: Integer;
+begin
+  if EditBib.Text = '' then
+  begin
+    Close;
+    Exit;
+  end;
+
+  lBib := StrToInt(EditBib.Text);
+  if not FRecentlyUsed.Contains(lBib) then
+    FRecentlyUsed.Insert(0, lBib);
+  AddPassingForBib(lBib);
+  SetTime(Now);
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.AddPassingForBib(ABib: Integer);
+var
+  lPassing: TPassing;
+begin
+  lPassing.PassingNumber := 0;
+  lPassing.ChipId := MainDataModule.GetActiveTransponderIdForBib(ABib);
+  lPassing.PassingTime := GetTime + Trunc(Now);
+  lPassing.SignalStrength := 100;
+  lPassing.Hits := 90;
+  lPassing.Flags := 0;
+  lPassing.Sport := sSportsIdCycling;
+  lPassing.DecoderId := 'MANUAL';
+  lPassing.RaceId := 0;
+  GSmartTimingController.AddManualPassing(lPassing);
 end;
 
 {==============================================================================}
@@ -78,42 +149,10 @@ begin
 end;
 
 {==============================================================================}
-procedure TFormManuallyAddPassing.Reset;
-var
-  i: integer;
+procedure TFormManuallyAddPassing.ListViewCompetitorsDblClick(Sender: TObject);
 begin
-  FSQLDataSet.Active := false;
-  MainDataModule.FillReadOnlyDataSetForSQL(
-    'SELECT COUNT(*) ' +
-    'FROM PARTICIPATION P ' +
-    'INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID ' +
-    'INNER JOIN RACES R ON P.RACEID = R.RACEID ' +
-    'WHERE R.STATUS IN (1,2) ' +
-    'ORDER BY BIB', FSQLDataSet);
-  FSQLDataSet.First;
-//  ListViewCompetitors.RowCount := FSQLDataSet.FieldList[0].AsInteger;
-  FSQLDataSet.Active := false;
-
-  MainDataModule.FillReadOnlyDataSetForSQL(
-    'SELECT C.BIB, C.FIRSTNAME, C.LASTNAME, C.CHIPID, C.CLUB ' +
-    'FROM PARTICIPATION P ' +
-    'INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID ' +
-    'INNER JOIN RACES R ON P.RACEID = R.RACEID ' +
-    'WHERE R.STATUS IN (1,2) ' +
-    'ORDER BY BIB', FSQLDataSet);
-
-  i := 0;
-  FSQLDataSet.First;
-  while not FSQLDataSet.Eof do
-  begin
-//    StringGridCompetitorsInRace.Cells[0, i] := FSQLDataSet.FieldByName('BIB').AsString;
-//    StringGridCompetitorsInRace.Cells[1, i] := FSQLDataSet.FieldByName('CHIPID').AsString;
-//    StringGridCompetitorsInRace.Cells[2, i] := FSQLDataSet.FieldByName('FIRSTNAME').AsString;
-//    StringGridCompetitorsInRace.Cells[3, i] := FSQLDataSet.FieldByName('LASTNAME').AsString;
-//    StringGridCompetitorsInRace.Cells[4, i] := FSQLDataSet.FieldByName('CLUB').AsString;
-    FSQLDataSet.Next;
-    Inc(i);
-  end;
+  AddPassingForBib(StrToInt(ListViewCompetitors.Selected.Caption));
+  SetTime(Now);
 end;
 
 end.

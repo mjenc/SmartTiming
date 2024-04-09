@@ -162,6 +162,11 @@
             <Form>FormManuallyAddPassing</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="Tools.DBGrid.pas"/>
+        <DCCReference Include="FormAssignCompetitorToTransponder.pas">
+            <Form>FormAssignCompetitor</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <None Include="ModelSupport_SmartTiming\default.txaPackage"/>
         <None Include="ModelSupport_SmartTiming\default.txvpck"/>
         <None Include="..\Resources\PassingBeep.wav"/>

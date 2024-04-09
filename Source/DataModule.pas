@@ -59,6 +59,7 @@ type
     function GetAllPassingsForRaceId(ARaceId: Integer): TArray<TPassing>;
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
     procedure GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
+    function GetActiveTransponderIdForBib(ABib: integer): string;
 
     procedure SetParticipantState(ARaceId: Integer; ACompetitorIDs: TArray<Integer>; AParticipantState: TParticipantState);
 
@@ -71,6 +72,8 @@ type
     procedure SaveTransponderMappingCache;
 
     procedure AddPassingToDatabase(APassing: TPassing; var ARaceId: integer);
+    procedure UpdatePassingInDatabase(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
+    procedure RemovePassingFromDatabase(APassingNumber: Integer);
 
     class function GetJSONFromDataSet(ADataSet: TDataSet): string;
     property DatabasePathAndName: string read FDatabaseName;
@@ -449,13 +452,34 @@ begin
 end;
 
 {==============================================================================}
+function TMainDataModule.GetActiveTransponderIdForBib(ABib: integer): string;
+var
+  lResultSet: TDataSet;
+begin
+  result := '';
+  SQLConnection.Execute(Format(
+    'SELECT C.CHIPID, C.BIB, C.LASTNAME, C.FIRSTNAME, C.CLUB, C.TEAM, C.CLASS FROM ' +
+    'COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID INNER JOIN RACES R ON P.RACEID = R.RACEID ' +
+    'WHERE R.STATUS IN (2) AND C.BIB = %d',
+    [ABib]), nil, lResultSet);
+  try
+    if lResultSet.IsEmpty then
+      Exit('');
+    lResultSet.First;
+    Exit(lResultSet.FieldByName('CHIPID').AsString);
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
 function TMainDataModule.GetAllPassingsForRaceId(ARaceId: Integer): TArray<TPassing>;
 var
   lResultSet: TDataSet;
   i: integer;
 begin
   SQLConnection.Execute(Format(
-    'SELECT * FROM PASSINGS WHERE RACEID = %d ORDER BY PASSINGID', [ARaceId]), nil, lResultSet);
+    'SELECT * FROM PASSINGS WHERE RACEID = %d ORDER BY PASSINGTIME', [ARaceId]), nil, lResultSet);
   try
     if lResultSet.IsEmpty then
       Exit(nil);
@@ -741,6 +765,28 @@ begin
            '(%d, %s, %s, %d, %d, %d, %d, %s, %d)',
            [APassing.PassingNumber, APassing.ChipId.QuotedString, lTimeStr, APassing.SignalStrength, APassing.Hits, APassing.Flags, APassing.Sport, APassing.DecoderId.QuotedString,
             APassing.RaceId]);
+  SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+procedure TMainDataModule.UpdatePassingInDatabase(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
+var
+  lCmd: string;
+  lTimeStr: string;
+begin
+  lTimeStr := FormatDatetime('yyyy-mm-dd hh:mm:ss.zzz', APassingTime).QuotedString;
+  lCmd :=
+    Format('UPDATE PASSINGS SET PASSINGTIME = %s, PASSINGSTATUS = %d WHERE PASSINGNUMBER = %d',
+           [lTimeStr, Ord(APassingState), APassingNumber]);
+  SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+procedure TMainDataModule.RemovePassingFromDatabase(APassingNumber: Integer);
+var
+  lCmd: string;
+begin
+  lCmd := Format('DELETE FROM PASSINGS WHERE PASSINGNUMBER = %d', [APassingNumber]);
   SQLConnection.Execute(lCmd, nil);
 end;
 

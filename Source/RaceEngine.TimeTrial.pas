@@ -20,6 +20,9 @@ type
     procedure AfterOpenRankingResultSet(ADataSet: TDataSet); override;
     procedure SetRankingGroupedByClass(AValue: boolean); override;
     procedure OnGetResultFieldValue(ACol: Integer; ADataSet: TDataSet; var AValue: string);
+    procedure OnPassingItemCompare(ASender: TObject; AItem1, AItem2: TListItem; AData: Integer; var ACompare: Integer); override;
+    function GetPassingDisplay: TWinControl; override;
+
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem); override;
     destructor Destroy; override;
@@ -137,7 +140,7 @@ var
   lName: string;
   lTeamClub: string;
 begin
-  lListItem := TListView(PassingDisplay).Items.Add;
+  lListItem := TListItem.Create(TListView(PassingDisplay).Items);
   if (APassing.Flags and 2) = 2 then
   begin
     lListItem.Caption := '';
@@ -145,17 +148,25 @@ begin
     lListItem.SubItems.Add(FormatDateTime('hh:mm:ss.zzz', APassing.PassingTime));
     lListItem.SubItems.Add('');
     lListItem.SubItems.Add('');
+    lListItem.SubItems.Add(APassing.PassingNumber.ToString);
     lListItem.Data := Pointer(-APassing.Hits);
+    TListView(FPassingDisplay).Items.AddItem(lListItem);
+    lListItem.ImageIndex := -1;
     Exit;
   end;
 
   MainDataModule.GetCompetitorInfoForPassing(APassing, lBIB, lName, lTeamClub);
-
   lListItem.Caption := lBIB.ToString;
   lListItem.SubItems.Add(lName);
   lListItem.SubItems.Add(FormatDateTime('hh:mm:ss.zzz', APassing.PassingTime));
   lListItem.SubItems.Add(APassing.TxId.ToString);
   lListItem.SubItems.Add(APassing.ChipId);
+  lListItem.SubItems.Add(APassing.PassingNumber.ToString);
+  TListView(FPassingDisplay).Items.AddItem(lListItem);
+  if APassing.Flags = 1 then
+    lListItem.ImageIndex := 3
+  else
+    lListItem.ImageIndex := 0;
   TListView(FPassingDisplay).Refresh;
 
   if AAutoScroll then
@@ -341,6 +352,21 @@ begin
     AValue := 'DNS';
     Exit;
   end;
+end;
+
+{==============================================================================}
+function TTimeTrialRaceEngine.GetPassingDisplay: TWinControl;
+begin
+  result := inherited GetPassingDisplay;
+  TListView(FPassingDisplay).SortType := stBoth;
+  TListView(FPassingDisplay).OnCompare := OnPassingItemCompare;
+end;
+
+{==============================================================================}
+procedure TTimeTrialRaceEngine.OnPassingItemCompare(ASender: TObject; AItem1, AItem2: TListItem; AData: Integer; var ACompare: Integer);
+begin
+  // Sort by passing times
+  ACompare := AnsiCompareText(AItem1.SubItems[cPassingItemSubItemIdxTime], AItem2.SubItems[cPassingItemSubItemIdxTime]);
 end;
 
 end.

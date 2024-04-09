@@ -2,8 +2,8 @@ object FormPassingSimulator: TFormPassingSimulator
   Left = 0
   Top = 0
   Caption = 'Passagensimulator'
-  ClientHeight = 727
-  ClientWidth = 934
+  ClientHeight = 735
+  ClientWidth = 936
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,17 +15,19 @@ object FormPassingSimulator: TFormPassingSimulator
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 686
-    Width = 934
+    Top = 694
+    Width = 936
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitTop = 686
+    ExplicitWidth = 934
     DesignSize = (
-      934
+      936
       41)
     object ButtonClose: TButton
-      Left = 840
+      Left = 842
       Top = 8
       Width = 75
       Height = 25
@@ -34,14 +36,15 @@ object FormPassingSimulator: TFormPassingSimulator
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonCloseClick
+      ExplicitLeft = 840
     end
   end
   object PageControlSimulator: TPageControl
     AlignWithMargins = True
     Left = 5
     Top = 5
-    Width = 924
-    Height = 676
+    Width = 926
+    Height = 684
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -49,6 +52,8 @@ object FormPassingSimulator: TFormPassingSimulator
     ActivePage = TabSheetSinglePassings
     Align = alClient
     TabOrder = 1
+    ExplicitWidth = 924
+    ExplicitHeight = 676
     object TabSheetSinglePassings: TTabSheet
       Caption = 'Einzelpassagen'
       object StringGridCompetitorsInRace: TStringGrid

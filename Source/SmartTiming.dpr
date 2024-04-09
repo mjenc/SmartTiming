@@ -34,7 +34,9 @@ uses
   SmartTiming.GridFormatProvider in 'SmartTiming.GridFormatProvider.pas',
   FormPenalty in 'FormPenalty.pas' {FormEditPenalty},
   FormTime in 'FormTime.pas' {FormEditTime},
-  FormAddPassing in 'FormAddPassing.pas' {FormManuallyAddPassing};
+  FormAddPassing in 'FormAddPassing.pas' {FormManuallyAddPassing},
+  Tools.DBGrid in 'Tools.DBGrid.pas',
+  FormAssignCompetitorToTransponder in 'FormAssignCompetitorToTransponder.pas' {FormAssignCompetitor};
 
 {$R *.res}
 

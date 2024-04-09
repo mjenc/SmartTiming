@@ -3,8 +3,8 @@ object FormManuallyAddPassing: TFormManuallyAddPassing
   Top = 0
   BorderStyle = bsDialog
   Caption = 'Durchfahrt manuell hinzuf'#252'gen'
-  ClientHeight = 445
-  ClientWidth = 375
+  ClientHeight = 389
+  ClientWidth = 416
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,57 +12,71 @@ object FormManuallyAddPassing: TFormManuallyAddPassing
   Font.Name = 'Segoe UI'
   Font.Style = []
   Position = poMainFormCenter
+  OnActivate = FormActivate
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
   TextHeight = 15
-  object PanelButtons: TPanel
+  object PanelGrid: TPanel
     Left = 0
-    Top = 404
-    Width = 375
-    Height = 41
-    Align = alBottom
+    Top = 73
+    Width = 416
+    Height = 316
+    Align = alClient
     BevelOuter = bvNone
     TabOrder = 0
-    DesignSize = (
-      375
-      41)
-    object ButtonOK: TButton
-      Left = 200
-      Top = 6
-      Width = 83
-      Height = 25
-      Anchors = [akTop, akRight]
-      Caption = 'OK'
-      Default = True
-      ModalResult = 1
+    ExplicitTop = 97
+    ExplicitWidth = 375
+    ExplicitHeight = 307
+    object ListViewCompetitors: TListView
+      Left = 0
+      Top = 0
+      Width = 414
+      Height = 308
+      Align = alClient
+      Columns = <
+        item
+          Caption = 'Start#'
+          Width = 45
+        end
+        item
+          Caption = 'Name'
+          Width = 120
+        end
+        item
+          Caption = 'Team'
+          Width = 120
+        end
+        item
+          Caption = 'Klasse'
+          Width = 120
+        end>
+      ReadOnly = True
+      RowSelect = True
       TabOrder = 0
-    end
-    object ButtonCancel: TButton
-      Left = 289
-      Top = 8
-      Width = 75
-      Height = 25
-      Anchors = [akTop, akRight]
-      Cancel = True
-      Caption = 'Abbrechen'
-      ModalResult = 2
-      TabOrder = 1
+      ViewStyle = vsReport
+      OnDblClick = ListViewCompetitorsDblClick
+      ExplicitTop = -10
     end
   end
   object PanelControls: TPanel
     Left = 0
     Top = 0
-    Width = 375
-    Height = 97
+    Width = 416
+    Height = 73
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitWidth = 414
+    DesignSize = (
+      416
+      73)
     object Label3: TLabel
       Left = 8
       Top = 8
-      Width = 49
-      Height = 23
+      Width = 38
+      Height = 15
       Caption = 'Startnr.'
     end
     object Label2: TLabel
@@ -91,49 +105,31 @@ object FormManuallyAddPassing: TFormManuallyAddPassing
       NumbersOnly = True
       TabOrder = 0
     end
-  end
-  object PanelGrid: TPanel
-    Left = 0
-    Top = 97
-    Width = 375
-    Height = 307
-    Align = alClient
-    BevelOuter = bvNone
-    TabOrder = 2
-    object ListViewCompetitors: TListView
-      Left = 0
-      Top = 0
-      Width = 375
-      Height = 307
-      Align = alClient
-      Columns = <
-        item
-          Caption = 'Startnr.'
-        end
-        item
-          Caption = 'Name'
-        end
-        item
-          Caption = 'Team'
-        end
-        item
-          Caption = 'Klasse'
-        end>
-      GridLines = True
-      Items.ItemData = {
-        057B0000000100000000000000FFFFFFFFFFFFFFFF03000000FFFFFFFF000000
-        000131000C4D00690063006800610065006C0020004A0065006E00630030E986
-        2410520053004700200052006900650064002000520061007300740061007400
-        7400A0D48624094D006100730074006500720073002000330090E68624FFFFFF
-        FFFFFF}
-      ReadOnly = True
-      RowSelect = True
-      TabOrder = 0
-      ViewStyle = vsReport
-      ExplicitLeft = 96
-      ExplicitTop = 88
-      ExplicitWidth = 250
-      ExplicitHeight = 150
+    object ButtonOK: TButton
+      Left = 241
+      Top = 20
+      Width = 83
+      Height = 25
+      Anchors = [akTop, akRight]
+      Caption = 'Hinzuf'#252'gen'
+      Default = True
+      ModalResult = 1
+      TabOrder = 2
+      OnClick = ButtonOKClick
+      ExplicitLeft = 239
+    end
+    object ButtonCancel: TButton
+      Left = 330
+      Top = 20
+      Width = 75
+      Height = 25
+      Anchors = [akTop, akRight]
+      Cancel = True
+      Caption = 'Schlie'#223'en'
+      ModalResult = 2
+      TabOrder = 3
+      OnClick = ButtonCancelClick
+      ExplicitLeft = 328
     end
   end
 end
