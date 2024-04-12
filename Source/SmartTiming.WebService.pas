@@ -163,10 +163,28 @@ end;
 
 {******************************************************************************}
 procedure TSmartTimingServlet.FillResultResponse(ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+var
+  lDataSet: TSQLDataSet;
 begin
   AResponseInfo.ResponseNo := 200;
   AResponseInfo.ContentType := 'text/json';
-  AResponseInfo.ContentText := '{"todo": "fill with results"}';
+
+  lDataSet := TSQLDataSet.Create(nil);
+  try
+    MainDataModule.FillReadOnlyDataSetForSQL(
+      'SELECT ROW_NUMBER() OVER (PARTITION BY C.CLASS, 1 ORDER BY C.CLASS, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME) CURRENTRANKING, '+
+      'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, IFNULL(C.TEAM, C.CLUB) TEAM, P.RANKINGTIME, ' +
+      'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
+      'OVER (PARTITION BY C.CLASS, 1 ORDER BY C.CLASS, P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
+      'P.FINISHTIME, P.STARTTIME, P.DNS, P.DNF, P.DSQ, P.PENALTIES, P.PARTICIPATIONID, P.COMPETITORID ' +
+      'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+      'WHERE P.RANKINGTIME IS NOT NULL ' +
+      'ORDER BY C.CLASS, P.RANKINGTIME IS NULL, P.LAPS DESC, P.RANKINGTIME, P.STARTTIME',
+        lDataSet);
+    AResponseInfo.ContentText := TMainDataModule.GetJSONFromDataSet(lDataSet);
+  finally
+    FreeAndNil(lDataSet);
+  end;
 end;
 
 end.
