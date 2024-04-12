@@ -39,11 +39,11 @@ type
   private
     FRunning: boolean;
     FSavedPassingReceiveEvent: TDecoderPassingReceivedEvent;
-    FReceivedIDs: TDictionary<integer, string>;
+    FReceivedIDs: TDictionary<string, integer>;
     FLastReceivedPassingNumber: integer;
 
     procedure OnReceivePassing(APassing: TPassing);
-    function FindListItem(ATransponderID: integer): TListItem;
+    function FindListItem(AChipID: string): TListItem;
   public
 
 
@@ -84,7 +84,7 @@ end;
 procedure TFormBatteryCheck.FormCreate(Sender: TObject);
 begin
   FRunning := false;
-  FReceivedIDs := TDictionary<integer, string>.Create;
+  FReceivedIDs := TDictionary<string, integer>.Create;
   FLastReceivedPassingNumber := -1;
 end;
 
@@ -101,23 +101,28 @@ procedure TFormBatteryCheck.ListViewTransponderBatteryStatusCompare(Sender: TObj
 begin
   Compare := 0;
 
-  if (Item1.Caption.ToInteger > Item2.Caption.ToInteger) then
+  if (Item1.SubItems[0].ToInteger > Item2.SubItems[0].ToInteger) then
   begin
     Compare := 1;
     Exit;
   end;
-  if (Item1.Caption.ToInteger < Item2.Caption.ToInteger) then
+  if (Item1.SubItems[0].ToInteger < Item2.SubItems[0].ToInteger) then
+  begin
     Compare := -1;
+    Exit;
+  end;
+  if (Item1.SubItems[0].ToInteger = Item2.SubItems[0].ToInteger) then
+    Compare := CompareText(Item1.Caption, Item2.Caption);
 end;
 
 {==============================================================================}
-function TFormBatteryCheck.FindListItem(ATransponderID: integer): TListItem;
+function TFormBatteryCheck.FindListItem(AChipID: string): TListItem;
 var
   i: integer;
 begin
   for i := 0 to ListViewTransponderBatteryStatus.Items.Count - 1 do
   begin
-    if ListViewTransponderBatteryStatus.Items[i].Caption = ATransponderID.ToString then
+    if ListViewTransponderBatteryStatus.Items[i].Caption = AChipID then
       Exit(ListViewTransponderBatteryStatus.Items[i]);
   end;
   result := nil;
@@ -130,8 +135,8 @@ procedure TFormBatteryCheck.OnReceivePassing(APassing: TPassing);
     ListViewTransponderBatteryStatus.Items.BeginUpdate;
     try
       AListItem.ImageIndex := APassing.Flags;
-      AListItem.Caption := APassing.TxId.ToString;
-      AListItem.SubItems.Add(APassing.ChipID);
+      AListItem.Caption := APassing.ChipID;
+      AListItem.SubItems.Add(APassing.TxId.ToString);
       AListItem.SubItems.Add(APassing.Flags.ToString);
       AListItem.SubItems.Add(APassing.SignalStrength.ToString);
 
@@ -167,13 +172,13 @@ begin
     Exit;
   end;
 
-  if not FReceivedIDs.TryGetValue(APassing.TxId, lChipID) then
+  if not FReceivedIDs.ContainsKey(APassing.ChipId) then
   begin
     lListItem := ListViewTransponderBatteryStatus.Items.AddItem(nil);
-    FReceivedIDs.Add(APassing.TxId, APassing.ChipID);
+    FReceivedIDs.Add(APassing.ChipID, APassing.TxId);
   end
   else
-    lListItem := FindListItem(APassing.TxId);
+    lListItem := FindListItem(APassing.ChipId);
   AddPassingToList(lListItem, APassing);
 end;
 
@@ -210,19 +215,19 @@ begin
       if (lStep = rsGaps) and (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '-') then
       begin
         Inc(lGapCount);
-        lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+        lText := lText + ListViewTransponderBatteryStatus.Items[i].SubItems[0] + ' (' + ListViewTransponderBatteryStatus.Items[i].Caption + ')' + #13#10;
         Continue;
       end;
       if (lStep = rsWeak) and (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '1') then
       begin
         Inc(lWeakCount);
-        lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+        lText := lText + ListViewTransponderBatteryStatus.Items[i].SubItems[0] + ' (' + ListViewTransponderBatteryStatus.Items[i].Caption + ')' + #13#10;
         Continue;
       end;
       if (lStep = rsHealthy)  and  (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '0') then
       begin
         Inc(lHealthyCount);
-        lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+        lText := lText + ListViewTransponderBatteryStatus.Items[i].SubItems[0] + ' (' + ListViewTransponderBatteryStatus.Items[i].Caption + ')' + #13#10;
       end;
     end;
 
@@ -258,16 +263,16 @@ begin
   begin
     if CheckBoxCopyGaps.Checked and (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '-') then
     begin
-      lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+      lText := lText + ListViewTransponderBatteryStatus.Items[i].SubItems[0] + ' (' + ListViewTransponderBatteryStatus.Items[i].Caption + ')' + #13#10;
       Continue;
     end;
     if CheckBoxWeak.Checked and (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '1') then
     begin
-      lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+      lText := lText + ListViewTransponderBatteryStatus.Items[i].SubItems[0] + ' (' + ListViewTransponderBatteryStatus.Items[i].Caption + ')' + #13#10;
       Continue;
     end;
     if CheckBoxHealthy.Checked and  (ListViewTransponderBatteryStatus.Items[i].SubItems[1] = '0') then
-      lText := lText + ListViewTransponderBatteryStatus.Items[i].Caption + #13#10;
+      lText := lText + ListViewTransponderBatteryStatus.Items[i].SubItems[0] + ' (' + ListViewTransponderBatteryStatus.Items[i].Caption + ')' + #13#10;
   end;
 
   Clipboard.AsText := lText;
@@ -283,10 +288,10 @@ var
   lChipID: string;
 begin
   i := 1;
-  lPred := ListViewTransponderBatteryStatus.Items[0].Caption.ToInteger;
+  lPred := ListViewTransponderBatteryStatus.Items[0].SubItems[0].ToInteger;
   while i < ListViewTransponderBatteryStatus.Items.Count do
   begin
-    lActual := ListViewTransponderBatteryStatus.Items[i].Caption.ToInteger;
+    lActual := ListViewTransponderBatteryStatus.Items[i].SubItems[0].ToInteger;
     while lPred + 1 < lActual do
     begin
       Inc(lPred);
@@ -296,14 +301,14 @@ begin
 
       lListItem := ListViewTransponderBatteryStatus.Items.AddItem(nil);
       lListItem.ImageIndex := 1;
-      lListItem.Caption := lPred.ToString;
-      lListItem.SubItems.Add(lChipID);
+      lListItem.Caption := lChipID;
+      lListItem.SubItems.Add(lPred.ToString);
       lListItem.SubItems.Add('-');
       lListItem.SubItems.Add('-');
-      FReceivedIDs.Add(lPred, lChipID);
+      FReceivedIDs.Add(lChipID, lPred);
     end;
 
-    lPred := ListViewTransponderBatteryStatus.Items[i].Caption.ToInteger;
+    lPred := ListViewTransponderBatteryStatus.Items[i].SubItems[0].ToInteger;
     Inc(i);
   end;
 end;

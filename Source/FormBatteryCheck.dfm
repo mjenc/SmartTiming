@@ -92,11 +92,11 @@ object FormBatteryCheck: TFormBatteryCheck
       Columns = <
         item
           AutoSize = True
-          Caption = 'TansonderID'
+          Caption = 'ChipID'
         end
         item
           AutoSize = True
-          Caption = 'ChipID'
+          Caption = 'TransponderID'
         end
         item
           AutoSize = True
