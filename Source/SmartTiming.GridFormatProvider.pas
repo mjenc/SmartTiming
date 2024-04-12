@@ -81,6 +81,7 @@ begin
     lColumn.Width := ASOColumn.I['Width'];
     lColumn.Title.Caption := ASOColumn.S['Title'];
     lColumn.Index := ASOColumn.I['Index'];
+    Exit;
   end;
 end;
 

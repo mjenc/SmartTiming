@@ -14,7 +14,7 @@ type
   private
     FRankingGridFormatInitialized: boolean;
     FSQLGroupingString: string;
-
+    FSQLSortingString: string;
   protected
     procedure UpdateParticipationTable(ACurrentPassingId: integer); override;
     procedure AfterOpenRankingResultSet(ADataSet: TDataSet); override;
@@ -47,25 +47,23 @@ uses
 constructor TTimeTrialRaceEngine.Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem);
 begin
   FRankingSQLFormat :=
-    'SELECT ROW_NUMBER() OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME) CURRENTRANKING, '+
-    'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, IFNULL(C.TEAM, C.CLUB) TEAM, P.RANKINGTIME, ' +
-    'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
-    'OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
-    'P.FINISHTIME, P.STARTTIME, P.DNS, P.DNF, P.DSQ, P.PENALTIES, P.PARTICIPATIONID, P.COMPETITORID ' +
-    'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+    'SELECT CURRENTRANKING, CLASS, BIB, NAME, TEAM, RANKINGTIME, GAP, ' +
+    'FINISHTIME, STARTTIME, DNS, DNF, DSQ, PENALTIES, PARTICIPATIONID, COMPETITORID ' +
+    'FROM RANKING_TIMETRIAL%1:s ' +
     'WHERE RACEID = %0:s ' +
-    'ORDER BY %1:s P.RANKINGTIME IS NULL, P.LAPS DESC, P.RANKINGTIME, P.STARTTIME';
-  FResultSQLFormat :=
-    'SELECT ROW_NUMBER() OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME) CURRENTRANKING, '+
-    'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, IFNULL(C.TEAM, C.CLUB) TEAM, C.UCIID, P.RANKINGTIME, ' +
-    'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
-    'OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
-    'P.DNS, P.DNF, P.DSQ ' + //, P.PENALTIES, P.PARTICIPATIONID ' +
-    'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
-    'WHERE RACEID = %0:s ' +
-    'ORDER BY %1:s P.DNF, P.DSQ, P.DNS, P.RANKINGTIME IS NULL, P.LAPS DESC, P.RANKINGTIME, P.STARTTIME';
+    'ORDER BY %2:s RANKINGTIME IS NULL, LAPS DESC, RANKINGTIME, STARTTIME';
+//  FResultSQLFormat :=
+//    'SELECT ROW_NUMBER() OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME) CURRENTRANKING, '+
+//    'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, IFNULL(C.TEAM, C.CLUB) TEAM, C.UCIID, P.RANKINGTIME, ' +
+//    'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
+//    'OVER (PARTITION BY %1:s 1 ORDER BY %1:s P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
+//    'P.DNS, P.DNF, P.DSQ ' + //, P.PENALTIES, P.PARTICIPATIONID ' +
+//    'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+//    'WHERE RACEID = %0:s ' +
+//    'ORDER BY %1:s P.DNF, P.DSQ, P.DNS, P.RANKINGTIME IS NULL, P.LAPS DESC, P.RANKINGTIME, P.STARTTIME';
 
-  FRankingSQLClassGrouping := 'C.CLASS,';
+  FRankingSQLClassGrouping := '_BYCLASS';
+  FRankingSQLClassSorting := 'CLASS,';
 
   FFormatSuffix := '.TimeTrial';
   FDefaultListFormatRanking :=
@@ -90,8 +88,8 @@ begin
 
   FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsStopped];
 
-  FRankingQuery := Format(FRankingSQLFormat, [ARaceItem.Id.ToString, '']);
-  FSQLDataSetRankings.CommandText := Format(FRankingSQLFormat, [ARaceItem.Id.ToString, '']);
+  FRankingQuery := Format(FRankingSQLFormat, [ARaceItem.Id.ToString, '', '']);
+  FSQLDataSetRankings.CommandText := FRankingQuery;
 
   FRankingGridFormatInitialized := false;
 //  FSQLDataSetRankings.AfterOpen := AfterOpenRankingResultSet;
@@ -124,11 +122,17 @@ begin
     Exit;
 
   if AValue then
-    FSQLGroupingString := FRankingSQLClassGrouping
+  begin
+    FSQLGroupingString := FRankingSQLClassGrouping;
+    FSQLSortingString := FRankingSQLClassSorting;
+  end
   else
+  begin
     FSQLGroupingString := '';
+    FSQLSortingString := '';
+  end;
 
-  FRankingQuery := Format(FRankingSQLFormat, [FRaceItem.Id.ToString, FSQLGroupingString]);
+  FRankingQuery := Format(FRankingSQLFormat, [FRaceItem.Id.ToString, FSQLGroupingString, FSQLSortingString]);
   FRankingGridFormatInitialized := false;
   inherited SetRankingGroupedByClass(AValue);
 end;

@@ -62,6 +62,7 @@ type
     FRankingSQLFormat: string;
     FResultSQLFormat: string;
     FRankingSQLClassGrouping: string;
+    FRankingSQLClassSorting: string;
     FFormatSuffix: string;
     FDefaultListFormatRanking: string;
 
