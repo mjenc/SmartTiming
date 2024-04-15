@@ -2,8 +2,8 @@ object FormMain: TFormMain
   Left = 0
   Top = 0
   Caption = 'SmartTiming'
-  ClientHeight = 969
-  ClientWidth = 1485
+  ClientHeight = 956
+  ClientWidth = 1483
   Color = clBackground
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,6 +12,8 @@ object FormMain: TFormMain
   Font.Style = []
   KeyPreview = True
   Menu = MainMenu
+  Position = poScreenCenter
+  WindowState = wsMaximized
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -22,7 +24,7 @@ object FormMain: TFormMain
     AlignWithMargins = True
     Left = 0
     Top = 0
-    Width = 1485
+    Width = 1483
     Height = 59
     Margins.Left = 0
     Margins.Top = 0
@@ -35,7 +37,7 @@ object FormMain: TFormMain
     ParentBackground = False
     TabOrder = 0
     DesignSize = (
-      1481
+      1479
       55)
     object LabelTitle: TLabel
       Left = 10
@@ -64,7 +66,7 @@ object FormMain: TFormMain
       ParentFont = False
     end
     object LabelDate: TLabel
-      Left = 1394
+      Left = 1392
       Top = 8
       Width = 70
       Height = 20
@@ -83,8 +85,8 @@ object FormMain: TFormMain
   object PanelMain: TPanel
     Left = 0
     Top = 59
-    Width = 1485
-    Height = 861
+    Width = 1483
+    Height = 848
     Align = alClient
     BevelOuter = bvNone
     Color = clWhite
@@ -94,13 +96,13 @@ object FormMain: TFormMain
       AlignWithMargins = True
       Left = 0
       Top = 6
-      Width = 1485
-      Height = 849
+      Width = 1483
+      Height = 836
       Margins.Left = 0
       Margins.Top = 6
       Margins.Right = 0
       Margins.Bottom = 6
-      ActivePage = TabSheetTiming
+      ActivePage = TabSheetEvent
       Align = alClient
       TabHeight = 30
       TabOrder = 0
@@ -111,7 +113,7 @@ object FormMain: TFormMain
         object PanelEventInfo: TPanel
           Left = 0
           Top = 0
-          Width = 1477
+          Width = 1475
           Height = 121
           Align = alTop
           BevelKind = bkFlat
@@ -219,7 +221,7 @@ object FormMain: TFormMain
           AlignWithMargins = True
           Left = 0
           Top = 126
-          Width = 1477
+          Width = 1475
           Height = 339
           Margins.Left = 0
           Margins.Top = 5
@@ -246,7 +248,7 @@ object FormMain: TFormMain
             AlignWithMargins = True
             Left = 0
             Top = 39
-            Width = 1473
+            Width = 1471
             Height = 296
             Margins.Left = 0
             Margins.Top = 5
@@ -259,7 +261,7 @@ object FormMain: TFormMain
             object DBGridRaces: TDBGrid
               Left = 30
               Top = 0
-              Width = 1439
+              Width = 1437
               Height = 292
               Align = alClient
               DataSource = MainDataModule.DataSourceRaces
@@ -280,7 +282,6 @@ object FormMain: TFormMain
               TitleFont.Height = -12
               TitleFont.Name = 'Segoe UI'
               TitleFont.Style = [fsBold]
-              OnDrawColumnCell = DBGridDrawCheckBox
             end
             object PanelRacesGridButtons: TPanel
               Left = 0
@@ -320,7 +321,7 @@ object FormMain: TFormMain
         object PanelCompetitorFilters: TPanel
           Left = 0
           Top = 0
-          Width = 1477
+          Width = 1475
           Height = 41
           Align = alTop
           BevelOuter = bvNone
@@ -364,8 +365,8 @@ object FormMain: TFormMain
         object DBGridCompetitors: TDBGrid
           Left = 30
           Top = 41
-          Width = 1447
-          Height = 768
+          Width = 1445
+          Height = 755
           Align = alClient
           DataSource = DataSourceCompetitors
           FixedColor = clBtnShadow
@@ -392,7 +393,7 @@ object FormMain: TFormMain
           Left = 0
           Top = 41
           Width = 30
-          Height = 768
+          Height = 755
           Align = alLeft
           TabOrder = 2
           OnClick = PanelCompetitorsGridButtonsClick
@@ -421,7 +422,7 @@ object FormMain: TFormMain
         object Splitter1: TSplitter
           Left = 185
           Top = 0
-          Height = 809
+          Height = 796
           Color = clBlack
           ParentColor = False
           ExplicitLeft = 272
@@ -431,7 +432,7 @@ object FormMain: TFormMain
         object Splitter2: TSplitter
           Left = 709
           Top = 0
-          Height = 809
+          Height = 796
           Align = alRight
           Color = clBlack
           ParentColor = False
@@ -442,7 +443,7 @@ object FormMain: TFormMain
           Left = 0
           Top = 0
           Width = 185
-          Height = 809
+          Height = 796
           Align = alLeft
           BevelOuter = bvNone
           TabOrder = 0
@@ -450,7 +451,7 @@ object FormMain: TFormMain
             Left = 0
             Top = 0
             Width = 185
-            Height = 804
+            Height = 784
             Style = lbOwnerDrawFixed
             AutoComplete = False
             Align = alClient
@@ -473,7 +474,7 @@ object FormMain: TFormMain
           Left = 188
           Top = 0
           Width = 521
-          Height = 809
+          Height = 796
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 1
@@ -582,7 +583,7 @@ object FormMain: TFormMain
             Left = 0
             Top = 41
             Width = 521
-            Height = 768
+            Height = 755
             Align = alClient
             BevelOuter = bvNone
             TabOrder = 1
@@ -591,15 +592,15 @@ object FormMain: TFormMain
         object PanelStandings: TPanel
           Left = 712
           Top = 0
-          Width = 765
-          Height = 809
+          Width = 763
+          Height = 796
           Align = alRight
           Anchors = [akLeft, akTop, akRight, akBottom]
           TabOrder = 2
           object PanelStandingsControls: TPanel
             Left = 1
             Top = 1
-            Width = 763
+            Width = 761
             Height = 41
             Align = alTop
             BevelOuter = bvNone
@@ -623,7 +624,7 @@ object FormMain: TFormMain
           Left = 0
           Top = 0
           Width = 185
-          Height = 809
+          Height = 796
           Align = alLeft
           BevelEdges = []
           BevelOuter = bvNone
@@ -632,8 +633,8 @@ object FormMain: TFormMain
         object PanelResults: TPanel
           Left = 185
           Top = 0
-          Width = 1292
-          Height = 809
+          Width = 1290
+          Height = 796
           Align = alClient
           BevelEdges = []
           BevelOuter = bvNone
@@ -641,7 +642,7 @@ object FormMain: TFormMain
           object PanelResultControls: TPanel
             Left = 0
             Top = 0
-            Width = 1292
+            Width = 1290
             Height = 41
             Align = alTop
             BevelEdges = []
@@ -699,8 +700,8 @@ object FormMain: TFormMain
           object PanelResultGrid: TPanel
             Left = 0
             Top = 41
-            Width = 1292
-            Height = 768
+            Width = 1290
+            Height = 755
             Align = alClient
             BevelEdges = []
             BevelOuter = bvNone
@@ -720,8 +721,8 @@ object FormMain: TFormMain
   object PanelStatus: TPanel
     AlignWithMargins = True
     Left = 0
-    Top = 920
-    Width = 1485
+    Top = 907
+    Width = 1483
     Height = 49
     Margins.Left = 0
     Margins.Top = 0
@@ -798,7 +799,7 @@ object FormMain: TFormMain
     object PanelTemperatureChart: TPanel
       Left = 756
       Top = 0
-      Width = 725
+      Width = 723
       Height = 45
       Align = alClient
       TabOrder = 2

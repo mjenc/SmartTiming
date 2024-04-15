@@ -74,6 +74,7 @@ type
     procedure SetRankingGroupedByClass(AValue: boolean); virtual;
     procedure UpdateParticipationTable(ACurrentPassingId: integer); virtual; abstract;
     procedure AfterOpenRankingResultSet(ADataSet: TDataSet); virtual; abstract;
+    procedure OnDrawRankingColumn(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
     procedure OnColorizePodium(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
     procedure CreateAndInitializePopupMenu;
     procedure PassingCompare(Sender: TObject; Item1, Item2: TListItem; Data: Integer; var ACompare: Integer);
@@ -312,6 +313,38 @@ begin
 end;
 
 {==============================================================================}
+procedure TCustomRaceEngine.OnDrawRankingColumn(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
+var
+  lSender: TDBGrid;
+  lLeft: Integer;
+begin
+  try
+    if not (Sender is TDBGrid) then
+      Exit;
+    lSender := Sender as TDBGrid;
+    if Field.IsNull or (not SameText(Field.DisplayName, 'Platz')) then
+      Exit;
+    if lSender.DataSource.DataSet.FieldByName('DNS').AsInteger <> 0 then
+    begin
+      lLeft := Rect.Left + (Rect.Right - Rect.Left) div 2 - (lSender.Canvas.TextWidth('DNS') div 2);
+      lSender.Canvas.TextRect(Rect, lLeft, Rect.Top + 2, 'DNS');
+    end;
+    if lSender.DataSource.DataSet.FieldByName('DNF').AsInteger <> 0 then
+    begin
+      lLeft := Rect.Left + (Rect.Right - Rect.Left) div 2 - (lSender.Canvas.TextWidth('DNF') div 2);
+      lSender.Canvas.TextRect(Rect, lLeft, Rect.Top + 2, 'DNF');
+    end;
+    if lSender.DataSource.DataSet.FieldByName('DSQ').AsInteger <> 0 then
+    begin
+      lLeft := Rect.Left + (Rect.Right - Rect.Left) div 2 - (lSender.Canvas.TextWidth('DSQ') div 2);
+      lSender.Canvas.TextRect(Rect, lLeft, Rect.Top + 2, 'DSQ');
+    end;
+  finally
+    OnColorizePodium(Sender, Rect, Field, State);
+  end;
+end;
+
+{==============================================================================}
 procedure TCustomRaceEngine.OnColorizePodium(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
 var
   lBgColor: TColor;
@@ -353,7 +386,9 @@ begin
   FRankingGrid.Align := alNone;
   FRankingGrid.DataSource := FDataSourceRankings;
   FRankingGrid.Options := [dgTitles, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgRowSelect,dgMultiSelect, dgTitleClick, dgTitleHotTrack];
-  FRankingGrid.OnDrawDataCell := OnColorizePodium;
+  FRankingGrid.OnDrawDataCell := OnDrawRankingColumn;
+  FRankingGrid.OnDrawColumnCell := SmartTimingTools.DBGridDrawCheckBox;
+
   FRankingGrid.PopupMenu := FPopupMenuRanking;
   result := FRankingGrid;
 //  AfterOpenRankingResultSet(FSQLDataSetRankings);
@@ -590,7 +625,6 @@ begin
     lForm.Time := Frac(Now);
     if not lForm.ShowModal = mrOK then
       Exit;
-    lTime := lForm.Time;
   finally
     FreeAndNil(lForm);
   end;
@@ -638,7 +672,6 @@ var
   lCurrentItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
-  lPassingTime: TDatetime;
 begin
   lListView := TListView(FPassingDisplay);
   lCurrentItem := lListView.Selected;
@@ -651,7 +684,6 @@ end;
 {==============================================================================}
 procedure TCustomRaceEngine.OnChangePassingTime(ASender: TObject);
 var
-  lFormEditTime: TFormEditTime;
   lCurrentItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
@@ -680,7 +712,6 @@ var
   lCurrentItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
-  lPassingTime: TDatetime;
 begin
   lListView := TListView(FPassingDisplay);
   lCurrentItem := lListView.Selected;

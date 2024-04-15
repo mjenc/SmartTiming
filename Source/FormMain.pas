@@ -132,7 +132,6 @@ type
     procedure MenuItemLoadEventClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure MenuItemSettingsClick(Sender: TObject);
-    procedure DBGridDrawCheckBox(Sender: TObject; const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
     procedure DBNavigatorRacesBeforeAction(Sender: TObject; Button: TNavigateBtn);
     procedure MenuItemImportCompetitorsClick(Sender: TObject);
     procedure PageControlMainChange(Sender: TObject);
@@ -321,28 +320,6 @@ begin
 end;
 
 {==============================================================================}
-procedure TFormMain.DBGridDrawCheckBox(Sender: TObject; const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
-begin
-  if (not SameText(Column.Field.FieldName, 'FIRSTPASSINGISLAP'))
-     and (not SameText(Column.Field.FieldName, 'DNS'))
-     and (not SameText(Column.Field.FieldName, 'DNF'))
-     and (not SameText(Column.Field.FieldName, 'DSQ')) then
-    Exit;
-
-  TDBGrid(Sender).Canvas.FillRect(Rect) ;
-  if VarIsNull(Column.Field.Value) then
-  begin
-    DrawFrameControl(TDBGrid(Sender).Canvas.Handle,Rect, DFC_BUTTON, DFCS_BUTTONCHECK or DFCS_INACTIVE); {grayed}
-    Exit;
-  end;
-
-  if Column.Field.AsInteger <> 0 then
-    DrawFrameControl(TDBGrid(Sender).Canvas.Handle,Rect, DFC_BUTTON, DFCS_BUTTONCHECK or DFCS_CHECKED)
-  else
-    DrawFrameControl(TDBGrid(Sender).Canvas.Handle,Rect, DFC_BUTTON, DFCS_BUTTONCHECK);
-end;
-
-{==============================================================================}
 procedure TFormMain.DBGridRacesShortCellClick(Column: TColumn);
 begin
   SetupRankingsGrid(MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').AsInteger);
@@ -471,6 +448,7 @@ end;
 procedure TFormMain.FormCreate(Sender: TObject);
 begin
   PageControlMain.ActivePage := TabSheetEvent;
+  DBGridRaces.OnDrawColumnCell := SmartTimingTools.DBGridDrawCheckBox;
 
   ReadSettings;
 

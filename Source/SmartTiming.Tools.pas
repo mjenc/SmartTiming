@@ -4,11 +4,18 @@ interface
 
 uses
   Classes, SysUtils, DateUtils, Windows, Dialogs, Forms, Winapi.Messages,
-  Registry, DBGrids, Controls, Graphics, Variants, Buttons,
+  Registry, DBGrids, Controls, Graphics, Variants, Buttons, Grids,
   Generics.Defaults, UITypes, DB, SmartTiming.Event,
   Tools.SuperObject, SmartTiming.Consts, RaceEngine.Custom;
 
 type
+  TDBGrid = class(DBGrids.TDBGrid)
+  private
+    procedure WMVScroll(var Msg: TWMVScroll); message WM_VSCROLL;
+  protected
+    procedure UpdateScrollBar; override;
+  end;
+
   SmartTimingTools = class
     class function FieldAsDatetime(AField: TField): TDatetime;
     class function RegistryReadString(aRootKey: HKEY; const aPath, aKey: string; aDefault: String = ''): String;
@@ -35,19 +42,13 @@ type
     class function GetFieldAsDatetime(AField: TField; ADefaultIfNull: TDatetime): TDatetime;
     class procedure OnGetRaceStatus(ASender: TField; var AText: string; ADisplayText: Boolean);
     class procedure OnGetTxId(ASender: TField; var AText: string; ADisplayText: Boolean);
+    class procedure DBGridDrawCheckBox(Sender: TObject; const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
     class procedure InitFieldDescriptions;
     class function ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]; ADefaultButton: TTaskDialogCommonButton = tcbCancel): TModalResult;
   end;
 
   TRaceEngineFactory = class
     class function CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
-  end;
-
-  TDBGrid = class(DBGrids.TDBGrid)
-  private
-    procedure WMVScroll(var Msg: TWMVScroll); message WM_VSCROLL;
-  protected
-    procedure UpdateScrollBar; override;
   end;
 
 var
@@ -556,6 +557,28 @@ begin
 end;
 
 {==============================================================================}
+class procedure SmartTimingTools.DBGridDrawCheckBox(Sender: TObject; const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
+begin
+  if (not SameText(Column.Field.FieldName, 'FIRSTPASSINGISLAP'))
+     and (not SameText(Column.Field.FieldName, 'DNS'))
+     and (not SameText(Column.Field.FieldName, 'DNF'))
+     and (not SameText(Column.Field.FieldName, 'DSQ')) then
+    Exit;
+
+  TDBGrid(Sender).Canvas.FillRect(Rect) ;
+  if VarIsNull(Column.Field.Value) then
+  begin
+    DrawFrameControl(TDBGrid(Sender).Canvas.Handle,Rect, DFC_BUTTON, DFCS_BUTTONCHECK or DFCS_INACTIVE); {grayed}
+    Exit;
+  end;
+
+  if Column.Field.AsInteger <> 0 then
+    DrawFrameControl(TDBGrid(Sender).Canvas.Handle,Rect, DFC_BUTTON, DFCS_BUTTONCHECK or DFCS_CHECKED)
+  else
+    DrawFrameControl(TDBGrid(Sender).Canvas.Handle,Rect, DFC_BUTTON, DFCS_BUTTONCHECK);
+end;
+
+{==============================================================================}
 class function TRaceEngineFactory.CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
 begin
   case ARaceItem.RaceType of
@@ -593,6 +616,7 @@ Begin
  Else
    inherited;end;
 
+{==============================================================================}
 Procedure TDBGrid.UpdateScrollBar;
 Var
  dataset: TDataSet;
