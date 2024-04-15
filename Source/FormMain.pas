@@ -18,7 +18,7 @@ uses
   SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
   VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
   VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider,
-  FormAddPassing, Vcl.WinXPanels;
+  FormAddPassing, Vcl.WinXPanels, ValueHistoryChart;
 
 type
   TFormMain = class(TForm)
@@ -179,6 +179,8 @@ type
     FFormPassingSimulator: TFormPassingSimulator;
     FFormGenerateTransponderMappings: TFormGenerateTransponderMappings;
     FFormManuallyAddPassing: TFormManuallyAddPassing;
+    FTemperatureChart: TValueHistoryChart;
+    FNoiseChart: TValueHistoryChart;
 
     FAutoScrollPassingList: boolean;
 
@@ -450,6 +452,25 @@ begin
   PageControlMain.ActivePage := TabSheetEvent;
   DBGridRaces.OnDrawColumnCell := SmartTimingTools.DBGridDrawCheckBox;
 
+  FTemperatureChart := TValueHistoryChart.Create(self);
+  begin
+    FTemperatureChart.MaxBufferSize := PanelTemperatureChart.Width;
+    FTemperatureChart.GreenAreaTo := 49.0;
+    FTemperatureChart.YellowAreaFrom := 49.0;
+    FTemperatureChart.RedAreaFrom := 59.0;
+    FTemperatureChart.Parent := PanelTemperatureChart;
+    FTemperatureChart.Align := alClient;
+  end;
+
+  FNoiseChart := TValueHistoryChart.Create(self);
+  begin
+    FNoiseChart.MaxBufferSize := PanelNoiseChart.Width;
+    FNoiseChart.GreenAreaTo := 39.0;
+    FNoiseChart.YellowAreaFrom := 39.0;
+    FNoiseChart.Parent := PanelNoiseChart;
+    FNoiseChart.Align := alClient;
+  end;
+
   ReadSettings;
 
   if not MainDataModule.FillTransponderMappingCache then
@@ -478,14 +499,19 @@ procedure TFormMain.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftSta
 begin
   case Key of
   VK_F4:
-    ButtonWarmUpClick(nil);
+    if ButtonWarmUp.Visible and ButtonWarmUp.Enabled then
+      ButtonWarmUpClick(nil);
   VK_F5:
-    ButtonStartClick(nil);
+    if ButtonStart.Visible and ButtonStart.Enabled then
+      ButtonStartClick(nil);
   VK_F6:
-    ButtonNeutralizeClick(nil);
+    if ButtonNeutralize.Visible and ButtonNeutralize.Enabled then
+      ButtonNeutralizeClick(nil);
   VK_F7:
-    ButtonAbortClick(nil);
+    if ButtonAbort.Visible and ButtonAbort.Enabled then
+      ButtonAbortClick(nil);
   VK_F8:
+    if ButtonFinish.Visible and ButtonFinish.Enabled then
     ButtonFinishClick(nil);
   VK_F10:
     begin
