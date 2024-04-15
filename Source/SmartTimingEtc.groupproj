@@ -12,6 +12,9 @@
         <Projects Include="SmartStarting.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="SmartRankingViewer.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -47,14 +50,23 @@
     <Target Name="SmartStarting:Make">
         <MSBuild Projects="SmartStarting.dproj" Targets="Make"/>
     </Target>
+    <Target Name="SmartRankingViewer">
+        <MSBuild Projects="SmartRankingViewer.dproj"/>
+    </Target>
+    <Target Name="SmartRankingViewer:Clean">
+        <MSBuild Projects="SmartRankingViewer.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SmartRankingViewer:Make">
+        <MSBuild Projects="SmartRankingViewer.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="SmartDecoderWatchDog;SmartTiming;SmartStarting"/>
+        <CallTarget Targets="SmartDecoderWatchDog;SmartTiming;SmartStarting;SmartRankingViewer"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="SmartDecoderWatchDog:Clean;SmartTiming:Clean;SmartStarting:Clean"/>
+        <CallTarget Targets="SmartDecoderWatchDog:Clean;SmartTiming:Clean;SmartStarting:Clean;SmartRankingViewer:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="SmartDecoderWatchDog:Make;SmartTiming:Make;SmartStarting:Make"/>
+        <CallTarget Targets="SmartDecoderWatchDog:Make;SmartTiming:Make;SmartStarting:Make;SmartRankingViewer:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

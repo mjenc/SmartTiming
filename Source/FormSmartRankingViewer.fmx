@@ -1,0 +1,158 @@
+object TabbedwithNavigationForm: TTabbedwithNavigationForm
+  Left = 0
+  Top = 0
+  Caption = 'Form56'
+  ClientHeight = 582
+  ClientWidth = 956
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  DesignerMasterStyle = 0
+  object TabControl1: TTabControl
+    Align = Client
+    FullSize = True
+    Size.Width = 956.000000000000000000
+    Size.Height = 541.000000000000000000
+    Size.PlatformDefault = False
+    TabHeight = 49.000000000000000000
+    TabIndex = 0
+    TabOrder = 0
+    TabPosition = PlatformDefault
+    Sizes = (
+      956s
+      492s
+      956s
+      492s
+      956s
+      492s
+      956s
+      492s)
+    object TabItem1: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = True
+      Size.Width = 238.000000000000000000
+      Size.Height = 49.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = 'tabitemcustom'
+      TabOrder = 0
+      Text = 'TabItem1'
+      ExplicitSize.cx = 101.000000000000000000
+      ExplicitSize.cy = 49.000000000000000000
+      object StringGrid1: TStringGrid
+        Align = Client
+        CanFocus = True
+        ClipChildren = True
+        Margins.Left = 8.000000000000000000
+        Margins.Top = 8.000000000000000000
+        Margins.Right = 8.000000000000000000
+        Margins.Bottom = 8.000000000000000000
+        Size.Width = 940.000000000000000000
+        Size.Height = 476.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        Options = [AlternatingRowBackground, ColumnResize, ColLines, RowLines, Tabs, Header, AutoDisplacement]
+        Viewport.Width = 936.000000000000000000
+        Viewport.Height = 451.000000000000000000
+      end
+    end
+    object TabItem2: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 238.000000000000000000
+      Size.Height = 49.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = 'tabitemcontacts'
+      TabOrder = 0
+      Text = 'TabItem2'
+      ExplicitSize.cx = 102.000000000000000000
+      ExplicitSize.cy = 49.000000000000000000
+    end
+    object TabItem3: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 238.000000000000000000
+      Size.Height = 49.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = 'tabitemsearch'
+      TabOrder = 0
+      Text = 'TabItem3'
+      ExplicitSize.cx = 101.000000000000000000
+      ExplicitSize.cy = 49.000000000000000000
+    end
+    object TabItem4: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 240.000000000000000000
+      Size.Height = 49.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = 'tabitembookmarks'
+      TabOrder = 0
+      Text = 'TabItem4'
+      ExplicitSize.cx = 99.000000000000000000
+      ExplicitSize.cy = 49.000000000000000000
+    end
+  end
+  object TimerRefresh: TTimer
+    Enabled = False
+    Interval = 10000
+    OnTimer = DoRefresh
+    Left = 40
+    Top = 265
+  end
+  object Panel1: TPanel
+    Align = Top
+    Size.Width = 956.000000000000000000
+    Size.Height = 41.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    object ImageControl1: TImageControl
+      Bitmap.PNG = {
+        89504E470D0A1A0A0000000D49484452000000100000001008060000001FF3FF
+        61000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+        016249444154384FD592DD4D024110C7674705E29325D881F0A0B81713B002A0
+        02A0026203AE4B0368059E155C091E89E1387D102BD012782410769CD91C2708
+        3C1B7F0FB7998F9DDBF9CFC0FF4765E706BAFFDA03A22607EB621340AC143C8D
+        6EABA14F5863A340CDBC9FCC711EF1657044B604A5C9D056A65593D411F191D3
+        E3C45C74B3F41FCECD4B594E6DC7A136C99D77EEE0D2A6D1EF38CAE7108FA2A0
+        9F7614A85A62F5DE024557E82A856799E9F12D68336E2A54111708C92D8780D8
+        58B8857DB357139FB586BCF6180EA643ABBFC4CE35D0367D16D1882896FE53AB
+        E32CE4919F00AA9ECF61511353BD167F5E80853A65D1B872659AB97224A61007
+        E4DC03A29256DB7CB3BB351511492691993BE1977E0626E9047C8AED455CA19C
+        FBF063DC030B3D401EE5C8EA90356A892F6F614560C6F7DC6B831CDD14A0E875
+        98C1ACCC7B60643F0A546CADB7B95540902712629B77D0EF07AFE284A7B47313
+        FF1A806F96E88DA7B13C80450000000049454E44AE426082}
+      Locked = True
+      Position.X = 8.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 25.000000000000000000
+      Size.Height = 25.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      OnClick = DoRefresh
+    end
+    object Label1: TLabel
+      Anchors = [akLeft, akTop, akRight]
+      StyledSettings = [Family, FontColor]
+      Position.X = 77.000000000000000000
+      Position.Y = 13.000000000000000000
+      Size.Width = 798.000000000000000000
+      Size.Height = 17.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 18.000000000000000000
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+      TextSettings.HorzAlign = Center
+      Text = 'Label1'
+      TabOrder = 1
+    end
+  end
+end
