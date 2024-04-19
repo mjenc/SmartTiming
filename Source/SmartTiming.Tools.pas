@@ -341,7 +341,7 @@ begin
   case ARank of
   1:
     begin
-      ABgColor := TColorRec.Goldenrod;
+      ABgColor := TColor($37afd4);
       AFgColor := TColorRec.White;
     end;
   2:
@@ -351,7 +351,7 @@ begin
     end;
   3:
     begin
-      ABgColor := TColorRec.Saddlebrown;
+      ABgColor := TColor($327fcd);
       AFgColor := TColorRec.White;
     end;
   end;
