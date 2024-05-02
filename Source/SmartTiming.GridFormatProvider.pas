@@ -18,6 +18,7 @@ type
 
     class function LoadSettings(AGrid: TDBGrid; const ADefaultFormat: string; const AFormatSuffix: string = ''): boolean;
     class procedure SaveSettings(AGrid: TDBGrid; const AFormatSuffix: string = '');
+    class procedure FillTitleList(const AFormatName: string; const ADefaultFormat: string; AList: TStrings);
   end;
 
 const
@@ -161,6 +162,43 @@ begin
     FreeAndNil(lReg);
     FreeAndNil(lBinaryStream);
     FreeAndNil(lStringStream);
+  end;
+end;
+
+{==============================================================================}
+class procedure TGridFormatProvider.FillTitleList(const AFormatName: string; const ADefaultFormat: string; AList: TStrings);
+var
+  i: Integer;
+  lRegPath: string;
+  lReg : TRegistry;
+  lText: string;
+  lSO: ISuperObject;
+  lColumnsArray: TSuperArray;
+begin
+  if AList = nil then
+    Exit;
+
+  lReg := TRegistry.Create;
+  try
+    lReg.RootKey := HKEY_CURRENT_USER;
+
+    lRegPath := RegPath + '\' + AFormatName;
+
+    if lReg.OpenKey(lRegPath, false) then
+      lText := lReg.ReadString('ColumnsJSON');
+
+    if lText.IsEmpty then
+      lText := ADefaultFormat;
+
+    lSO := TSuperObject.ParseString(PChar(lText), true);
+    lColumnsArray := lSO.A['titles'];
+    if lColumnsArray = nil then
+      Exit;
+
+    for i := 0 to lColumnsArray.Length - 1 do
+      AList.Add(lColumnsArray.S[i]);
+  finally
+    FreeAndNil(lReg);
   end;
 end;
 

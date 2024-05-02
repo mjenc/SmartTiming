@@ -51,7 +51,7 @@ implementation
 {$R *.dfm}
 
 uses
-  FormMain;
+  FormMain, SmartTiming.Controller;
 
 {==============================================================================}
 constructor TFormRaceDetails.Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean; AEventDate: TDatetime);
@@ -156,6 +156,9 @@ begin
   FDataSource.DataSet.FieldByName('STATUS').Value := FStatus;
   FDataSource.DataSet.Post;
   TClientDataSet(FDataSource.DataSet).ApplyUpdates(-1);
+
+  GSmartTimingController.LoadRaces;
+  GFormMain.RefreshRacesListBox;
 end;
 
 end.

@@ -21,8 +21,6 @@ object FormCompetitorImport: TFormCompetitorImport
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 455
-    ExplicitWidth = 821
     DesignSize = (
       823
       41)
@@ -74,7 +72,6 @@ object FormCompetitorImport: TFormCompetitorImport
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitHeight = 455
     DesignSize = (
       249
       463)
@@ -130,8 +127,6 @@ object FormCompetitorImport: TFormCompetitorImport
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 3
-    ExplicitWidth = 572
-    ExplicitHeight = 455
     DesignSize = (
       574
       463)

@@ -61,6 +61,7 @@ begin
     FreeAndNil(FormAppLauncher);
   end;
 
+  GSmartTimingController := nil;
   GSmartTimingController := TSmartTimingController.Create;
   Application.CreateForm(TFormMain, GFormMain);
   GSmartTimingController.LoadEventData(MainDataModule.DatabasePathAndName);

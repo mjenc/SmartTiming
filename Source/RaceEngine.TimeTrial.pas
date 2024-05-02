@@ -251,7 +251,7 @@ var
 begin
   lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
   try
-    lExcelFiller.TemplateFile := cStdTemplatePath + 'StartListTT.xlsx';
+    lExcelFiller.TemplateFile := gStdTemplatePath + 'StartListTT.xlsx';
 
     lResultSet := nil;
     MainDataModule.FillReadOnlyDataSetForSQL(
@@ -261,7 +261,7 @@ begin
       'ORDER BY C.BIB',
       lResultSet);
 
-    lExcelFiller.FillDataRowsAndSave(cStdDataPath + Format('StartList-%s.xlsx', [FRaceItem.Title]),
+    lExcelFiller.FillDataRowsAndSave(gStdDataPath + Format('StartList-%s.xlsx', [FRaceItem.Title]),
                                      lResultSet,
                                      FRankingGroupedByClass);
   finally
@@ -279,7 +279,7 @@ var
 begin
   lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
   try
-    lExcelFiller.TemplateFile := cStdTemplatePath + 'ResultListTT.xlsx';
+    lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListTT.xlsx';
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
     lResultSet := nil;
     if AGroupByClass then
@@ -306,7 +306,7 @@ var
 begin
   lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
   try
-    lExcelFiller.TemplateFile := cStdTemplatePath + 'ResultListTT.xlsx';
+    lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListTT.xlsx';
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
     lResultSet := nil;
     if AGroupByClass then
@@ -317,7 +317,7 @@ begin
       Format(FResultSQLFormat, [FRaceItem.Id.ToString, lGroupByClassString]),
       lResultSet);
 
-    lExcelFiller.FillDataRowsAndSave(cStdDataPath + Format('Results-%s.xlsx', [FRaceItem.Title]),
+    lExcelFiller.FillDataRowsAndSave(gStdDataPath + Format('Results-%s.xlsx', [FRaceItem.Title]),
                                      lResultSet,
                                      FRankingGroupedByClass);
   finally

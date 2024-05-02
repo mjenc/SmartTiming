@@ -5,6 +5,13 @@ interface
 uses
   Generics.Collections, SysUtils, System.UITypes, DB;
 
+{$IFDEF MSWINDOWS}
+var
+  gSmartTimingRoot: string;
+  gStdDataPath: string;
+  gStdTemplatePath: string;
+{$ENDIF}
+
 const
   CRLF = #13#10;
 
@@ -14,10 +21,8 @@ const
   cCopyright = '© Michael Jenc 2024';
 
   // Database
-  cStdDataPath = 'd:\projects\SmartTiming\Data\';
   cStdDatabaseName = 'SmartTiming.db';
   cCreateSchemaScriptName = 'CreateSchema.sql';
-  cStdTemplatePath = 'd:\projects\SmartTiming\Templates\';
 
   cRegKeyPath = 'SOFTWARE\' + cManufacturer + '\' + cSmartTimingAppName;
 
@@ -145,5 +150,13 @@ var
 
 implementation
 
+uses
+  SmartTiming.Tools, Windows;
 
+initialization
+  {$IFDEF MSWINDOWS}
+  gSmartTimingRoot := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath, 'SmartTimingRoot');
+  gStdDataPath := gSmartTimingRoot + 'Data\';
+  gStdTemplatePath := gSmartTimingRoot + 'Templates\';
+  {$ENDIF}
 end.

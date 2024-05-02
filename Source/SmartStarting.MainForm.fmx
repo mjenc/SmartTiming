@@ -27,13 +27,13 @@ object SmartStartingForm: TSmartStartingForm
     Size.PlatformDefault = False
     object AreaCompetitorDescription: TRectangle
       Align = Client
-      Size.Width = 953.000000000000000000
+      Size.Width = 952.799987792968800000
       Size.Height = 360.000000000000000000
       Size.PlatformDefault = False
       object LabelCompetitorName: TLabel
         Align = Top
         StyledSettings = []
-        Size.Width = 953.000000000000000000
+        Size.Width = 952.799987792968800000
         Size.Height = 180.000000000000000000
         Size.PlatformDefault = False
         TextSettings.Font.Size = 80.000000000000000000
@@ -47,7 +47,7 @@ object SmartStartingForm: TSmartStartingForm
         Align = Bottom
         StyledSettings = []
         Position.Y = 180.000000000000000000
-        Size.Width = 953.000000000000000000
+        Size.Width = 952.799987792968800000
         Size.Height = 180.000000000000000000
         Size.PlatformDefault = False
         TextSettings.Font.Size = 80.000000000000000000
@@ -65,7 +65,7 @@ object SmartStartingForm: TSmartStartingForm
       Margins.Left = 10.000000000000000000
       Margins.Right = 10.000000000000000000
       Position.X = 10.000000000000000000
-      Size.Width = 467.000000000000000000
+      Size.Width = 467.200012207031300000
       Size.Height = 360.000000000000000000
       Size.PlatformDefault = False
       TextSettings.Font.Family = 'Microsoft New Tai Lue'

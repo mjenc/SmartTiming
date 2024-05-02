@@ -75,9 +75,12 @@ var
 begin
   try
     FreeAndNil(FServlet);
-    for lRaceItem in FRaceList.Values do
-      FreeAndNil(lRaceItem);
-    FreeAndNil(FRaceList);
+    if FRaceList <> nil then
+    begin
+      for lRaceItem in FRaceList.Values do
+        FreeAndNil(lRaceItem);
+      FreeAndNil(FRaceList);
+    end;
     FreeAndNil(FEventDataObject);
   finally
     inherited Destroy;
@@ -203,8 +206,7 @@ var
   lPassing: TPassing;
 begin
   MainDataModule.SetRaceStatus(ARaceId, ARaceStatus);
-
-  lPassing.PassingNumber := 0;
+  lPassing.PassingNumber := MainDataModule.GetMinPassingNumber - 1;
   lPassing.ChipId := '';
   lPassing.PassingTime := Now;
   lPassing.SignalStrength := 100;

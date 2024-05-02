@@ -99,10 +99,6 @@ type
     PanelNoiseChart: TPanel;
     Splitter4: TSplitter;
     PanelTemperatureChart: TPanel;
-    LabelDecoderNoiseLevel: TLabel;
-    LabelDecoderTemperature: TLabel;
-    Label6: TLabel;
-    Label7: TLabel;
     MenuItemReports: TMenuItem;
     PanelResultRaces: TPanel;
     PanelResults: TPanel;
@@ -171,7 +167,8 @@ type
     procedure ButtonPrintResultsClick(Sender: TObject);
     procedure PopupMenuCompetitorAssignToRaceClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure StackPanel1Click(Sender: TObject);
+    procedure DBGridRacesDrawDataCell(Sender: TObject; const Rect: TRect;
+      Field: TField; State: TGridDrawState);
 
   private
     FCurrentEventId: integer;
@@ -188,7 +185,6 @@ type
     procedure SetupRacesGrid;
     procedure SetupCompetitorsGrid;
     procedure SetupRankingsGrid(ARaceId: Integer);
-    procedure RefreshRacesListBox;
     procedure FillClassFilterComboBox;
     procedure OnAssignCompetitorsToRace(ASender: TObject);
     procedure OnRemoveCompetitorsFromRace(ASender: TObject);
@@ -201,6 +197,7 @@ type
     procedure OnGetRaceType(ASender: TField; var AText: string; ADisplayText: Boolean);
 
   public
+    procedure RefreshRacesListBox;
     procedure AddDecoderStatus(ADecoderStatus: TDecoderStatus);
     procedure AddPassingForRaceId(ARaceId: integer; APassing: TPassing);
     procedure DecoderConnected(ADecoder: TDecoder);
@@ -322,6 +319,21 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.DBGridRacesDrawDataCell(Sender: TObject; const Rect: TRect; Field: TField; State: TGridDrawState);
+var
+  lValue: string;
+  lTop: Integer;
+  lHeight: Integer;
+begin
+  if SameText(Field.FieldName, 'RACETYPE') then
+  begin
+    lValue := SmartTimingTools.GetRaceTypeStringFromEnum(TRaceType(Field.AsInteger));
+    lHeight := DBGridRaces.Canvas.TextHeight(lValue);
+    lTop := (Rect.Height - lHeight) div 2;
+    DBGridRaces.Canvas.TextOut(Rect.Left + 2, lTop + Rect.Top, lValue);
+  end;
+end;
+
 procedure TFormMain.DBGridRacesShortCellClick(Column: TColumn);
 begin
   SetupRankingsGrid(MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').AsInteger);
@@ -454,6 +466,7 @@ begin
 
   FTemperatureChart := TValueHistoryChart.Create(self);
   begin
+    FTemperatureChart.ValueLabel := 'Temperatur (°C) ';
     FTemperatureChart.MaxBufferSize := PanelTemperatureChart.Width;
     FTemperatureChart.GreenAreaTo := 49.0;
     FTemperatureChart.YellowAreaFrom := 49.0;
@@ -464,6 +477,7 @@ begin
 
   FNoiseChart := TValueHistoryChart.Create(self);
   begin
+    FTemperatureChart.ValueLabel := 'Störlevel ';
     FNoiseChart.MaxBufferSize := PanelNoiseChart.Width;
     FNoiseChart.GreenAreaTo := 39.0;
     FNoiseChart.YellowAreaFrom := 39.0;
@@ -750,11 +764,6 @@ begin
   TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]).RaceEngine.RefreshRankingDisplay;
 end;
 
-procedure TFormMain.StackPanel1Click(Sender: TObject);
-begin
-
-end;
-
 {==============================================================================}
 procedure TFormMain.ToggleAutoScrollClick(Sender: TObject);
 begin
@@ -919,8 +928,14 @@ end;
 
 {==============================================================================}
 procedure TFormMain.ButtonStopClick(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
 begin
-  RaceButtonStatusChange(rsStopped);
+  if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
+    Exit;
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  lRaceItem.RaceEngine.RecalcCountingLaps;
+//  RaceButtonStatusChange(rsStopped);
 end;
 
 {==============================================================================}
@@ -1169,8 +1184,8 @@ end;
 procedure TFormMain.AddDecoderStatus(ADecoderStatus: TDecoderStatus);
 begin
   LabelDecoderId.Caption := ADecoderStatus.DecoderId;
-  LabelDecoderNoiseLevel.Caption := 'Störungslevel: ' + ADecoderStatus.Noise.ToString;
-  LabelDecoderTemperature.Caption := 'Temperatur: ' + ADecoderStatus.Temperature.ToString;
+  FNoiseChart.AddValue(ADecoderStatus.Noise);
+  FTemperatureChart.AddValue(ADecoderStatus.Temperature);
 end;
 
 {==============================================================================}

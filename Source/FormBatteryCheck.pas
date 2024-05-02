@@ -148,7 +148,6 @@ procedure TFormBatteryCheck.OnReceivePassing(APassing: TPassing);
 
 
 var
-  lChipID: string;
   lListItem: TListItem;
   lPassing: TPassing;
 begin

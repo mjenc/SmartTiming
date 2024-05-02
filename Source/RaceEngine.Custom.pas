@@ -5,7 +5,8 @@ interface
 uses
   Controls, StdCtrls, ComCtrls, SysUtils, Graphics, Types, UITypes, Classes, Grids,
   Menus, DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages,
-  SmartTiming.Consts, DecoderInterface, SmartTiming.Event, Report.ExcelTemplateFiller;
+  SmartTiming.Consts, DecoderInterface, SmartTiming.Event, Report.ExcelTemplateFiller,
+  Generics.Collections;
 
 type
   TCustomRaceEngine = class;
@@ -23,6 +24,7 @@ type
     RaceEngine: TCustomRaceEngine;
   public
     destructor Destroy; override;
+    function InfoToJSON: string;
   end;
 
   TCustomRaceEngine = class
@@ -114,7 +116,9 @@ type
     property RankingDisplay: TCustomGrid read GetRankingGrid;
     property RankingDataSet: TDataSet read GetRankingDataSet;
     property RankingGroupedByClass: boolean read FRankingGroupedByClass write SetRankingGroupedByClass;
+
     // corrections
+    procedure RecalcCountingLaps;
 
     // Reports
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual; abstract;
@@ -128,7 +132,8 @@ implementation
 uses
   SmartTiming.Tools, Math, SmartTiming.Controller, SmartTiming.GridFormatProvider,
   DataModule, FormMain, FormCompetitorDetails, FormPenalty, FormTime,
-  SmartTiming.Cache, DateUtils, FormAssignCompetitorToTransponder;
+  SmartTiming.Cache, DateUtils, FormAssignCompetitorToTransponder,
+  Data.DBXCommon;
 
 {==============================================================================}
 destructor TRaceItem.Destroy;
@@ -138,6 +143,29 @@ begin
   finally
     inherited Destroy;
   end;
+end;
+
+{==============================================================================}
+function TRaceItem.InfoToJSON: string;
+var
+  lFirstPassingIsLapBoolStr: string;
+begin
+  if FirstPassingIsLap then
+    lFirstPassingIsLapBoolStr := 'true'
+  else
+    lFirstPassingIsLapBoolStr := 'false';
+
+  result := Format(
+    '{ "id": %d, "racetype": "%s", "starttime": "%s", "title": "%s", "laps": %d, "distance": %s, "firstpassingislap": %s, "minlapduration": %d, "status": "%s" }',
+    [Id,
+     SmartTimingTools.GetRaceTypeStringFromEnum(RaceType),
+     StartTime.ToISO8601(false),
+     Title,
+     Laps,
+     Distance.ToString,
+     lFirstPassingIsLapBoolStr,
+     MinLapDuration,
+     SmartTimingTools.GetRaceStatusStringFromEnum(Status)]);
 end;
 
 {==============================================================================}
@@ -391,7 +419,6 @@ begin
 
   FRankingGrid.PopupMenu := FPopupMenuRanking;
   result := FRankingGrid;
-//  AfterOpenRankingResultSet(FSQLDataSetRankings);
 end;
 
 {==============================================================================}
@@ -436,6 +463,85 @@ begin
     SmartTimingTools.SetColumnProperties('RANKING', lColumn);
   end;
   AfterOpenRankingResultSet(FClientDataSetRankings);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.RecalcCountingLaps;
+var
+  lPassingList: TDictionary<TDatetime, TPassing>;
+  i: Integer;
+  lTime: TDatetime;
+  lPassing: TPassing;
+  lTimeArray: TArray<TDatetime>;
+  lInActiveRaceSection: boolean;
+  lTransaction: TDBXTransaction;
+
+  function PassingIsStart: boolean;
+  begin
+    result :=
+      (lPassing.Flags = 2)
+      and
+      (lPassing.Hits = 0 - Ord(rsStarted));
+    if result then
+      lInActiveRaceSection := true;
+  end;
+
+  // rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped
+  function PassingIsBreak: boolean;
+  begin
+    result :=
+      (lPassing.Flags = 2)
+      and
+      ((lPassing.Hits = -Ord(rsNotStarted))
+       or
+       (lPassing.Hits = -Ord(rsNeutralized))
+       or
+       (lPassing.Hits = -Ord(rsFinished))
+       or
+       (lPassing.Hits = -Ord(rsStopped)));
+    if result then
+      lInActiveRaceSection := false;
+  end;
+
+begin
+  lPassingList := TDictionary<TDatetime, TPassing>.Create;
+  try
+    lTransaction := MainDataModule.SQLConnection.BeginTransaction;
+    try
+      MainDataModule.ResetRaceParticitipations(FRaceItem.Id);
+
+      TPassingStore.GetSingleton.FillPassingListForRaceId(FRaceItem.Id, lPassingList, true, true);
+
+      lTimeArray := lPassingList.Keys.ToArray;
+
+      TArray.Sort<TDatetime>(lTimeArray);
+
+      lInActiveRaceSection := false;
+
+      for lTime in lTimeArray do
+      begin
+        if not lPassingList.TryGetValue(lTime, lPassing) then
+          Continue;
+
+        if PassingIsStart then
+          Continue;
+        if PassingIsBreak then
+          Continue;
+        if not lInActiveRaceSection then
+          Continue;
+
+        UpdateParticipationTable(lPassing.PassingNumber);
+      end;
+      MainDataModule.SQLConnection.CommitFreeAndNil(lTransaction);
+    except
+      MainDataModule.SQLConnection.RollbackFreeAndNil(lTransaction);
+      raise;
+    end;
+
+
+  finally
+    FreeAndNil(lPassingList);
+  end;
 end;
 
 {==============================================================================}
@@ -618,7 +724,6 @@ end;
 procedure TCustomRaceEngine.OnEditTime(ASender: TObject);
 var
   lForm: TFormEditTime;
-  lTime: TDatetime;
 begin
   lForm := TFormEditTime.Create(nil);
   try
@@ -679,6 +784,8 @@ begin
     Exit;
 
   lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+
+  // TODO
 end;
 
 {==============================================================================}

@@ -3,7 +3,7 @@ unit ValueHistoryChart;
 interface
 
 uses
-  Classes, Controls, ExtCtrls, Graphics;
+  Classes, Controls, ExtCtrls, Graphics, SysUtils;
 
 type
   TValueHistoryChart = class (TPanel)
@@ -18,6 +18,7 @@ type
     FYellowAreaTo: Double;
     FRedAreaFrom: Double;
     FRedAreaTo: Double;
+    FValueLabel: string;
     procedure ShiftBufferLeft(ACount: integer);
     function GetColorForValue(AValue: Double): TColor;
   public
@@ -25,6 +26,7 @@ type
     procedure Paint; override;
     procedure AddValue(AValue: Double);
 
+    property ValueLabel: string read FValueLabel write FValueLabel;
     property MaxBufferSize: integer read FMaxBufferSize write FMaxBufferSize default 120;
     property MinValue: Double read FMinValue write FMinValue;
     property MaxValue: Double read FMaxValue write FMaxValue;
@@ -73,7 +75,8 @@ end;
 {==============================================================================}
 function TValueHistoryChart.GetColorForValue(AValue: Double): TColor;
 begin
-//  if (AValue >= FGreenAreaFrom) and (AValue
+// TODO
+// if (AValue >= FGreenAreaFrom) and (AValue
 end;
 
 {==============================================================================}
@@ -90,6 +93,7 @@ begin
   else
     ShiftBufferLeft(1);
   FValues[lLength - 1] := AValue;
+  Canvas.TextOut(2,5, FValueLabel + ' ' + AValue.ToString)
 end;
 
 {==============================================================================}

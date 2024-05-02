@@ -21,7 +21,8 @@ type
     procedure InitHttpServer;
     procedure FillStartListResponse(ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
     procedure FillResultResponse(ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
-
+    procedure GetEventInfo(ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+    procedure GetRaceInfo(ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
   public
     constructor Create; overload;
     constructor Create(AHTTPPort: integer); overload;
@@ -35,6 +36,9 @@ type
   end;
 
 implementation
+
+uses
+  SmartTiming.Controller, RaceEngine.Custom;
 
 {******************************************************************************}
 constructor TSmartTimingServlet.Create;
@@ -130,6 +134,18 @@ begin
     Exit;
   end;
 
+  if ARequestInfo.Document.Equals('/eventinfo') then
+  begin
+    GetEventInfo(ARequestInfo, AResponseInfo);
+    Exit;
+  end;
+
+  if ARequestInfo.Document.Equals('/raceinfo') then
+  begin
+    GetRaceInfo(ARequestInfo, AResponseInfo);
+    Exit;
+  end;
+
   if ARequestInfo.Document.Equals('/connectiontest') then
   begin
     AResponseInfo.ResponseNo := 200;
@@ -155,7 +171,7 @@ begin
     'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
     'ORDER BY P.STARTTIME',
     lDataSet);
-    AResponseInfo.ContentText := TMainDataModule.GetJSONFromDataSet(lDataSet);
+    AResponseInfo.ContentText := TMainDataModule.GetJSONFromDataSet(lDataSet, '');
   finally
     FreeAndNil(lDataSet);
   end;
@@ -165,26 +181,80 @@ end;
 procedure TSmartTimingServlet.FillResultResponse(ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
   lDataSet: TSQLDataSet;
+  lRaceIdStr: string;
+  lGrouped: string;
+  lSorting: string;
+  lFilter: string;
 begin
-  AResponseInfo.ResponseNo := 200;
+  AResponseInfo.ResponseNo := 204;
   AResponseInfo.ContentType := 'text/json';
+
+  lRaceIdStr := ARequestInfo.Params.Values['raceid'];
+  if lRaceIdStr.IsEmpty then
+    Exit;
+
+  if ARequestInfo.Params.Values['grouped'] = 'true' then
+  begin
+    lGrouped := '_BYCLASS';
+    lSorting := 'CLASS,';
+  end;
+
+  if ARequestInfo.Params.Values['finishedonly'] = 'true' then
+    lFilter := 'AND RANKINGTIME IS NOT NULL OR DNS != 0 OR DNF != 0 OR DSQ != 0';
+
+  AResponseInfo.ResponseNo := 200;
 
   lDataSet := TSQLDataSet.Create(nil);
   try
-    MainDataModule.FillReadOnlyDataSetForSQL(
-      'SELECT ROW_NUMBER() OVER (PARTITION BY C.CLASS, 1 ORDER BY C.CLASS, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME) CURRENTRANKING, '+
-      'C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, IFNULL(C.TEAM, C.CLUB) TEAM, P.RANKINGTIME, ' +
-      'STRFTIME(''%%M:%%f'',JULIANDAY(P.RANKINGTIME)- LAG(JULIANDAY(P.RANKINGTIME), 1) ' +
-      'OVER (PARTITION BY C.CLASS, 1 ORDER BY C.CLASS, P.LAPS DESC, P.RANKINGTIME IS NULL, P.RANKINGTIME, P.STARTTIME))  GAP, ' +
-      'P.FINISHTIME, P.STARTTIME, P.DNS, P.DNF, P.DSQ, P.PENALTIES, P.PARTICIPATIONID, P.COMPETITORID ' +
-      'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
-      'WHERE P.RANKINGTIME IS NOT NULL ' +
-      'ORDER BY C.CLASS, P.RANKINGTIME IS NULL, P.LAPS DESC, P.RANKINGTIME, P.STARTTIME',
-        lDataSet);
-    AResponseInfo.ContentText := TMainDataModule.GetJSONFromDataSet(lDataSet);
+    MainDataModule.FillReadOnlyDataSetForSQL(Format(
+      'SELECT CURRENTRANKING, CLASS, BIB, NAME, TEAM, RANKINGTIME, GAP, ' +
+      'FINISHTIME, STARTTIME, DNS, DNF, DSQ, PENALTIES, PARTICIPATIONID, COMPETITORID ' +
+      'FROM RANKING_TIMETRIAL%1:s ' +
+      'WHERE RACEID = %0:s %3:s ' +
+      'ORDER BY %2:s DNS, DNF, DSQ, RANKINGTIME IS NULL, LAPS DESC, RANKINGTIME, STARTTIME',
+      [lRaceIdStr, lGrouped, lSorting, lFilter]),
+      lDataSet);
+    AResponseInfo.ContentText := TMainDataModule.GetJSONFromDataSet(lDataSet, 'Platz,Klasse,Nr,Name,Team,Wertungszeit,Diff,Zielzeit,Startzeit,DNS,DNF,DSQ,Strafen');
   finally
     FreeAndNil(lDataSet);
   end;
+end;
+
+{******************************************************************************}
+procedure TSmartTimingServlet.GetEventInfo(ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+var
+  lRaceItem: TRaceItem;
+  lContent: string;
+begin
+  AResponseInfo.ResponseNo := 200;
+  AResponseInfo.ContentType := 'text/json';
+  lContent :=
+    '{ "eventinfo": ' + GSmartTimingController.Event.AsJSON + ', "races": [';
+  for lRaceItem in GSmartTimingController.RaceList.Values do
+    lContent := lContent + lRaceItem.InfoToJSON + ',';
+  lContent := lContent.TrimRight([',']);
+  lContent := lContent + ']}';
+  AResponseInfo.ContentText := lContent;
+end;
+
+{******************************************************************************}
+procedure TSmartTimingServlet.GetRaceInfo(ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+var
+  lRaceIdStr: string;
+  lRaceItem: TRaceItem;
+begin
+  AResponseInfo.ResponseNo := 204;
+  AResponseInfo.ContentType := 'text/json';
+
+  lRaceIdStr := ARequestInfo.Params.Values['raceid'];
+  if lRaceIdStr.IsEmpty then
+    Exit;
+
+  if not GSmartTimingController.RaceList.TryGetValue(lRaceIdStr.ToInteger, lRaceItem) then
+    Exit;
+
+  AResponseInfo.ResponseNo := 200;
+  AResponseInfo.ContentText := lRaceItem.InfoToJSON;
 end;
 
 end.

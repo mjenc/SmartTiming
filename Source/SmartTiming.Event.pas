@@ -21,6 +21,7 @@ type
     procedure SaveToDatabase;
     procedure DeleteFromDatabase;
     procedure RefreshFromDatabase;
+    function AsJSON: string;
 
     property EventId: integer read FEventId write FEventId;
     property Organizer: string read FOrganizer write FOrganizer;
@@ -32,7 +33,7 @@ type
 implementation
 
 uses
-  DataModule;
+  DataModule, DateUtils;
 
 {==============================================================================}
 function TEventDataObject.Exists(AEventId: integer): boolean;
@@ -117,5 +118,12 @@ begin
   FDateTo := lResultSet.FieldByName('DATETO').AsFloat;
 end;
 
+{==============================================================================}
+function TEventDataObject.AsJSON: string;
+begin
+  result := Format(
+    '{ "id": %d, "organizer": "%s", "title": "%s", "datefrom": "%s", "dateto": "%s"}',
+    [FEventId, FOrganizer, FTitle, FDateFrom.ToISO8601(false), FDateTo.ToISO8601(false)]);
+end;
 
 end.

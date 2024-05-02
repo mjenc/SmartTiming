@@ -70,7 +70,7 @@ end;
 {==============================================================================}
 procedure TFormAppLauncher.ButtonNewClick(Sender: TObject);
 begin
-  MainDataModule.CreateNewDatabase;
+  MainDataModule.CreateNewDatabase(gStdDataPath, cStdDatabaseName);
   ModalResult := mrOK;
 end;
 
@@ -95,7 +95,7 @@ procedure TFormAppLauncher.FormCreate(Sender: TObject);
 begin
   LabelCopyright.Caption := cCopyright;
   LabelVersion.Caption := GetAppVersion;
-  FEventPath := cStdDataPath + cStdDatabaseName;
+  FEventPath := gStdDataPath + cStdDatabaseName;
 
   FHistoryList := TStringList.Create;
   LoadHistory;

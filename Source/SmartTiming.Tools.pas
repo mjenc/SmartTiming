@@ -168,7 +168,7 @@ end;
 {==============================================================================}
 class function SmartTimingTools.ReadLastOpenedDatabaseFromRegistry: string;
 begin
-  result := RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath, 'LastUsedDatabase', cStdDataPath);
+  result := RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath, 'LastUsedDatabase', gStdDataPath);
 end;
 
 {==============================================================================}
@@ -180,7 +180,7 @@ end;
 {==============================================================================}
 class function SmartTimingTools.LoadExportDirectory: string;
 begin
-  result := RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath, 'ExportDir', cStdDataPath + cStdDatabaseName);
+  result := RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath, 'ExportDir', gStdDataPath + cStdDatabaseName);
 end;
 
 {==============================================================================}
@@ -199,7 +199,7 @@ var
 begin
   lJSON := TStringList.Create;
   try
-    lJSON.LoadFromFile(cStdDataPath + '\TableColumnDescriptions.json');
+    lJSON.LoadFromFile(gStdDataPath + '\TableColumnDescriptions.json');
     GFieldDescriptionsSuperObject := TSuperObject.ParseString(PChar(lJSON.Text), false);
   finally
     FreeAndNil(lJSON);

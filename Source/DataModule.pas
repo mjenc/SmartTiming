@@ -6,8 +6,8 @@ uses
   System.SysUtils, System.Classes, Data.DbxSqlite, Data.FMTBcd, DBGrids,
   Datasnap.DBClient, Datasnap.Provider, Data.DB, Data.SqlExpr, DBCtrls,
   Graphics, Dialogs, Registry, Windows, JclFileUtils, Variants,
-  SmartTiming.Consts, SmartTiming.Tools, DecoderInterface;
-
+  SmartTiming.Consts, SmartTiming.Tools, DecoderInterface, DateUtils,
+  StrUtils;
 
 type
   TMainDataModule = class(TDataModule)
@@ -27,6 +27,7 @@ type
     FEventHistory: TStringList;
     FDatabaseName: string;
 
+    function GetMinIdOf(const ATableName, AColumnName: string): Integer;
     function GetMaxIdOf(const ATableName, AColumnName: string): Integer;
     function GetSQLValueFromVariant(AValue: Variant): string;
   public
@@ -34,9 +35,9 @@ type
     procedure PushEventToHistory(const ATitle: string);
     procedure WriteEventHistory;
 
-    function GetNewDatabaseFileName(const APath: string = cStdDataPath; const AFileName: string = cStdDatabaseName): string;
+    function GetNewDatabaseFileName(const APath: string; const AFileName: string): string;
     procedure OpenDatabase(const ADatabaseName: string);
-    procedure CreateNewDatabase(const APath: string = cStdDataPath; const AFileName: string = cStdDatabaseName);
+    procedure CreateNewDatabase(const APath: string; const AFileName: string);
     function BackupDatabase(const ATo: string): boolean;
     procedure RestoreDatabase(const AFrom: string; const ATo: string = '');
 
@@ -47,6 +48,7 @@ type
     function GetMaxCompetitorId: integer;
     function GetMaxParticipationId: integer;
     function GetMaxPassingNumber: integer;
+    function GetMinPassingNumber: integer;
 
     procedure FillWithDistinctValues(const ATableName, AFieldName: string; AStrings: TStrings);
 
@@ -56,13 +58,14 @@ type
     function IsCompetitorAssignedToRace(ARaceId, ACompetitorId: Integer): Boolean;
     function GetCompetitorID(ARaceId: integer; AChipId: string): integer;
     function GetRaceIdForPassing(APassing: TPassing; var ACompetitorId: integer): integer;
-    function GetAllPassingsForRaceId(ARaceId: Integer): TArray<TPassing>;
+    function GetAllPassingsForRaceId(ARaceId: Integer; AOnlyActive: boolean = false): TArray<TPassing>;
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
     procedure GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
     function GetActiveTransponderIdForBib(ABib: integer): string;
 
     procedure SetParticipantState(ARaceId: Integer; ACompetitorIDs: TArray<Integer>; AParticipantState: TParticipantState);
 
+    procedure ResetRaceParticitipations(ARaceId: Integer);
     function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer; var AStartTime: TDatetime): integer;
     procedure UpdateParticipationValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
 
@@ -75,7 +78,7 @@ type
     procedure UpdatePassingInDatabase(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
     procedure RemovePassingFromDatabase(APassingNumber: Integer);
 
-    class function GetJSONFromDataSet(ADataSet: TDataSet): string;
+    class function GetJSONFromDataSet(ADataSet: TDataSet; const AFieldTitles: string): string;
     property DatabasePathAndName: string read FDatabaseName;
   end;
 
@@ -89,7 +92,7 @@ implementation
 {$R *.dfm}
 
 uses
-  SmartTiming.Cache, Tools.SuperObject;
+  SmartTiming.Cache, Tools.SuperObject, SmartTiming.Controller, FormMain;
 
 {==============================================================================}
 procedure TMainDataModule.DataModuleCreate(Sender: TObject);
@@ -101,7 +104,7 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.GetNewDatabaseFileName(const APath: string = cStdDataPath; const AFileName: string = cStdDatabaseName): string;
+function TMainDataModule.GetNewDatabaseFileName(const APath: string; const AFileName: string): string;
 
   function CutNumberedFilename(const AFileNameOnly: string): string;
   begin
@@ -140,7 +143,7 @@ begin
 end;
 
 {==============================================================================}
-procedure TMainDataModule.CreateNewDatabase(const APath: string = cStdDataPath; const AFileName: string = cStdDatabaseName);
+procedure TMainDataModule.CreateNewDatabase(const APath: string; const AFileName: string);
 
   function GetNextCommandOfScript(var AScript: string): string;
   var
@@ -195,7 +198,7 @@ begin
 
   lScriptLines := TStringList.Create;
   try
-    lScriptLines.LoadFromFile(cStdDataPath + cCreateSchemaScriptName);
+    lScriptLines.LoadFromFile(gStdDataPath + cCreateSchemaScriptName);
     lScriptText := lScriptLines.Text;
     while not lScriptText.IsEmpty do
     begin
@@ -218,7 +221,7 @@ end;
 procedure TMainDataModule.RestoreDatabase(const AFrom: string; const ATo: string = '');
 begin
   if ATo.IsEmpty then
-    FDatabaseName := GetNewDatabaseFileName
+    FDatabaseName := GetNewDatabaseFileName(gStdDataPath, cStdDatabaseName)
   else
     FDatabaseName := ATo;
   FileCopy(AFrom, FDatabaseName);
@@ -364,6 +367,12 @@ begin
 end;
 
 {==============================================================================}
+function TMainDataModule.GetMinPassingNumber: integer;
+begin
+  result := GetMinIdOf('PASSINGS', 'PASSINGNUMBER');
+end;
+
+{==============================================================================}
 function TMainDataModule.GetMaxPassingNumber: integer;
 begin
   result := GetMaxIdOf('PASSINGS', 'PASSINGNUMBER');
@@ -373,6 +382,26 @@ end;
 function TMainDataModule.GetMaxCompetitorId: integer;
 begin
   result := GetMaxIdOf('COMPETITORS', 'COMPETITORID');
+end;
+
+{==============================================================================}
+function TMainDataModule.GetMinIdOf(const ATableName, AColumnName: string): Integer;
+var
+  lResultSet: TDataSet;
+begin
+  SQLConnection.Execute('SELECT MIN(' + AColumnName + ') FROM ' + ATableName, nil, lResultSet);
+  try
+    if lResultSet.IsEmpty then
+      Exit(1);
+
+    if lResultSet.RecordCount < 1 then
+      Exit(0);
+
+    lResultSet.First;
+    Exit(lResultSet.Fields[0].AsInteger);
+  finally
+    FreeAndNil(lResultSet);
+  end;
 end;
 
 {==============================================================================}
@@ -473,13 +502,17 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.GetAllPassingsForRaceId(ARaceId: Integer): TArray<TPassing>;
+function TMainDataModule.GetAllPassingsForRaceId(ARaceId: Integer; AOnlyActive: boolean = false): TArray<TPassing>;
 var
+  lOnlyActive: string;
   lResultSet: TDataSet;
   i: integer;
 begin
+  if AOnlyActive then
+    lOnlyActive := 'AND PASSINGSTATUS = ' + Ord(psValid).ToString;
+
   SQLConnection.Execute(Format(
-    'SELECT * FROM PASSINGS WHERE RACEID = %d ORDER BY PASSINGTIME', [ARaceId]), nil, lResultSet);
+    'SELECT * FROM PASSINGS WHERE RACEID = %d %s ORDER BY PASSINGTIME', [ARaceId, lOnlyActive]), nil, lResultSet);
   try
     if lResultSet.IsEmpty then
       Exit(nil);
@@ -500,6 +533,7 @@ begin
       result[i].Temperature := 0;
       result[i].DecoderId := lResultSet.FieldByName('DECODERID').AsString;
       result[i].TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(result[i].ChipId);
+      result[i].RaceId := ARaceId;
       Inc(i);
       lResultSet.Next;
     end;
@@ -551,6 +585,12 @@ begin
   finally
     FreeAndNil(lResultSet);
   end;
+end;
+
+{==============================================================================}
+procedure TMainDataModule.ResetRaceParticitipations(ARaceId: Integer);
+begin
+  SQLConnection.ExecuteDirect('UPDATE PARTICIPATION SET LAPS = 0, RANKINGTIME = NULL, FINISHTIME = NULL, CURRENTRANKING = NULL, POINTS = 0, CRITRANKINGVALUE = NULL WHERE RACEID = ' + ARaceId.ToString);
 end;
 
 {==============================================================================}
@@ -907,32 +947,44 @@ begin
 end;
 
 {==============================================================================}
-class function TMainDataModule.GetJSONFromDataSet(ADataSet: TDataSet): string;
+class function TMainDataModule.GetJSONFromDataSet(ADataSet: TDataSet; const AFieldTitles: string): string;
 var
   lColIdx: Integer;
   lRow: ISuperObject;
   lField: TField;
+  lFieldTitles: TStringList;
+  lTitle: string;
 begin
-  result := '{"list":[';
+  lFieldTitles := TStringList.Create;
+  try
+    lFieldTitles.CommaText := AFieldTitles;
+    result := '{"list":[';
 
-  ADataSet.First;
-  while not ADataSet.Eof do
-  begin
-    lRow := TSuperObject.Create;
-    for lColIdx := 0 to ADataSet.FieldCount - 1 do
+    ADataSet.First;
+    while not ADataSet.Eof do
     begin
-      lField := ADataSet.FieldList[lColIdx];
-      if SameText(lField.FieldName, 'STARTTIME') then
-        lRow.D[lField.FieldName] := SmartTimingTools.GetFieldAsDatetime(lField, 0)
-      else
-        lRow.S[lField.FieldName] := lField.AsString;
+      lRow := TSuperObject.Create;
+      for lColIdx := 0 to ADataSet.FieldCount - 1 do
+      begin
+        lField := ADataSet.FieldList[lColIdx];
+        if (lFieldTitles.Count > 0) and (lColIdx < lFieldTitles.Count) then
+          lTitle := lFieldTitles[lColIdx]
+        else
+          lTitle := lField.FieldName;
+        if SameText(lTitle, 'STARTTIME') then
+          lRow.D[lTitle] := SmartTimingTools.GetFieldAsDatetime(lField, 0)
+        else
+          lRow.S[lTitle] := lField.AsString;
+      end;
+      result := result + lRow.AsJSon;
+      ADataSet.Next;
+      if not ADataSet.Eof then
+        result := result + ',';
     end;
-    result := result + lRow.AsJSon;
-    ADataSet.Next;
-    if not ADataSet.Eof then
-      result := result + ',';
+    result := result + ']}';
+  finally
+    FreeAndNil(lFieldTitles);
   end;
-  result := result + ']}';
 end;
 
 end.

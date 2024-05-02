@@ -421,85 +421,84 @@ end;
 
 {==============================================================================}
 procedure TMyLapsP3MessageParser.AddMessage(Msg: string);
-var l: integer;
-    s: string;
-    IsValid: boolean;
-    Version: integer;
-    Checksum: integer;
-    Flags: integer;
-    TypeOfRecord: integer;
-    lPassing: TPassing;
-    lStatus: TDecoderStatus;
-    lVersionDecoder: TDecoder;
-    OrigMsg: string;
+var
+  lStr: string;
+  TypeOfRecord: integer;
+  lPassing: TPassing;
+  lStatus: TDecoderStatus;
+  lVersionDecoder: TDecoder;
+  OrigMsg: string;
 begin
-  try
-    //    VER LEN  CRC FLOR TOR  FOR
-    // 8E.02.1F00.C5F8.0000.0200.01.02.0000.07.02.2900.0C.01.73.06.01.00.81.04.40240400.8F
-    // 8E.02.3A00.0479.0000.0100.01.04.E6330000.0A.08.46432D3932333938.04.8F
+  //    VER LEN  CRC FLOR TOR  FOR
+  // 8E.02.1F00.C5F8.0000.0200.01.02.0000.07.02.2900.0C.01.73.06.01.00.81.04.40240400.8F
+  // 8E.02.3A00.0479.0000.0100.01.04.E6330000.0A.08.46432D3932333938.04.8F
 
-    // 8E.02.1D00.48E0.0000.0400.01.04.00010204.02.04.4E000000.81.04.40240400.8F
-    // 8E.02.1D00.8350.0000.0400.01.04.00000204.02.04.51000000.81.04.40240400.8F -> answer for "resend 0..1"
-    // 8E.02.1D00.A606.0000.0400.01.04.00010204.02.04.52000000.81.04.40240400.8F -> answer for "resend 1..2"
+  // 8E.02.1D00.48E0.0000.0400.01.04.00010204.02.04.4E000000.81.04.40240400.8F
+  // 8E.02.1D00.8350.0000.0400.01.04.00000204.02.04.51000000.81.04.40240400.8F -> answer for "resend 0..1"
+  // 8E.02.1D00.A606.0000.0400.01.04.00010204.02.04.52000000.81.04.40240400.8F -> answer for "resend 1..2"
 
-    OrigMsg := Msg;
-    Msg := DeEscapeMessage(Msg);
-    if length(Msg) >= 23 then
-    begin
-      // start
-      s := '$' + MidStr(Msg, 1, 2);
-      if StrToInt(s) <> $8E then
-        IsValid := false;
-      // Version
-      Version := StrToInt('$' + MidStr(Msg, 3, 2));
-      // length of message
-      s := '$' + MidStr(Msg, 7, 2) + MidStr(Msg, 5, 2);
-      l := StrToInt(s);
-      // checksum
-      s := '$' + MidStr(Msg, 11, 2) + MidStr(Msg, 9, 2);
-      Checksum := StrToInt(s);
-      // flags
-      s := '$' + MidStr(Msg, 15, 2) + MidStr(Msg, 13, 2);
-      Flags := StrToInt(s);
-      // TOR (type of record) or message type
-      s := '$' + MidStr(Msg, 19, 2) + MidStr(Msg, 17, 2);
-      TypeOfRecord := StrToInt(s);
+  OrigMsg := Msg;
+  Msg := DeEscapeMessage(Msg);
+  if length(Msg) >= 23 then
+  begin
+    // start
+    lStr := '$' + MidStr(Msg, 1, 2);
+    if StrToInt(lStr) <> $8E then
+      Exit;
 
-      case TypeOfRecord of
-      TOR_PASSING:
-        begin
-          lPassing := ParseRecordTypePassing(MidStr(Msg, 21, length(Msg) - 21 - 1));
-          if assigned(FOnPassing) then
-            FOnPassing(lPassing);
-        end;
-      TOR_STATUS:
-        begin
-          lStatus := ParseRecordTypeStatus(MidStr(Msg, 21, length(Msg) - 21 - 1));
-          if assigned(FOnStatus) then
-            FOnStatus(lStatus);
-        end;
-      TOR_VERSION_DECODER:
-        lVersionDecoder := ParseRecordTypeVersionDecoder(MidStr(Msg, 21, length(Msg) - 21 - 1));
+    // Version (unused)
+    // Version := StrToInt('$' + MidStr(Msg, 3, 2));
+
+    // length of message (unused)
+    // TODO assert correct length
+    // s := '$' + MidStr(Msg, 7, 2) + MidStr(Msg, 5, 2);
+    // l := StrToInt(s);
+
+    // checksum (unused)
+    // TODO Consider checksum
+    // s := '$' + MidStr(Msg, 11, 2) + MidStr(Msg, 9, 2);
+    // Checksum := StrToInt(s);
+
+    // flags (unused)
+    // s := '$' + MidStr(Msg, 15, 2) + MidStr(Msg, 13, 2);
+    // Flags := StrToInt(s);
+
+    // TOR (type of record) or message type
+    lStr := '$' + MidStr(Msg, 19, 2) + MidStr(Msg, 17, 2);
+    TypeOfRecord := StrToInt(lStr);
+
+    case TypeOfRecord of
+    TOR_PASSING:
+      begin
+        lPassing := ParseRecordTypePassing(MidStr(Msg, 21, length(Msg) - 21 - 1));
+        if assigned(FOnPassing) then
+          FOnPassing(lPassing);
       end;
+    TOR_STATUS:
+      begin
+        lStatus := ParseRecordTypeStatus(MidStr(Msg, 21, length(Msg) - 21 - 1));
+        if assigned(FOnStatus) then
+          FOnStatus(lStatus);
+      end;
+    TOR_VERSION_DECODER:
+      lVersionDecoder := ParseRecordTypeVersionDecoder(MidStr(Msg, 21, length(Msg) - 21 - 1));
     end;
-
-  except
-    s := '';
   end;
 end;
 
 {==============================================================================}
 function TMyLapsP3MessageParser.AddMessageDecoderSearch(Msg: string): TDecoder;
-var l: integer;
-    s: string;
-    TypeOfRecord: integer;
+var
+  s: string;
+  TypeOfRecord: integer;
 begin
   if length(Msg) < 23 then
     Exit;
 
-  // length of message
-  s := '$' + MidStr(Msg, 7, 2) + MidStr(Msg, 5, 2);
-  l := StrToInt(s);
+  // length of message (unused)
+  // TODO asster correct length
+  // s := '$' + MidStr(Msg, 7, 2) + MidStr(Msg, 5, 2);
+  // l := StrToInt(s);
   // TOR (type of record) or message type
   s := '$' + MidStr(Msg, 19, 2) + MidStr(Msg, 17, 2);
   TypeOfRecord := StrToInt(s);
@@ -836,7 +835,7 @@ begin
 
   lSubnetMasks := TStringList.Create;
   try
-    lSubnetMasks.Text := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'DecoderSubnetMasks', '192.168.255.255');
+    lSubnetMasks.CommaText := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'DecoderSubnetMasks', '192.168.255.255');
     for i := 0 to lSubnetMasks.Count - 1 do
       FUdpServer.SendBuffer(lSubnetMasks[i], cMyLapsDefaultOperatingPort, ReqBuf);
   finally

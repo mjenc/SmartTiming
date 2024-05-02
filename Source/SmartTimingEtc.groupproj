@@ -9,10 +9,10 @@
         <Projects Include="SmartTiming.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="SmartStarting.dproj">
+        <Projects Include="SmartRankingViewer.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="SmartRankingViewer.dproj">
+        <Projects Include="SmartStarting.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -41,15 +41,6 @@
     <Target Name="SmartTiming:Make">
         <MSBuild Projects="SmartTiming.dproj" Targets="Make"/>
     </Target>
-    <Target Name="SmartStarting">
-        <MSBuild Projects="SmartStarting.dproj"/>
-    </Target>
-    <Target Name="SmartStarting:Clean">
-        <MSBuild Projects="SmartStarting.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="SmartStarting:Make">
-        <MSBuild Projects="SmartStarting.dproj" Targets="Make"/>
-    </Target>
     <Target Name="SmartRankingViewer">
         <MSBuild Projects="SmartRankingViewer.dproj"/>
     </Target>
@@ -59,14 +50,23 @@
     <Target Name="SmartRankingViewer:Make">
         <MSBuild Projects="SmartRankingViewer.dproj" Targets="Make"/>
     </Target>
+    <Target Name="SmartStarting">
+        <MSBuild Projects="SmartStarting.dproj"/>
+    </Target>
+    <Target Name="SmartStarting:Clean">
+        <MSBuild Projects="SmartStarting.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SmartStarting:Make">
+        <MSBuild Projects="SmartStarting.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="SmartDecoderWatchDog;SmartTiming;SmartStarting;SmartRankingViewer"/>
+        <CallTarget Targets="SmartDecoderWatchDog;SmartTiming;SmartRankingViewer;SmartStarting"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="SmartDecoderWatchDog:Clean;SmartTiming:Clean;SmartStarting:Clean;SmartRankingViewer:Clean"/>
+        <CallTarget Targets="SmartDecoderWatchDog:Clean;SmartTiming:Clean;SmartRankingViewer:Clean;SmartStarting:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="SmartDecoderWatchDog:Make;SmartTiming:Make;SmartStarting:Make;SmartRankingViewer:Make"/>
+        <CallTarget Targets="SmartDecoderWatchDog:Make;SmartTiming:Make;SmartRankingViewer:Make;SmartStarting:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

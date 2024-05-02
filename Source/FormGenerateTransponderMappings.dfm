@@ -21,8 +21,6 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 408
-    ExplicitWidth = 362
     DesignSize = (
       364
       41)

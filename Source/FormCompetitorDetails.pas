@@ -126,15 +126,15 @@ procedure TFormCompetitorDetails.ButtonOKClick(Sender: TObject);
 var
   lTxId: string;
 begin
-  lTxId := DBEditTxId.EditText;
-  if not TTransponderMappingStore.GetSingleton.ConvertToValidChipId(lTxId) then
-    raise Exception.Create('Keine gültige Transponder ID.');
-  DBEditTxId.EditText := lTxId;
-
   if FIsInsert then
-  begin
     FDataSource.DataSet.FieldByName('COMPETITORID').Value := MainDataModule.GetMaxCompetitorId + 1;
-  end;
+
+  lTxId := DBEditTxId.EditText;
+
+  if not TTransponderMappingStore.GetSingleton.ConvertToValidChipId(lTxId) then
+    ShowMessage('Keine gültige Transponder ID.');
+
+  DBEditTxId.EditText := lTxId;
 
   FDataSource.DataSet.Post;
   TClientDataSet(FDataSource.DataSet).ApplyUpdates(0);

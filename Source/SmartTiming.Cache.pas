@@ -32,6 +32,7 @@ type
     procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime);
     procedure RemovePassing(APassingNumber: Integer);
     procedure FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TPassing>; AFilterOnTransponderIDs: TList<integer> = nil);
+    procedure FillPassingListForRaceId(ARaceId: integer; AList: TDictionary<TDatetime, TPassing>; AOnlyActivePassings, ATimeFractionOnly: Boolean);
     property MaxPassingNumber: integer read FMaxPassingNumber;
   end;
 
@@ -227,6 +228,28 @@ begin
     end;
   finally
     Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+procedure TPassingStore.FillPassingListForRaceId(ARaceId: integer; AList: TDictionary<TDatetime, TPassing>; AOnlyActivePassings, ATimeFractionOnly: Boolean);
+var
+  lPassing: TPassing;
+begin
+  Synchronizer.BeginRead;
+  try
+    for lPassing in FPassingList.Values do
+    begin
+      if lPassing.RaceId = ARaceId then
+      begin
+        if ATimeFractionOnly then
+          AList.Add(Frac(lPassing.PassingTime), lPassing)
+        else
+          AList.Add(lPassing.PassingTime, lPassing);
+      end;
+    end;
+  finally
+    Synchronizer.EndRead;
   end;
 end;
 
