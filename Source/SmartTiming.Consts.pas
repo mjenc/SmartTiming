@@ -150,8 +150,10 @@ var
 
 implementation
 
+{$IFDEF MSWINDOWS}
 uses
   SmartTiming.Tools, Windows;
+{$ENDIF}
 
 initialization
   {$IFDEF MSWINDOWS}

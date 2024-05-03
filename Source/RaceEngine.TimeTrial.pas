@@ -57,7 +57,7 @@ begin
     'DNS, DNF, DSQ ' +
     'FROM RANKING_TIMETRIAL%1:s ' +
     'WHERE RACEID = %0:s ' +
-    'ORDER BY %1:s DNS, DNF, DSQ, RANKINGTIME IS NULL, LAPS DESC, RANKINGTIME, STARTTIME';
+    'ORDER BY %2:s DNS, DNF, DSQ, RANKINGTIME IS NULL, LAPS DESC, RANKINGTIME, STARTTIME';
 
   FRankingSQLClassGrouping := '_BYCLASS';
   FRankingSQLClassSorting := 'CLASS,';
@@ -303,6 +303,8 @@ var
   lExcelFiller: TExcelFiller;
   lResultSet: TSQLDataSet;
   lGroupByClassString: string;
+  lSQLSortingString: string;
+  lSQL: string;
 begin
   lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
   try
@@ -310,12 +312,17 @@ begin
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
     lResultSet := nil;
     if AGroupByClass then
-      lGroupByClassString := FRankingSQLClassGrouping
+    begin
+      lGroupByClassString := FRankingSQLClassGrouping;
+      lSQLSortingString := FSQLSortingString;
+    end
     else
+    begin
       lGroupByClassString := '';
-    MainDataModule.FillReadOnlyDataSetForSQL(
-      Format(FResultSQLFormat, [FRaceItem.Id.ToString, lGroupByClassString]),
-      lResultSet);
+      lSQLSortingString := '';
+    end;
+    lSQL := Format(FResultSQLFormat, [FRaceItem.Id.ToString, lGroupByClassString, lSQLSortingString]);
+    MainDataModule.FillReadOnlyDataSetForSQL(lSQL, lResultSet);
 
     lExcelFiller.FillDataRowsAndSave(gStdDataPath + Format('Results-%s.xlsx', [FRaceItem.Title]),
                                      lResultSet,

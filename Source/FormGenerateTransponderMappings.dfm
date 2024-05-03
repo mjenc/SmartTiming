@@ -2,8 +2,8 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
   Left = 0
   Top = 0
   Caption = #220'bersetzungstabelle generieren'
-  ClientHeight = 457
-  ClientWidth = 364
+  ClientHeight = 465
+  ClientWidth = 366
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,17 +15,19 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 416
-    Width = 364
+    Top = 424
+    Width = 366
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitTop = 416
+    ExplicitWidth = 364
     DesignSize = (
-      364
+      366
       41)
     object ButtonOK: TButton
-      Left = 190
+      Left = 192
       Top = 8
       Width = 75
       Height = 25
@@ -34,10 +36,10 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonOKClick
-      ExplicitLeft = 186
+      ExplicitLeft = 190
     end
     object ButtonCancel: TButton
-      Left = 278
+      Left = 280
       Top = 8
       Width = 75
       Height = 25
@@ -46,19 +48,19 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
-      ExplicitLeft = 274
+      ExplicitLeft = 278
     end
   end
   object PanelMain: TPanel
     Left = 0
     Top = 0
-    Width = 364
-    Height = 416
+    Width = 366
+    Height = 424
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 360
-    ExplicitHeight = 400
+    ExplicitWidth = 364
+    ExplicitHeight = 416
     object Label1: TLabel
       Left = 16
       Top = 74
@@ -98,11 +100,13 @@ object FormGenerateTransponderMappings: TFormGenerateTransponderMappings
     end
     object MemoLog: TMemo
       Left = 0
-      Top = 160
-      Width = 360
+      Top = 184
+      Width = 366
       Height = 240
       Align = alBottom
       TabOrder = 3
+      ExplicitTop = 176
+      ExplicitWidth = 364
     end
     object ButtonStartReceiving: TButton
       Left = 16

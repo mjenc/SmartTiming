@@ -36,6 +36,7 @@ object FormMain: TFormMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 0
+    OnClick = PanelTitleClick
     DesignSize = (
       1479
       55)
@@ -102,7 +103,7 @@ object FormMain: TFormMain
       Margins.Top = 6
       Margins.Right = 0
       Margins.Bottom = 6
-      ActivePage = TabSheetCompetitors
+      ActivePage = TabSheetTiming
       Align = alClient
       TabHeight = 30
       TabOrder = 0
@@ -752,6 +753,7 @@ object FormMain: TFormMain
       BevelOuter = bvNone
       ShowCaption = False
       TabOrder = 0
+      OnDblClick = PanelDecoderDblClick
       object LabelDecoderIpAddress: TLabel
         Left = 8
         Top = 23
@@ -851,7 +853,11 @@ object FormMain: TFormMain
       end
       object MenuItemReports: TMenuItem
         Caption = 'Druckvorlagen'
-        OnClick = MenuItemReportsClick
+        Enabled = False
+      end
+      object MenuItemRecalc: TMenuItem
+        Caption = 'Ergebnis neu berechnen'
+        OnClick = MenuItemRecalcClick
       end
     end
   end

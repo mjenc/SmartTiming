@@ -36,6 +36,7 @@ type
     procedure AddManualPassing(APassing: TPassing);
     procedure ResetRacesDataSet;
     procedure ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
+    procedure RetryDecoderSearch;
 
     property Event: TEventDataObject read FEventDataObject;
     property RaceList: TDictionary<integer, TRaceItem> read FRaceList;
@@ -92,6 +93,14 @@ procedure TSmartTimingController.LoadSettings;
 begin
 //  Sound Effect by https://pixabay.com
   FPlayPassingSound := SmartTimingTools.RegistryReadBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'BeepOnPassing', true);
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.RetryDecoderSearch;
+begin
+  if FDecoderEngine.Connected then
+    Exit;
+  FDecoderEngine.RefreshDecoderList;
 end;
 
 {==============================================================================}

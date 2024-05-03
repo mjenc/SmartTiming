@@ -7,6 +7,7 @@ uses
   Classes, SysUtils, StrUtils, Windows,
   IdTCPConnection, IdTCPClient, IdBaseComponent, IdComponent, IdCustomTCPServer, IdTCPServer, IdUdpServer,
   IdGlobal, IdSocketHandle,
+Dialogs,
   DecoderInterface;
 
 const
@@ -837,7 +838,17 @@ begin
   try
     lSubnetMasks.CommaText := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'DecoderSubnetMasks', '192.168.255.255');
     for i := 0 to lSubnetMasks.Count - 1 do
-      FUdpServer.SendBuffer(lSubnetMasks[i], cMyLapsDefaultOperatingPort, ReqBuf);
+    begin
+      try
+        FUdpServer.SendBuffer(lSubnetMasks[i], cMyLapsDefaultOperatingPort, ReqBuf);
+      except
+        on E: Exception do
+        begin
+          ShowMessage(E.Message);
+          Exit;
+        end;
+      end;
+    end;
   finally
     FreeAndNil(lSubnetMasks);
   end;

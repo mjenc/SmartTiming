@@ -338,6 +338,8 @@ begin
 
   for i := 1 to FFileLines.Count - 1 do
   begin
+    if FFileLines[i].Trim.IsEmpty then
+      Continue;
     MainDataModule.ClientDataSetCompetitors.Append;
     MainDataModule.ClientDataSetCompetitors.FieldByName('COMPETITORID').Value := lCompetitorId + i;
     FillValue('CLASS', cFieldTitleClass, GetStringValueFromFileLines, 'Unbekannt');

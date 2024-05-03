@@ -3,7 +3,7 @@ object FormRankingViewer: TFormRankingViewer
   Top = 0
   Caption = 'Form56'
   ClientHeight = 584
-  ClientWidth = 481
+  ClientWidth = 1082
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
@@ -13,7 +13,7 @@ object FormRankingViewer: TFormRankingViewer
   object TabControlRaces: TTabControl
     Align = Client
     FullSize = True
-    Size.Width = 481.000000000000000000
+    Size.Width = 1082.000000000000000000
     Size.Height = 503.000000000000000000
     Size.PlatformDefault = False
     TabHeight = 49.000000000000000000
@@ -22,7 +22,6 @@ object FormRankingViewer: TFormRankingViewer
     TabPosition = PlatformDefault
   end
   object TimerRefresh: TTimer
-    Enabled = False
     Interval = 10000
     OnTimer = DoRefresh
     Left = 40
@@ -30,17 +29,16 @@ object FormRankingViewer: TFormRankingViewer
   end
   object PanelTitleBar: TPanel
     Align = Top
-    Size.Width = 481.000000000000000000
+    Size.Width = 1082.000000000000000000
     Size.Height = 81.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 2
     object LabelEventTitle: TLabel
       Anchors = [akLeft, akTop, akRight]
-      AutoSize = True
       StyledSettings = [Family, FontColor]
       Position.X = 77.000000000000000000
       Position.Y = 32.000000000000000000
-      Size.Width = 323.000000000000000000
+      Size.Width = 924.000000000000000000
       Size.Height = 24.000000000000000000
       Size.PlatformDefault = False
       TextSettings.Font.Size = 18.000000000000000000
@@ -50,10 +48,9 @@ object FormRankingViewer: TFormRankingViewer
       TabOrder = 1
       object LabelOrganizer: TLabel
         Anchors = [akLeft, akTop, akRight]
-        AutoSize = True
         StyledSettings = [Family, FontColor]
         Position.Y = -24.000000000000000000
-        Size.Width = 323.000000000000000000
+        Size.Width = 924.000000000000000000
         Size.Height = 19.000000000000000000
         Size.PlatformDefault = False
         TextSettings.Font.Size = 14.000000000000000000
@@ -124,8 +121,8 @@ object FormRankingViewer: TFormRankingViewer
       CanFocus = False
       EnableDragHighlight = False
       EnableOpenDialog = False
-      Position.X = 8.000000000000000000
-      Position.Y = 8.000000000000000000
+      Position.X = 16.000000000000000000
+      Position.Y = 20.000000000000000000
       Size.Width = 41.000000000000000000
       Size.Height = 42.000000000000000000
       Size.PlatformDefault = False
@@ -135,8 +132,8 @@ object FormRankingViewer: TFormRankingViewer
     object SwitchGrouped: TSwitch
       Anchors = [akTop, akRight]
       IsChecked = False
-      Position.X = 407.000000000000000000
-      Position.Y = 48.000000000000000000
+      Position.X = 1009.000000000000000000
+      Position.Y = 39.000000000000000000
       Size.Width = 53.000000000000000000
       Size.Height = 25.000000000000000000
       Size.PlatformDefault = False
@@ -144,10 +141,10 @@ object FormRankingViewer: TFormRankingViewer
     end
     object Label1: TLabel
       Anchors = [akTop, akRight]
-      Position.X = 405.000000000000000000
-      Position.Y = 20.000000000000000000
+      Position.X = 1006.000000000000000000
+      Position.Y = 15.000000000000000000
       Size.Width = 113.000000000000000000
-      Size.Height = 17.000000000000000000
+      Size.Height = 16.000000000000000000
       Size.PlatformDefault = False
       Text = 'Nach Klasse'
       TabOrder = 4

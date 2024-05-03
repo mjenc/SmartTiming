@@ -14,6 +14,7 @@ type
   TDecoderEngine = class
   private
     FDecoder: TDecoder;
+    FSearchListener: TDecoderListener;
     FListener: TDecoderListener;
     FTimingBias: integer;
     FDecoderFinder: TDecoderFinder;
@@ -68,6 +69,7 @@ begin
   FTimingBias := SmartTimingTools.ReadTimingBiasFromRegistry;
 
   FListener := nil;
+  FSearchListener := nil;
   FDecoderFoundCount := 0;
   FDecoderFinder := TDecoderFinder.Create(DecoderFound);
 end;
@@ -78,6 +80,12 @@ destructor TDecoderEngine.Destroy;
 begin
   try
     FreeAndNil(FDecoderFinder);
+    if FSearchListener <> nil then
+    begin
+      FSearchListener.Terminate;
+      FreeAndNil(FSearchListener);
+    end;
+
     if FListener <> nil then
     begin
       FListener.Terminate;
@@ -98,12 +106,12 @@ end;
 {==============================================================================}
 procedure TDecoderEngine.SetActiveDecoder(ADecoder: TDecoder);
 begin
-  if FListener <> nil then
+  if FSearchListener <> nil then
   begin
-    FListener.Terminate;
-    while not FListener.CheckTerminated do
+    FSearchListener.Terminate;
+    while not FSearchListener.CheckTerminated do
       Sleep(100);
-    FreeAndNil(FListener);
+    FreeAndNil(FSearchListener);
   end;
 
   FDecoder := ADecoder;

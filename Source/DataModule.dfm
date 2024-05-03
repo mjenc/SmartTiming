@@ -1,8 +1,9 @@
 object MainDataModule: TMainDataModule
   OnCreate = DataModuleCreate
   OnDestroy = DataModuleDestroy
-  Height = 600
-  Width = 800
+  Height = 750
+  Width = 1000
+  PixelsPerInch = 120
   object SQLConnection: TSQLConnection
     DriverName = 'Sqlite'
     LoginPrompt = False
@@ -16,32 +17,32 @@ object MainDataModule: TMainDataModule
         'Driver280.bpl'
       'FailIfMissing=True'
       'Database=d:\projects\SmartTiming\Data\SmartTiming.db')
-    Left = 82
-    Top = 90
+    Left = 103
+    Top = 113
   end
   object SQLDataSetCompetitors: TSQLDataSet
     CommandText = 'SELECT * FROM COMPETITORS WHERE 1=2'
     MaxBlobSize = 1
     Params = <>
     SQLConnection = SQLConnection
-    Left = 249
-    Top = 70
+    Left = 311
+    Top = 88
   end
   object DataSourceCompetitors: TDataSource
-    Left = 250
-    Top = 269
+    Left = 313
+    Top = 336
   end
   object DataSetProviderCompetitors: TDataSetProvider
     DataSet = SQLDataSetCompetitors
-    Left = 250
-    Top = 128
+    Left = 313
+    Top = 160
   end
   object ClientDataSetCompetitors: TClientDataSet
     Aggregates = <>
     Params = <>
     ProviderName = 'DataSetProviderCompetitors'
-    Left = 250
-    Top = 192
+    Left = 313
+    Top = 240
   end
   object SQLDataSetRaces: TSQLDataSet
     CommandText = 'SELECT * FROM RACES'
@@ -49,30 +50,30 @@ object MainDataModule: TMainDataModule
     MaxBlobSize = -1
     Params = <>
     SQLConnection = SQLConnection
-    Left = 58
-    Top = 253
+    Left = 73
+    Top = 316
   end
   object DataSetProviderRaces: TDataSetProvider
     DataSet = SQLDataSetRaces
     Options = [poAutoRefresh, poUseQuoteChar]
-    Left = 58
-    Top = 302
+    Left = 73
+    Top = 378
   end
   object ClientDataSetRaces: TClientDataSet
     Aggregates = <>
     DisableStringTrim = True
     Params = <>
     ProviderName = 'DataSetProviderRaces'
-    Left = 56
-    Top = 354
+    Left = 70
+    Top = 443
   end
   object DataSourceRaces: TDataSource
     DataSet = ClientDataSetRaces
-    Left = 60
-    Top = 403
+    Left = 75
+    Top = 504
   end
   object DataSourceResults: TDataSource
-    Left = 520
-    Top = 312
+    Left = 650
+    Top = 390
   end
 end

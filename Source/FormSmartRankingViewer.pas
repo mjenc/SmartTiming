@@ -25,6 +25,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure DoRefresh(Sender: TObject);
   private
+    FInRefresh: boolean;
     FSmartRankingViewWebClient: TSmartRankingViewWebClient;
     FSmartTimingServer: string;
     FRacesList: TDictionary<integer, TSRVRaceItem>;
@@ -40,6 +41,7 @@ type
     procedure GenerateNeededTabs;
     procedure FillResultsIntoHtml(var AHtml: string; ASuperObject: ISuperObject);
     function GetRealRank(ARow: ISuperObject): string;
+    function CompareTabControls(Left, Right: TFmxObject): Integer;
   public
     property Organizer: string read FOrganizer write FOrganizer;
     property Title: string read FTitle write FTitle;
@@ -127,6 +129,8 @@ const
 {==============================================================================}
 procedure TFormRankingViewer.FormCreate(Sender: TObject);
 begin
+  FInRefresh := false;
+
   FTitlesToShow := TStringList.Create;
   FTitlesToShow.CommaText := cTitlesToShow;
 
@@ -150,8 +154,14 @@ end;
 procedure TFormRankingViewer.GetConnectionSettings;
 begin
   FormConnectionProperties.WebClient := FSmartRankingViewWebClient;
-//  FormConnectionProperties.Show;
-  FSmartTimingServer := 'CAS-N04798';// FormConnectionProperties.SmartTimingServer;
+  {$IFDEF MSWINDOWS}
+  FormConnectionProperties.BringToFront;
+  if not FormConnectionProperties.ShowModal = mrOK then
+    Exit;
+  {$ELSE}
+  FormConnectionProperties.Show;
+  {$ENDIF}
+  FSmartTimingServer := FormConnectionProperties.SmartTimingServer;
 end;
 
 {==============================================================================}
@@ -160,6 +170,7 @@ begin
   FSmartRankingViewWebClient := TSmartRankingViewWebClient.Create(FSmartTimingServer);
   try
     GetConnectionSettings;
+    FSmartRankingViewWebClient.Server := FSmartTimingServer;
     FSmartRankingViewWebClient.FillEventInfo(TForm(self));
     GenerateNeededTabs;
   except
@@ -176,33 +187,46 @@ var
   lHtml: string;
   lTabItem: TTabItem;
 begin
-  if FSmartRankingViewWebClient = nil then
-  begin
-    GetConnectionSettings;
-    SetupWebClient;
-    LabelOrganizer.Text := FOrganizer;
-    LabelEventTitle.Text := FTitle;
-    Exit;
-  end;
-
-  if TabControlRaces.ActiveTab = nil then
+  if FInRefresh then
     Exit;
 
-  lTabItem := TabControlRaces.ActiveTab;
-  lJSON := FSmartRankingViewWebClient.GetRankings(lTabItem.Tag, SwitchGrouped.IsChecked);
-  lSuperObject := TSuperObject.Create(PWideChar(lJSON));
-
-  lHtml := cRankingHtml;
-  FillResultsIntoHtml(lHtml, lSuperObject);
-
-  for i := 0 to lTabItem.ComponentCount do
-  begin
-    if lTabItem.Components[i] is TWebBrowser then
+  FInRefresh := true;
+  try
+    if FSmartRankingViewWebClient = nil then
     begin
-      TWebBrowser(lTabItem.Components[i]).LoadFromStrings(lHtml, '');
+      SetupWebClient;
+      LabelOrganizer.Text := FOrganizer;
+      LabelEventTitle.Text := FTitle;
       Exit;
     end;
+
+    if TabControlRaces.ActiveTab = nil then
+      Exit;
+
+    lTabItem := TabControlRaces.ActiveTab;
+    lJSON := FSmartRankingViewWebClient.GetRankings(lTabItem.Tag, SwitchGrouped.IsChecked);
+    lSuperObject := TSuperObject.Create(PWideChar(lJSON));
+
+    lHtml := cRankingHtml;
+    FillResultsIntoHtml(lHtml, lSuperObject);
+
+    for i := 0 to lTabItem.ComponentCount do
+    begin
+      if lTabItem.Components[i] is TWebBrowser then
+      begin
+        TWebBrowser(lTabItem.Components[i]).LoadFromStrings(lHtml, '');
+        Exit;
+      end;
+    end;
+  finally
+    FInRefresh := false;
   end;
+end;
+
+{==============================================================================}
+function TFormRankingViewer.CompareTabControls(Left, Right: TFmxObject): Integer;
+begin
+  result := Left.Tag - Right.Tag;
 end;
 
 {==============================================================================}
@@ -211,11 +235,20 @@ var
   lTabItem: TTabItem;
   lRaceItem: TSRVRaceItem;
   lWebBrowser: TWebBrowser;
+  lRaceIdArray: TArray<integer>;
+  i: integer;
+  lRaceId: Integer;
 begin
   TabControlRaces.BeginUpdate;
   try
-    for lRaceItem in RacesList.Values do
+    lRaceIdArray := RacesList.Keys.ToArray;
+    TArray.Sort<Integer>(lRaceIdArray);
+
+    for i := 0 to Length(lRaceIdArray) - 1 do
     begin
+      if not RacesList.TryGetValue(lRaceIdArray[i], lRaceItem) then
+        Continue;
+
       lTabItem := TabControlRaces.Add;
       lTabItem.Tag := lRaceItem.Id;
       lTabItem.Text := lRaceItem.Title;

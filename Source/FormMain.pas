@@ -120,6 +120,7 @@ type
     LabelDecoderId: TLabel;
     CardPanelPassings: TCardPanel;
     ImageListPassingStates: TImageList;
+    MenuItemRecalc: TMenuItem;
 
     procedure DatePickerFromChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -156,7 +157,6 @@ type
     procedure MenuItemBackupClick(Sender: TObject);
     procedure ToggleAutoScrollClick(Sender: TObject);
     procedure LabelDecoderManufacturerClick(Sender: TObject);
-    procedure MenuItemReportsClick(Sender: TObject);
     procedure PopupMenuCompetitorActionsPopup(Sender: TObject);
     procedure ButtonPrintParticipantListClick(Sender: TObject);
     procedure DBGridCompetitorsDblClick(Sender: TObject);
@@ -169,6 +169,9 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure DBGridRacesDrawDataCell(Sender: TObject; const Rect: TRect;
       Field: TField; State: TGridDrawState);
+    procedure PanelDecoderDblClick(Sender: TObject);
+    procedure PanelTitleClick(Sender: TObject);
+    procedure MenuItemRecalcClick(Sender: TObject);
 
   private
     FCurrentEventId: integer;
@@ -325,15 +328,16 @@ var
   lTop: Integer;
   lHeight: Integer;
 begin
-  if SameText(Field.FieldName, 'RACETYPE') then
-  begin
-    lValue := SmartTimingTools.GetRaceTypeStringFromEnum(TRaceType(Field.AsInteger));
-    lHeight := DBGridRaces.Canvas.TextHeight(lValue);
-    lTop := (Rect.Height - lHeight) div 2;
-    DBGridRaces.Canvas.TextOut(Rect.Left + 2, lTop + Rect.Top, lValue);
-  end;
+  if (not SameText(Field.FieldName, 'RACETYPE')) or Field.IsNull then
+    Exit;
+
+  lValue := SmartTimingTools.GetRaceTypeStringFromEnum(TRaceType(Field.AsInteger));
+  lHeight := DBGridRaces.Canvas.TextHeight(lValue);
+  lTop := (Rect.Height - lHeight) div 2;
+  DBGridRaces.Canvas.TextOut(Rect.Left + 2, lTop + Rect.Top, lValue);
 end;
 
+{==============================================================================}
 procedure TFormMain.DBGridRacesShortCellClick(Column: TColumn);
 begin
   SetupRankingsGrid(MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').AsInteger);
@@ -477,10 +481,10 @@ begin
 
   FNoiseChart := TValueHistoryChart.Create(self);
   begin
-    FTemperatureChart.ValueLabel := 'Störlevel ';
+    FNoiseChart.ValueLabel := 'Störlevel ';
     FNoiseChart.MaxBufferSize := PanelNoiseChart.Width;
-    FNoiseChart.GreenAreaTo := 39.0;
-    FNoiseChart.YellowAreaFrom := 39.0;
+    FNoiseChart.GreenAreaTo := 45.0;
+    FNoiseChart.YellowAreaFrom := 45.0;
     FNoiseChart.Parent := PanelNoiseChart;
     FNoiseChart.Align := alClient;
   end;
@@ -583,7 +587,7 @@ begin
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
 
   RefreshFlagButtonsVisibility(lRaceItem);
-
+  RefreshFlagButtonsActive(lRaceItem.Status);
   for i := 0 to CardPanelPassings.CardCount - 1 do
   begin
     if CardPanelPassings.Cards[i].Tag = lRaceItem.Id then
@@ -848,8 +852,15 @@ begin
 end;
 
 {==============================================================================}
-procedure TFormMain.MenuItemReportsClick(Sender: TObject);
+procedure TFormMain.MenuItemRecalcClick(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
 begin
+  if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
+    Exit;
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  lRaceItem.RaceEngine.RecalcCountingLaps;
+  lRaceItem.RaceEngine.RefreshRankingDisplay;
 end;
 
 {==============================================================================}
@@ -928,14 +939,8 @@ end;
 
 {==============================================================================}
 procedure TFormMain.ButtonStopClick(Sender: TObject);
-var
-  lRaceItem: TRaceItem;
 begin
-  if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
-    Exit;
-  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
-  lRaceItem.RaceEngine.RecalcCountingLaps;
-//  RaceButtonStatusChange(rsStopped);
+  RaceButtonStatusChange(rsStopped);
 end;
 
 {==============================================================================}
@@ -1157,6 +1162,17 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.PanelDecoderDblClick(Sender: TObject);
+begin
+  GSmartTimingController.RetryDecoderSearch;
+end;
+
+procedure TFormMain.PanelTitleClick(Sender: TObject);
+begin
+
+end;
+
+{==============================================================================}
 procedure TFormMain.PopupMenuCompetitorActionsPopup(Sender: TObject);
 begin
   RefreshAddCompetitorToRaceMenu;
@@ -1270,7 +1286,7 @@ begin
     DBGridCompetitors.DataSource.DataSet.Next;
   end;
   MainDataModule.AssignCompetitorsToRace(FCurrentEventId, lRaceId, lCompetitorIds);
-  if GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) then
+  if GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) and TDBGrid(lRaceItem.RaceEngine.RankingDisplay).DataSource.DataSet.Active then
     TDBGrid(lRaceItem.RaceEngine.RankingDisplay).DataSource.DataSet.Refresh;
   DBGridCompetitors.SelectedIndex := lSelected;
 end;

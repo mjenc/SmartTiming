@@ -56,6 +56,7 @@ begin
   FYellowAreaTo := 59.0;
   FRedAreaFrom := 59.0;
   FRedAreaTo := FMaxValue;
+  AddValue(0.0);
 end;
 
 {==============================================================================}
@@ -93,7 +94,7 @@ begin
   else
     ShiftBufferLeft(1);
   FValues[lLength - 1] := AValue;
-  Canvas.TextOut(2,5, FValueLabel + ' ' + AValue.ToString)
+  Invalidate;
 end;
 
 {==============================================================================}
@@ -125,6 +126,8 @@ begin
     Canvas.MoveTo(i + 1, Height);
     Canvas.LineTo(i + 1, Height - 1 - Trunc(lScale * (FValues[i] - FMinValue)));
   end;
+  if Length(FValues) > 0 then
+    Canvas.TextOut(2,5, FValueLabel + ' ' + FValues[High(FValues)].ToString);
 end;
 
 end.

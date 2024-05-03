@@ -18,9 +18,10 @@ type
     FWebClient: TSmartRankingViewWebClient;
     FSmartTimingServer: string;
 
+    function GetSmartTimingServer: string;
   public
     property WebClient: TSmartRankingViewWebClient read FWebClient write FWebClient;
-    property SmartTimingServer: string read FSmartTimingServer;
+    property SmartTimingServer: string read GetSmartTimingServer;
   end;
 
 var
@@ -43,6 +44,13 @@ begin
   FSmartTimingServer := ComboBoxWellKnownHosts.Items[ComboBoxWellKnownHosts.ItemIndex];
 
   Close;
+end;
+
+function TFormConnectionProperties.GetSmartTimingServer: string;
+begin
+  if ComboBoxWellKnownHosts.ItemIndex < 0 then
+    Exit('');
+  result := ComboBoxWellKnownHosts.Items[ComboBoxWellKnownHosts.ItemIndex]
 end;
 
 end.

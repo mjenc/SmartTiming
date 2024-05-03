@@ -162,7 +162,7 @@ begin
      StartTime.ToISO8601(false),
      Title,
      Laps,
-     Distance.ToString,
+     Distance.ToString.Replace(',','.'),
      lFirstPassingIsLapBoolStr,
      MinLapDuration,
      SmartTimingTools.GetRaceStatusStringFromEnum(Status)]);
@@ -511,13 +511,10 @@ begin
       MainDataModule.ResetRaceParticitipations(FRaceItem.Id);
 
       TPassingStore.GetSingleton.FillPassingListForRaceId(FRaceItem.Id, lPassingList, true, true);
-
       lTimeArray := lPassingList.Keys.ToArray;
-
       TArray.Sort<TDatetime>(lTimeArray);
 
       lInActiveRaceSection := false;
-
       for lTime in lTimeArray do
       begin
         if not lPassingList.TryGetValue(lTime, lPassing) then
@@ -529,7 +526,10 @@ begin
           Continue;
         if not lInActiveRaceSection then
           Continue;
+        if lPassing.PassingNumber < 0 then
+          Continue;
 
+        FLastConsideredPassingId := lPassing.PassingNumber - 1;
         UpdateParticipationTable(lPassing.PassingNumber);
       end;
       MainDataModule.SQLConnection.CommitFreeAndNil(lTransaction);
@@ -537,7 +537,7 @@ begin
       MainDataModule.SQLConnection.RollbackFreeAndNil(lTransaction);
       raise;
     end;
-
+    RefreshRankingDisplay;
 
   finally
     FreeAndNil(lPassingList);

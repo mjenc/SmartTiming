@@ -33,6 +33,8 @@ object FormConnectionProperties: TFormConnectionProperties
     TabOrder = 2
     ItemHeight = 19.000000000000000000
     Items.Strings = (
+      '192.168.182.21'
+      '192.168.182.30'
       '127.0.0.1'
       'localhost'
       'CAS-N04798')

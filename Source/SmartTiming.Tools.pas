@@ -3,8 +3,10 @@ unit SmartTiming.Tools;
 interface
 
 uses
-  Classes, SysUtils, DateUtils, Windows, Dialogs, Forms, Winapi.Messages,
-  Registry, DBGrids, Controls, Graphics, Variants, Buttons, Grids,
+  Classes, SysUtils, DateUtils,
+  Windows, Dialogs,Forms, Winapi.Messages,Registry,DBGrids,Controls,Graphics,
+  Buttons,Grids,
+  Variants,
   Generics.Defaults, UITypes, DB, SmartTiming.Event,
   Tools.SuperObject, SmartTiming.Consts, RaceEngine.Custom;
 

@@ -207,8 +207,6 @@ end;
 {==============================================================================}
 procedure TSmartStartingForm.ButtonImportStartingListClick(Sender: TObject);
 begin
-  FCompetitors.Clear;
-  // ImportStartListFromCSVFile;
   GetStartListFromServer;
   DisplayNextCompetitor;
 end;
@@ -261,6 +259,9 @@ begin
     lJSONString := lWebClient.GetListOfStarters;
     if lJSONString.IsEmpty then
       Exit;
+
+    FCompetitors.Clear;
+
     lSO := TSuperObject.Create(lJSONString);
     for i := 0 to lSO.A['list'].Length - 1 do
       AddCompetitorInfo(lSO.A['list'].O[i]);
