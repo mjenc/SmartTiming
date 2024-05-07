@@ -245,11 +245,11 @@ var
     lCompetitorInfo.TeamName := lTeam;
     lStartTime := ACompetitorObject.F['STARTTIME'];
     DecodeTime(lStartTime, lHour, lMin, lSec, lMSec);
-    lStartTime := 0.0;
-    lStartTime := EncodeTime(lHour, lMin, lSec, 0);
     try
+      lStartTime := EncodeTime(lHour, lMin, lSec, 0);
       FCompetitors.Add(lStartTime, lCompetitorInfo);
     except
+      lStartTime := 0.0;
     end;
   end;
 

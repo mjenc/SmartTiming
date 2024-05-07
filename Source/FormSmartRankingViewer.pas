@@ -41,7 +41,6 @@ type
     procedure GenerateNeededTabs;
     procedure FillResultsIntoHtml(var AHtml: string; ASuperObject: ISuperObject);
     function GetRealRank(ARow: ISuperObject): string;
-    function CompareTabControls(Left, Right: TFmxObject): Integer;
   public
     property Organizer: string read FOrganizer write FOrganizer;
     property Title: string read FTitle write FTitle;
@@ -56,6 +55,7 @@ var
 implementation
 
 {$R *.fmx}
+
 
 uses
   FormRankingViewerConnectionProps;
@@ -105,26 +105,6 @@ const
     '</html>';
 
   cTitlesToShow = 'Platz,Klasse,Nr,Name,Team,Wertungszeit,Diff';
-
-//        <thead>
-//            <tr>
-//                <th>head1</th>
-//                <th>head2</th>
-//                <th>head3</th>
-//                <th>head4</th>
-//                <th>head5</th>
-//            </tr>
-//        </thead>
-
-//        <tbody>
-//            <tr>
-//                <td>cell1_1</td>
-//                <td>cell2_1</td>
-//                <td>cell3_1</td>
-//                <td>cell4_1</td>
-//                <td>cell5_1</td>
-//            </tr>
-//        </tbody>
 
 {==============================================================================}
 procedure TFormRankingViewer.FormCreate(Sender: TObject);
@@ -224,12 +204,6 @@ begin
 end;
 
 {==============================================================================}
-function TFormRankingViewer.CompareTabControls(Left, Right: TFmxObject): Integer;
-begin
-  result := Left.Tag - Right.Tag;
-end;
-
-{==============================================================================}
 procedure TFormRankingViewer.GenerateNeededTabs;
 var
   lTabItem: TTabItem;
@@ -237,7 +211,6 @@ var
   lWebBrowser: TWebBrowser;
   lRaceIdArray: TArray<integer>;
   i: integer;
-  lRaceId: Integer;
 begin
   TabControlRaces.BeginUpdate;
   try

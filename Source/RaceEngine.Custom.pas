@@ -469,7 +469,6 @@ end;
 procedure TCustomRaceEngine.RecalcCountingLaps;
 var
   lPassingList: TDictionary<TDatetime, TPassing>;
-  i: Integer;
   lTime: TDatetime;
   lPassing: TPassing;
   lTimeArray: TArray<TDatetime>;

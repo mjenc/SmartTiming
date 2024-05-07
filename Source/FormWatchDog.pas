@@ -250,6 +250,7 @@ var
   lReg : TRegistry;
   lValueName: string;
 begin
+  result := ADefault;
   lReg := TRegistry.Create;
   try
     lReg.RootKey := HKEY_CURRENT_USER;
@@ -271,6 +272,7 @@ var
   lReg : TRegistry;
   lValueName: string;
 begin
+  result := ADefault;
   lReg := TRegistry.Create;
   try
     lReg.RootKey := HKEY_CURRENT_USER;
