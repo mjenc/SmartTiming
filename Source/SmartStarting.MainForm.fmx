@@ -1,0 +1,172 @@
+object SmartStartingForm: TSmartStartingForm
+  Left = 0
+  Top = 0
+  BorderIcons = []
+  BorderStyle = None
+  Caption = 'Header Footer Form'
+  ClientHeight = 900
+  ClientWidth = 1440
+  FormFactor.Width = 1440
+  FormFactor.Height = 900
+  FormFactor.Orientations = [Landscape]
+  FormFactor.Devices = [Desktop, iPad]
+  FullScreen = True
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnResize = FormResize
+  DesignerMasterStyle = 0
+  object TimerSeconds: TTimer
+    OnTimer = TimerSecondsTimer
+    Left = 80
+    Top = 688
+  end
+  object AreaCompetitorInfo: TRectangle
+    Align = Top
+    Size.Width = 1440.000000000000000000
+    Size.Height = 360.000000000000000000
+    Size.PlatformDefault = False
+    object AreaCompetitorDescription: TRectangle
+      Align = Client
+      Size.Width = 953.000000000000000000
+      Size.Height = 360.000000000000000000
+      Size.PlatformDefault = False
+      object LabelCompetitorName: TLabel
+        Align = Top
+        StyledSettings = []
+        Size.Width = 953.000000000000000000
+        Size.Height = 180.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 80.000000000000000000
+        TextSettings.Font.StyleExt = {00070000000000000004000000}
+        TextSettings.HorzAlign = Center
+        TextSettings.VertAlign = Trailing
+        Text = 'Michael Jenc'
+        TabOrder = 0
+      end
+      object LabelCompetitorTeam: TLabel
+        Align = Bottom
+        StyledSettings = []
+        Position.Y = 180.000000000000000000
+        Size.Width = 953.000000000000000000
+        Size.Height = 180.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 80.000000000000000000
+        TextSettings.Font.StyleExt = {00070000000000000004000000}
+        TextSettings.HorzAlign = Center
+        TextSettings.VertAlign = Leading
+        Text = 'RSG Ried Rastatt'
+        TabOrder = 1
+      end
+    end
+    object LabelBib: TLabel
+      Align = Left
+      AutoSize = True
+      StyledSettings = []
+      Margins.Left = 10.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Position.X = 10.000000000000000000
+      Size.Width = 467.000000000000000000
+      Size.Height = 360.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Family = 'Microsoft New Tai Lue'
+      TextSettings.Font.Size = 180.000000000000000000
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+      TextSettings.WordWrap = False
+      Text = '# 123'
+      TabOrder = 1
+    end
+  end
+  object AreaTime: TRectangle
+    Align = Client
+    Corners = []
+    Size.Width = 1440.000000000000000000
+    Size.Height = 464.000000000000000000
+    Size.PlatformDefault = False
+    object LabelTime: TLabel
+      Align = Client
+      AutoTranslate = False
+      StyledSettings = []
+      Size.Width = 1440.000000000000000000
+      Size.Height = 464.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Family = 'Microsoft New Tai Lue'
+      TextSettings.Font.Size = 360.000000000000000000
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+      TextSettings.HorzAlign = Center
+      TextSettings.WordWrap = False
+      Text = '12:23:45'
+      TabOrder = 0
+    end
+  end
+  object OpenDialog: TOpenDialog
+    Left = 408
+    Top = 812
+  end
+  object AreaControls: TRectangle
+    Align = Bottom
+    Position.Y = 824.000000000000000000
+    Size.Width = 1440.000000000000000000
+    Size.Height = 76.000000000000000000
+    Size.PlatformDefault = False
+    object ButtonExit: TButton
+      Anchors = [akTop, akRight, akBottom]
+      StyledSettings = []
+      Position.X = 1240.000000000000000000
+      Position.Y = 18.000000000000000000
+      Size.Width = 152.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 3
+      Text = 'Beenden'
+      TextSettings.Font.Size = 30.000000000000000000
+      OnClick = ButtonExitClick
+    end
+    object ButtonImportStartingList: TButton
+      Anchors = [akTop, akRight, akBottom]
+      StyledSettings = []
+      Position.X = 576.000000000000000000
+      Position.Y = 18.000000000000000000
+      Size.Width = 256.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Text = 'Startlistenimport'
+      TextSettings.Font.Size = 30.000000000000000000
+      OnClick = ButtonImportStartingListClick
+    end
+    object ButtonSettings: TButton
+      Anchors = [akTop, akRight, akBottom]
+      StyledSettings = []
+      Position.X = 840.000000000000000000
+      Position.Y = 18.000000000000000000
+      Size.Width = 200.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      Text = 'Einstellungen'
+      TextSettings.Font.Size = 30.000000000000000000
+      OnClick = ButtonSettingsClick
+    end
+    object ButtonSwitchDarkMode: TButton
+      Anchors = [akTop, akRight, akBottom]
+      StyledSettings = []
+      Position.X = 1048.000000000000000000
+      Position.Y = 18.000000000000000000
+      Size.Width = 184.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 2
+      Text = 'Hell/Dunkel'
+      TextSettings.Font.Size = 30.000000000000000000
+      OnClick = ButtonSwitchDarkModeClick
+    end
+  end
+  object MediaPlayerStart: TMediaPlayer
+    Left = 216
+    Top = 824
+  end
+  object MediaPlayerLastSeconds: TMediaPlayer
+    Left = 120
+    Top = 824
+  end
+end

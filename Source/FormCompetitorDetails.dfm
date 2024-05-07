@@ -1,0 +1,296 @@
+object FormCompetitorDetails: TFormCompetitorDetails
+  Left = 0
+  Top = 0
+  Caption = 'Fahrer Details'
+  ClientHeight = 493
+  ClientWidth = 527
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -12
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  OnCreate = FormCreate
+  OnShow = FormShow
+  TextHeight = 15
+  object PanelMain: TPanel
+    Left = 0
+    Top = 0
+    Width = 527
+    Height = 452
+    Align = alClient
+    BevelOuter = bvNone
+    TabOrder = 0
+    DesignSize = (
+      527
+      452)
+    object Label1: TLabel
+      Left = 32
+      Top = 24
+      Width = 32
+      Height = 15
+      Caption = 'Klasse'
+    end
+    object DBCompetitorID: TDBText
+      Left = 446
+      Top = 24
+      Width = 65
+      Height = 17
+      Anchors = [akTop, akRight]
+      ExplicitLeft = 440
+    end
+    object Label2: TLabel
+      Left = 32
+      Top = 53
+      Width = 70
+      Height = 15
+      Caption = 'Startnummer'
+    end
+    object Label3: TLabel
+      Left = 302
+      Top = 53
+      Width = 27
+      Height = 15
+      Anchors = [akTop, akRight]
+      Caption = 'Tx-ID'
+      ExplicitLeft = 296
+    end
+    object Label4: TLabel
+      Left = 32
+      Top = 99
+      Width = 47
+      Height = 15
+      Caption = 'Vorname'
+    end
+    object Label5: TLabel
+      Left = 302
+      Top = 99
+      Width = 58
+      Height = 15
+      Anchors = [akTop, akRight]
+      Caption = 'Nachname'
+      ExplicitLeft = 296
+    end
+    object Label6: TLabel
+      Left = 32
+      Top = 157
+      Width = 32
+      Height = 15
+      Caption = 'Verein'
+    end
+    object Label7: TLabel
+      Left = 32
+      Top = 186
+      Width = 28
+      Height = 15
+      Caption = 'Team'
+    end
+    object Label8: TLabel
+      Left = 32
+      Top = 259
+      Width = 36
+      Height = 15
+      Caption = 'Nation'
+    end
+    object Label9: TLabel
+      Left = 302
+      Top = 259
+      Width = 23
+      Height = 15
+      Anchors = [akTop, akRight]
+      Caption = 'Kurz'
+    end
+    object Label10: TLabel
+      Left = 32
+      Top = 128
+      Width = 35
+      Height = 15
+      Caption = 'UCI-ID'
+    end
+    object Label11: TLabel
+      Left = 32
+      Top = 307
+      Width = 89
+      Height = 15
+      Caption = 'Handicap-Faktor'
+    end
+    object Label12: TLabel
+      Left = 32
+      Top = 355
+      Width = 62
+      Height = 15
+      Caption = 'Zus'#228'tzlich 1'
+    end
+    object Label13: TLabel
+      Left = 32
+      Top = 384
+      Width = 62
+      Height = 15
+      Caption = 'Zus'#228'tzlich 2'
+    end
+    object Label14: TLabel
+      Left = 32
+      Top = 413
+      Width = 62
+      Height = 15
+      Caption = 'Zus'#228'tzlich 3'
+    end
+    object Label15: TLabel
+      Left = 32
+      Top = 215
+      Width = 42
+      Height = 15
+      Caption = 'Startzeit'
+    end
+    object DBComboBoxClass: TDBComboBox
+      Left = 128
+      Top = 21
+      Width = 151
+      Height = 23
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 0
+    end
+    object DBEditBib: TDBEdit
+      Left = 128
+      Top = 50
+      Width = 145
+      Height = 23
+      TabOrder = 1
+    end
+    object DBEditFirstName: TDBEdit
+      Left = 128
+      Top = 96
+      Width = 151
+      Height = 23
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 3
+    end
+    object DBEditLastName: TDBEdit
+      Left = 366
+      Top = 96
+      Width = 145
+      Height = 23
+      Anchors = [akTop, akRight]
+      TabOrder = 4
+    end
+    object DBComboBoxClub: TDBComboBox
+      Left = 128
+      Top = 154
+      Width = 383
+      Height = 23
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 6
+    end
+    object DBComboBoxTeam: TDBComboBox
+      Left = 128
+      Top = 183
+      Width = 383
+      Height = 23
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 7
+    end
+    object DBComboBoxNationality: TDBComboBox
+      Left = 128
+      Top = 256
+      Width = 145
+      Height = 23
+      TabOrder = 9
+    end
+    object DBComboBoxNationalityISO: TDBComboBox
+      Left = 366
+      Top = 256
+      Width = 145
+      Height = 23
+      Anchors = [akTop, akRight]
+      TabOrder = 10
+    end
+    object DBEditUCIID: TDBEdit
+      Left = 128
+      Top = 125
+      Width = 145
+      Height = 23
+      TabOrder = 5
+    end
+    object DBEditHandicapFactor: TDBEdit
+      Left = 128
+      Top = 304
+      Width = 145
+      Height = 23
+      TabOrder = 11
+    end
+    object DBEditTxId: TDBEdit
+      Left = 366
+      Top = 50
+      Width = 145
+      Height = 23
+      Anchors = [akTop, akRight]
+      TabOrder = 2
+    end
+    object DBEditAddtional1: TDBEdit
+      Left = 128
+      Top = 352
+      Width = 383
+      Height = 23
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 12
+    end
+    object DBEditAdditional2: TDBEdit
+      Left = 128
+      Top = 381
+      Width = 383
+      Height = 23
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 13
+    end
+    object DBEditAdditional3: TDBEdit
+      Left = 128
+      Top = 410
+      Width = 383
+      Height = 23
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 14
+    end
+    object DBEditStarttime: TDBEdit
+      Left = 128
+      Top = 212
+      Width = 145
+      Height = 23
+      TabOrder = 8
+    end
+  end
+  object PanelButtons: TPanel
+    Left = 0
+    Top = 452
+    Width = 527
+    Height = 41
+    Align = alBottom
+    BevelOuter = bvNone
+    TabOrder = 1
+    DesignSize = (
+      527
+      41)
+    object ButtonOK: TButton
+      Left = 353
+      Top = 8
+      Width = 75
+      Height = 25
+      Anchors = [akTop, akRight]
+      Caption = 'OK'
+      Default = True
+      ModalResult = 1
+      TabOrder = 0
+      OnClick = ButtonOKClick
+    end
+    object ButtonCancel: TButton
+      Left = 441
+      Top = 8
+      Width = 75
+      Height = 25
+      Anchors = [akTop, akRight]
+      Cancel = True
+      Caption = 'Abbrechen'
+      ModalResult = 2
+      TabOrder = 1
+    end
+  end
+end

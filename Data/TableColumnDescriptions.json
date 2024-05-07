@@ -1,0 +1,410 @@
+{
+    "tables": [
+        {
+            "tablename": "RACES",
+            "columns": [
+                {
+                    "columnname": "EVENTID",
+                    "invisible": true
+                },
+                {
+                    "columnname": "RACEID",
+                    "caption": "Nr.",
+                    "width": 25
+                },
+                {
+                    "columnname": "TITLE",
+                    "caption": "Titel",
+                    "width": 100,
+                    "align": "taLeftJustify"
+                },
+                {
+                    "columnname": "STARTTIME",
+                    "caption": "Startzeit",
+                    "width": 120,
+                    "ongettext": "OnGetDateTimeFromValue",
+                    "fieldtype": "ftDatetime",
+                    "align": "taLeftJustify"
+                },
+                {
+                    "columnname": "RACETYPE",
+                    "caption": "Art",
+                    "width": 120,
+                    "ongettext": "OnGetRaceType",
+                    "fieldtype": "ftString",
+                    "align": "taLeftJustify"
+                },
+                {
+                    "columnname": "LAPS",
+                    "caption": "Runden",
+                    "width": 50
+                },
+                {
+                    "columnname": "DISTANCE",
+                    "caption": "Distianz",
+                    "width": 50
+                },
+                {
+                    "columnname": "FIRSTPASSINGISLAP",
+                    "caption": "Erste Passage als Runde",
+                    "width": 145,
+                    "algin": "taCenter"
+                },
+                {
+                    "columnname": "MINLAPDURATION",
+                    "caption": "Min. Rundenzeit",
+                    "width": 100
+                },
+                {
+                    "columnname": "STATUS",
+                    "caption": "Status",
+                    "width": 100,
+                    "align": "taLeftJustify",
+                    "ongettext": "OnGetRaceStatus"
+                }
+            ]
+        },
+        {
+            "tablename": "RACES.SHORT",
+            "columns": [
+                {
+                    "columnname": "EVENTID",
+                    "invisible": true
+                },
+                {
+                    "columnname": "RACEID",
+                    "caption": "Nr.",
+                    "width": 25
+                },
+                {
+                    "columnname": "TITLE",
+                    "caption": "Titel",
+                    "width": 80,
+                    "align": "taLeftJustify"
+                },
+                {
+                    "columnname": "STARTTIME",
+                    "caption": "Startzeit",
+                    "width": 120,
+                    "ongettext": "OnGetTimeFromValue",
+                    "fieldtype": "ftDatetime",
+                    "align": "taLeftJustify"
+                },
+                {
+                    "columnname": "RACETYPE",
+                    "invisible": true
+                },
+                {
+                    "columnname": "LAPS",
+                    "invisible": true
+                },
+                {
+                    "columnname": "DISTANCE",
+                    "invisible": true
+                },
+                {
+                    "columnname": "FIRSTPASSINGISLAP",
+                    "invisible": true
+                },
+                {
+                    "columnname": "MINLAPDURATION",
+                    "invisible": true
+                },
+                {
+                    "columnname": "STATUS",
+                    "caption": "Status",
+                    "width": 100,
+                    "align": "taLeftJustify",
+                    "ongettext": "OnGetRaceStatus"
+                }
+            ]
+        },
+        {
+            "tablename": "COMPETITORS",
+            "columns": [
+                {
+                    "columnname": "COMPETITORID",
+                    "invisible": true
+                },
+                {
+                    "columnname": "CLASS",
+                    "caption": "Klasse",
+                    "align": "taLeftJustify",
+                    "width": 100
+                },
+                {
+                    "columnname": "BIB",
+                    "caption": "Start#",
+                    "width": 50
+                },
+                {
+                    "columnname": "FIRSTNAME",
+                    "caption": "Vorname",
+                    "align": "taLeftJustify",
+                    "width": 150
+                },
+                {
+                    "columnname": "LASTNAME",
+                    "caption": "Nachname",
+                    "align": "taLeftJustify",
+                    "width": 150
+                },
+                {
+                    "columnname": "CLUB",
+                    "caption": "Verein",
+                    "align": "taLeftJustify",
+                    "width": 200
+                },
+                {
+                    "columnname": "TEAM",
+                    "caption": "Team",
+                    "align": "taLeftJustify",
+                    "width": 200
+                },
+                {
+                    "columnname": "NATIONALITY",
+                    "invisible": true,
+                    "caption": "Nationalität",
+                    "align": "taLeftJustify",
+                    "width": 50
+                },
+                {
+                    "columnname": "NATIONALITYISO",
+                    "invisible": true,
+                    "caption": "Nat.",
+                    "align": "taLeftJustify",
+                    "width": 50
+                },
+                {
+                    "columnname": "UCIID",
+                    "caption": "UCI-ID",
+                    "align": "taLeftJustify",
+                    "width": 90
+                },
+                {
+                    "columnname": "STARTTIME",
+                    "caption": "Startzeit",
+                    "align": "taRightJustify",
+                    "fieldtype": "ftTime",
+                    "width": 90
+                },
+                {
+                    "columnname": "HANDICAPFACTOR",
+                    "invisible": true,
+                    "caption": "Handicapfaktor",
+                    "width": 50
+                },
+                {
+                    "columnname": "ADDITIONAL1",
+                    "invisible": true,
+                    "caption": "Zusätzlich 1",
+                    "align": "taLeftJustify",
+                    "width": 50
+                },
+                {
+                    "columnname": "ADDITIONAL2",
+                    "invisible": true,
+                    "caption": "Zusätzlich 2",
+                    "align": "taLeftJustify",
+                    "width": 50
+                },
+                {
+                    "columnname": "ADDITIONAL3",
+                    "invisible": true,
+                    "caption": "Zusätzlich 3",
+                    "align": "taLeftJustify",
+                    "width": 50
+                },
+                {
+                    "columnname": "CHIPID",
+                    "caption": "Tx-Id",
+                    "align": "taRightJustify",
+                    "width": 50,
+                    "ongettext": "OnGetTxId"
+                }
+            ]
+        },
+        {
+            "tablename": "RANKING",
+            "columns": [
+                {
+                    "columnname": "COMPETITORID",
+                    "position": 15,
+                    "invisible": true
+                },
+                {
+                    "columnname": "RACEID",
+                    "position": 16,
+                    "invisible": true
+                },
+                {
+                    "columnname": "COMPETITORID_1",
+                    "position": 17,
+                    "invisible": true
+                },
+                {
+                    "columnname": "CLASS",
+                    "caption": "Klasse",
+                    "align": "taLeftJustify",
+                    "width": 100,
+                    "position": 0
+                },
+                {
+                    "columnname": "CURRENTRANKING",
+                    "caption": "Platz",
+                    "width": 50,
+                    "position": 1
+                },
+                {
+                    "columnname": "BIB",
+                    "caption": "Start#",
+                    "width": 50,
+                    "position": 2
+                },
+                {
+                    "columnname": "LASTNAME",
+                    "caption": "Nachname",
+                    "align": "taLeftJustify",
+                    "width": 150,
+                    "position": 3
+                },
+                {
+                    "columnname": "FIRSTNAME",
+                    "caption": "Vorname",
+                    "align": "taLeftJustify",
+                    "width": 150,
+                    "position": 4
+                },
+                {
+                    "columnname": "LAPS",
+                    "caption": "Runden",
+                    "width": 45,
+                    "position": 5
+                },
+                {
+                    "columnname": "POINTS",
+                    "caption": "Punkte",
+                    "width": 45,
+                    "position": 6
+                },
+                {
+                    "columnname": "RANKINGTIME",
+                    "caption": "Wertungszeit",
+                    "width": 120,
+                    "ongettext": "OnGetTimeFromValue",
+                    "fieldtype": "ftDatetime",
+                    "align": "taLeftJustify",
+                    "position": 7
+                },
+                {
+                    "columnname": "GAP",
+                    "caption": "Diff",
+                    "position": 8
+                },
+                {
+                    "columnname": "FINISHTIME",
+                    "caption": "Zielzeit",
+                    "width": 120,
+                    "ongettext": "OnGetTimeFromValue",
+                    "fieldtype": "ftDatetime",
+                    "align": "taLeftJustify",
+                    "position": 9
+                },
+                {
+                    "columnname": "TRANSPONDERID",
+                    "caption": "Tx-Id",
+                    "align": "taLeftJustify",
+                    "width": 50,
+                    "position": 10
+                },
+                {
+                    "columnname": "DNS",
+                    "caption": "DNS",
+                    "width": 30,
+                    "position": 11
+                },
+                {
+                    "columnname": "DNF",
+                    "caption": "DNF",
+                    "width": 30,
+                    "position": 12
+                },
+                {
+                    "columnname": "DSQ",
+                    "caption": "DSQ",
+                    "width": 30,
+                    "position": 13
+                },
+                {
+                    "columnname": "CLUB",
+                    "caption": "Verein",
+                    "align": "taLeftJustify",
+                    "width": 200,
+                    "position": 14
+                },
+                {
+                    "columnname": "TEAM",
+                    "caption": "Team",
+                    "align": "taLeftJustify",
+                    "width": 200,
+                    "position": 15
+                },
+                {
+                    "columnname": "NATIONALITY",
+                    "position": 16,
+                    "invisible": true
+                },
+                {
+                    "columnname": "NATIONALITYISO",
+                    "position": 17,
+                    "invisible": true
+                },
+                {
+                    "columnname": "UCIID",
+                    "position": 18,
+                    "invisible": true
+                },
+                {
+                    "columnname": "HANDICAPFACTOR",
+                    "position": 19,
+                    "invisible": true
+                },
+                {
+                    "columnname": "ADDITIONAL1",
+                    "position": 20,
+                    "invisible": true
+                },
+                {
+                    "columnname": "ADDITIONAL2",
+                    "position": 21,
+                    "invisible": true
+                },
+                {
+                    "columnname": "ADDITIONAL3",
+                    "position": 22,
+                    "invisible": true
+                },
+                {
+                    "columnname": "CRITRANKINGVALUE",
+                    "position": 23,
+                    "invisible": true
+                },
+                {
+                    "columnname": "PARTICIPATIONID",
+                    "position": 24,
+                    "invisible": true
+                },
+                {
+                    "columnname": "PENALTIES",
+                    "position": 25,
+                    "invisible": true
+                },
+                {
+                    "columnname": "STARTTIME",
+                    "position": 26,
+                    "invisible": true
+                }
+            ]
+        }
+    ]
+}
