@@ -41,23 +41,35 @@ uses
 
 {$R *.res}
 
+const
+  cLogger = 'SmartTiming';
+
 var
   lStylename: string;
   lResult: Integer;
+
 begin
+  LogOnInfo(cLogger, ['Startup SmartTiming']);
+
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
 
   lStylename := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'Theme');
   if (lStylename <> '') then
+  begin
+    LogOnDebug(cLogger, ['Setting style: ' + lStylename]);
     TStyleManager.SetStyle(lStylename);
+  end;
 
   Application.CreateForm(TMainDataModule, MainDataModule);
   FormAppLauncher := TFormAppLauncher.Create(nil);
   try
     lResult := FormAppLauncher.ShowModal;
     if (lResult = mrCancel) then
+    begin
+      LogOnInfo(cLogger, ['Shutdown SmartTiming', 'Launcher was cancelled.']);
       Exit;
+    end;
   finally
     FreeAndNil(FormAppLauncher);
   end;

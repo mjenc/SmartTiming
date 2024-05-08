@@ -45,6 +45,14 @@ type
 
 implementation
 
+uses
+  Tools.Logger;
+
+const
+  cLogger = 'SmartTiming.DecoderEngine';
+  cLoggerStatus = cLogger + '.Status';
+  cLoggerPassing = cLogger + '.Passing';
+
 var
   gCriticalSection: TCriticalSection;
   gTheDecoderEngine: TDecoderEngine;
@@ -66,6 +74,7 @@ end;
 {==============================================================================}
 constructor TDecoderEngine.Create;
 begin
+  LogOnDebug(cLogger, ['Creating DecoderEngine']);
   FTimingBias := SmartTimingTools.ReadTimingBiasFromRegistry;
 
   FListener := nil;
@@ -79,6 +88,7 @@ end;
 destructor TDecoderEngine.Destroy;
 begin
   try
+    LogOnDebug(cLogger, ['Destroying DecoderEngine']);
     FreeAndNil(FDecoderFinder);
     if FSearchListener <> nil then
     begin
@@ -99,66 +109,104 @@ end;
 {==============================================================================}
 procedure TDecoderEngine.RefreshDecoderList;
 begin
-  FDecoderFinder.Refresh;
-  Sleep(500);
+  try
+    LogOnDebug(cLogger, ['RefreshDecoderList']);
+    FDecoderFinder.Refresh;
+    Sleep(500);
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['RefreshDecoderList']);
+  end;
 end;
 
 {==============================================================================}
 procedure TDecoderEngine.SetActiveDecoder(ADecoder: TDecoder);
 begin
-  if FSearchListener <> nil then
-  begin
-    FSearchListener.Terminate;
-    while not FSearchListener.CheckTerminated do
-      Sleep(100);
-    FreeAndNil(FSearchListener);
+  try
+    LogOnDebug(cLogger, ['SetActiveDecoder', ADecoder.DecoderManufacturer, ADecoder.DecoderId, ADecoder.Address]);
+    if FSearchListener <> nil then
+    begin
+      FSearchListener.Terminate;
+      while not FSearchListener.CheckTerminated do
+        Sleep(100);
+      FreeAndNil(FSearchListener);
+    end;
+
+    FDecoder := ADecoder;
+
+    FListener := TDecoderListener.GetListenerForDecoder(FDecoder, OnStatusReceived, OnPassingReceived);
+    FListener.Start;
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['SetActiveDecoder']);
   end;
-
-  FDecoder := ADecoder;
-
-  FListener := TDecoderListener.GetListenerForDecoder(FDecoder, OnStatusReceived, OnPassingReceived);
-  FListener.Start;
 end;
 
 {==============================================================================}
 function TDecoderEngine.GetIsConnected: boolean;
 begin
-  if FListener = nil then
-    Exit(false);
-  result := FListener.Started;
+  try
+    LogOnDebug(cLogger, ['GetIsConnected']);
+    if FListener = nil then
+    begin
+      LogOnDebug(cLogger, ['No listener.']);
+      Exit(false);
+    end;
+    result := FListener.Started;
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['GetIsConnected']);
+  end;
 end;
 
 {==============================================================================}
 procedure TDecoderEngine.OnStatusReceived(AStatus: TDecoderStatus);
 begin
-  TStatusStore.GetSingleton.AddStatus(AStatus);
-  if Assigned(FNewStatusReceived) then
-    FNewStatusReceived(AStatus);
+  try
+    LogOnDebug(cLoggerStatus, ['OnStatusReceived']);
+    TStatusStore.GetSingleton.AddStatus(AStatus);
+    if Assigned(FNewStatusReceived) then
+      FNewStatusReceived(AStatus);
+  except
+    LogAndRaise(ExceptObject, cLoggerStatus, Tools.Logger.Error, ['OnStatusReceived']);
+  end;
 end;
 
 {==============================================================================}
 procedure TDecoderEngine.OnPassingReceived(APassing: TPassing);
 begin
-  APassing.TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(APassing.ChipId);
-  APassing.PassingTime.AddSecond(FTimingBias);
-  TPassingStore.GetSingleton.AddPassing(APassing);
-  if Assigned(FNewPassingReceived) then
-    FNewPassingReceived(APassing);
+  try
+    LogOnDebug(cLoggerPassing, ['OnPassingReceived']);
+    APassing.TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(APassing.ChipId);
+    APassing.PassingTime.AddSecond(FTimingBias);
+    TPassingStore.GetSingleton.AddPassing(APassing);
+    if Assigned(FNewPassingReceived) then
+      FNewPassingReceived(APassing);
+  except
+    LogAndRaise(ExceptObject, cLoggerPassing, Tools.Logger.Error, ['OnPassingReceived']);
+  end;
 end;
 
 {==============================================================================}
 procedure TDecoderEngine.SendSimulatedPassing(APassing: TPassing);
 begin
-  OnPassingReceived(APassing);
+  try
+    LogOnDebug(cLoggerPassing, ['SendSimulatedPassing']);
+    OnPassingReceived(APassing);
+  except
+    LogAndRaise(ExceptObject, cLoggerPassing, Tools.Logger.Error, ['SendSimulatedPassing']);
+  end;
 end;
 
 {==============================================================================}
 procedure TDecoderEngine.DecoderFound(ADecoder: TDecoder);
 begin
-  FDecoderFoundCount := TDecoderStore.GetSingleton.AddDecoder(ADecoder);
-  SetActiveDecoder(ADecoder);
-  if Assigned(FOnDecoderFound) then
-    FOnDecoderFound(ADecoder);
+  try
+    LogOnDebug(cLogger, ['DecoderFound']);
+    FDecoderFoundCount := TDecoderStore.GetSingleton.AddDecoder(ADecoder);
+    SetActiveDecoder(ADecoder);
+    if Assigned(FOnDecoderFound) then
+      FOnDecoderFound(ADecoder);
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['DecoderFound']);
+  end;
 end;
 
 

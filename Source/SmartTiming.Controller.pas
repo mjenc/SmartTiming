@@ -51,11 +51,12 @@ uses
   FormMain, SmartTiming.Cache, Tools.Logger;
 
 const
-  cLogger = 'SmartTiming.Settings';
+  cLogger = 'SmartTiming.Controller';
 
 {==============================================================================}
 constructor TSmartTimingController.Create;
 begin
+  LogOnDebug(cLogger, ['Creating controller']);
   LoadSettings;
 
   FEventDataObject := TEventDataObject.Create;
@@ -78,6 +79,7 @@ var
   lRaceItem: TRaceItem;
 begin
   try
+    LogOnDebug(cLogger, ['Destroying controller']);
     FreeAndNil(FServlet);
     if FRaceList <> nil then
     begin
@@ -97,30 +99,43 @@ begin
 //  Sound Effect by https://pixabay.com
   FPlayPassingSound := SmartTimingTools.RegistryReadBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'BeepOnPassing', true);
 
-  LogOnInfo(cLogger, ['TSmartTimingController.LoadSettings', 'PlayPassingSound=' + BoolToStr(FPlayPassingSound, true)]);
+  LogOnDebug(cLogger, ['LoadSettings', 'PlayPassingSound=' + BoolToStr(FPlayPassingSound, true)]);
 end;
 
 {==============================================================================}
 procedure TSmartTimingController.RetryDecoderSearch;
 begin
-  if FDecoderEngine.Connected then
-    Exit;
-  FDecoderEngine.RefreshDecoderList;
+  try
+    LogOnDebug(cLogger, ['RetryDecoderSearch']);
+    if FDecoderEngine.Connected then
+    begin
+      LogOnDebug(cLogger, ['Decoder already connected.']);
+      Exit;
+    end;
+    FDecoderEngine.RefreshDecoderList;
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['RetryDecoderSearch']);
+  end;
 end;
 
 {==============================================================================}
 procedure TSmartTimingController.LoadEventData(const AEventPath: string);
 begin
-  FDatabasePath := AEventPath;
-  MainDataModule.OpenDatabase(FDatabasePath);
-  FEventDataObject.RefreshFromDatabase;
-  GFormMain.RefreshControlsFromEventDataObject(FEventDataObject);
-  SaveEvent(FEventDataObject);
+  try
+    LogOnDebug(cLogger, ['LoadEventData']);
+    FDatabasePath := AEventPath;
+    MainDataModule.OpenDatabase(FDatabasePath);
+    FEventDataObject.RefreshFromDatabase;
+    GFormMain.RefreshControlsFromEventDataObject(FEventDataObject);
+    SaveEvent(FEventDataObject);
 
-  MainDataModule.RefreshRacesDataSet(FEventDataObject.EventId);
-  ResetRacesDataSet;
-  LoadRaces;
-  RestorePassings;
+    MainDataModule.RefreshRacesDataSet(FEventDataObject.EventId);
+    ResetRacesDataSet;
+    LoadRaces;
+    RestorePassings;
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['LoadEventData']);
+  end;
 end;
 
 {==============================================================================}
@@ -131,37 +146,42 @@ var
   i: integer;
   lVisited: TList<string>;
 begin
-  lVisited := TList<string>.Create;
   try
-    MainDataModule.SQLDataSetRaces.Refresh;
-    MainDataModule.DataSourceRaces.DataSet.Refresh;
-    MainDataModule.DataSourceRaces.DataSet.First;
-    while not MainDataModule.DataSourceRaces.DataSet.Eof do
-    begin
-      lRaceId := MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').Value;
-      if not FRaceList.TryGetValue(lRaceId, lRaceItem) then
+    LogOnDebug(cLogger, ['LoadRaces']);
+    lVisited := TList<string>.Create;
+    try
+      MainDataModule.SQLDataSetRaces.Refresh;
+      MainDataModule.DataSourceRaces.DataSet.Refresh;
+      MainDataModule.DataSourceRaces.DataSet.First;
+      while not MainDataModule.DataSourceRaces.DataSet.Eof do
       begin
-        lRaceItem := TRaceItem.Create;
-        FRaceList.Add(lRaceId, lRaceItem);
+        lRaceId := MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').Value;
+        if not FRaceList.TryGetValue(lRaceId, lRaceItem) then
+        begin
+          lRaceItem := TRaceItem.Create;
+          FRaceList.Add(lRaceId, lRaceItem);
+        end;
+
+        SmartTimingTools.FillRaceItemFromDataSet(MainDataModule.DataSourceRaces.DataSet, lRaceItem);
+        if lRaceItem.RaceEngine = nil then
+          lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);
+
+        lVisited.Add(lRaceItem.Id.ToString);
+        MainDataModule.DataSourceRaces.DataSet.Next;
       end;
 
-      SmartTimingTools.FillRaceItemFromDataSet(MainDataModule.DataSourceRaces.DataSet, lRaceItem);
-      if lRaceItem.RaceEngine = nil then
-        lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);
+      for i in FRaceList.Keys do
+      begin
+        if lVisited.IndexOf(lRaceItem.Id.ToString) >= 0 then
+          Continue;
+        FRaceList.Remove(i);
+      end;
 
-      lVisited.Add(lRaceItem.Id.ToString);
-      MainDataModule.DataSourceRaces.DataSet.Next;
+    finally
+      FreeAndNil(lVisited);
     end;
-
-    for i in FRaceList.Keys do
-    begin
-      if lVisited.IndexOf(lRaceItem.Id.ToString) >= 0 then
-        Continue;
-      FRaceList.Remove(i);
-    end;
-
-  finally
-    FreeAndNil(lVisited);
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['LoadRaces']);
   end;
 end;
 
@@ -178,14 +198,19 @@ var
   lMonth: Word;
   lDay: Word;
 begin
-  FEventDataObject.Organizer := AOrganizer;
-  FEventDataObject.Title := ATitle;
-  FEventDataObject.DateFrom := ADateFrom;
-  FEventDataObject.DateTo := ADateTo;
-  FEventDataObject.SaveToDatabase;
+  try
+    LogOnDebug(cLogger, ['SaveEvent']);
+    FEventDataObject.Organizer := AOrganizer;
+    FEventDataObject.Title := ATitle;
+    FEventDataObject.DateFrom := ADateFrom;
+    FEventDataObject.DateTo := ADateTo;
+    FEventDataObject.SaveToDatabase;
 
-  DecodeDate(ADateFrom, lYear, lMonth, lDay);
-  MainDataModule.PushEventToHistory(Format('%d-%2d-%2d %s | %s', [lYear, lMonth, lDay, AOrganizer, ATitle]));
+    DecodeDate(ADateFrom, lYear, lMonth, lDay);
+    MainDataModule.PushEventToHistory(Format('%d-%2d-%2d %s | %s', [lYear, lMonth, lDay, AOrganizer, ATitle]));
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['SaveEvent']);
+  end;
 end;
 
 {==============================================================================}
@@ -196,15 +221,20 @@ var
   lPassings: TArray<TPassing>;
   i: integer;
 begin
-  lRaceIds := GFormMain.GetAllRaceIds;
-  for lRaceId in lRaceIds do
-  begin
-    lPassings := MainDataModule.GetAllPassingsForRaceId(lRaceId);
-    for i := 0 to Length(lPassings) - 1 do
+  try
+    LogOnDebug(cLogger, ['RestorePassings']);
+    lRaceIds := GFormMain.GetAllRaceIds;
+    for lRaceId in lRaceIds do
     begin
-      GFormMain.AddPassingForRaceId(lRaceId, lPassings[i]);
-      TPassingStore.GetSingleton.AddPassing(lPassings[i]);
+      lPassings := MainDataModule.GetAllPassingsForRaceId(lRaceId);
+      for i := 0 to Length(lPassings) - 1 do
+      begin
+        GFormMain.AddPassingForRaceId(lRaceId, lPassings[i]);
+        TPassingStore.GetSingleton.AddPassing(lPassings[i]);
+      end;
     end;
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['RestorePassings']);
   end;
 end;
 
@@ -219,21 +249,27 @@ procedure TSmartTimingController.ChangeRaceStatus(ARaceId: Integer; ARaceStatus:
 var
   lPassing: TPassing;
 begin
-  MainDataModule.SetRaceStatus(ARaceId, ARaceStatus);
-  lPassing.PassingNumber := MainDataModule.GetMinPassingNumber - 1;
-  lPassing.ChipId := '';
-  lPassing.PassingTime := Now;
-  lPassing.SignalStrength := 100;
-  lPassing.Hits := 0 - Ord(ARaceStatus);
-  lPassing.Flags := 2;
-  lPassing.Sport := sSportsIdCycling;
-  lPassing.DecoderId := 'SYSTEM';
-  lPassing.RaceId := ARaceId;
+  try
+    LogOnDebug(cLogger, ['ChangeRaceStatus']);
 
-  MainDataModule.AddPassingToDatabase(lPassing, ARaceId);
+    MainDataModule.SetRaceStatus(ARaceId, ARaceStatus);
+    lPassing.PassingNumber := MainDataModule.GetMinPassingNumber - 1;
+    lPassing.ChipId := '';
+    lPassing.PassingTime := Now;
+    lPassing.SignalStrength := 100;
+    lPassing.Hits := 0 - Ord(ARaceStatus);
+    lPassing.Flags := 2;
+    lPassing.Sport := sSportsIdCycling;
+    lPassing.DecoderId := 'SYSTEM';
+    lPassing.RaceId := ARaceId;
 
-  GFormMain.AddPassingForRaceId(ARaceId, lPassing);
-  GFormMain.RefreshFlagButtonsActive(ARaceStatus);
+    MainDataModule.AddPassingToDatabase(lPassing, ARaceId);
+
+    GFormMain.AddPassingForRaceId(ARaceId, lPassing);
+    GFormMain.RefreshFlagButtonsActive(ARaceStatus);
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['ChangeRaceStatus']);
+  end;
 end;
 
 {==============================================================================}
@@ -245,7 +281,12 @@ end;
 {==============================================================================}
 procedure TSmartTimingController.OnStatusReceived(AStatus: TDecoderStatus);
 begin
-  GFormMain.AddDecoderStatus(AStatus);
+  try
+    LogOnDebug(cLogger, ['OnStatusReceived']);
+    GFormMain.AddDecoderStatus(AStatus);
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['OnStatusReceived']);
+  end;
 end;
 
 {==============================================================================}
@@ -254,33 +295,53 @@ var
   lRaceId: integer;
   lCompetitorId: integer;
 begin
-  if FPlayPassingSound then
-    PlaySound('PassingBeep', 0, SND_NOSTOP or SND_NOWAIT or SND_RESOURCE or SND_ASYNC or SND_NODEFAULT);
+  try
+    LogOnDebug(cLogger, ['OnPassingReceived']);
+    if FPlayPassingSound then
+      PlaySound('PassingBeep', 0, SND_NOSTOP or SND_NOWAIT or SND_RESOURCE or SND_ASYNC or SND_NODEFAULT);
 
-  MainDataModule.AddPassingToDatabase(APassing, lRaceId);
+    MainDataModule.AddPassingToDatabase(APassing, lRaceId);
 
-  lRaceId := MainDataModule.GetRaceIdForPassing(APassing, lCompetitorId);
-  GFormMain.AddPassingForRaceId(lRaceId, APassing);
+    lRaceId := MainDataModule.GetRaceIdForPassing(APassing, lCompetitorId);
+    GFormMain.AddPassingForRaceId(lRaceId, APassing);
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['OnPassingReceived']);
+  end;
 end;
 
 {==============================================================================}
 procedure TSmartTimingController.AddManualPassing(APassing: TPassing);
 begin
-  TDecoderEngine.GetSingleton.SendSimulatedPassing(APassing);
+  try
+    LogOnDebug(cLogger, ['AddManualPassing']);
+    TDecoderEngine.GetSingleton.SendSimulatedPassing(APassing);
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['AddManualPassing']);
+  end;
 end;
 
 {==============================================================================}
 procedure TSmartTimingController.UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
 begin
-  MainDataModule.UpdatePassingInDatabase(APassingNumber, APassingTime, APassingState);
-  TPassingStore.GetSingleton.UpdatePassing(APassingNumber, APassingTime);
+  try
+    LogOnDebug(cLogger, ['UpdatePassing']);
+    MainDataModule.UpdatePassingInDatabase(APassingNumber, APassingTime, APassingState);
+    TPassingStore.GetSingleton.UpdatePassing(APassingNumber, APassingTime);
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['UpdatePassing']);
+  end;
 end;
 
 {==============================================================================}
 procedure TSmartTimingController.RemovePassing(APassingNumber: Integer);
 begin
-  MainDataModule.RemovePassingFromDatabase(APassingNumber);
-  TPassingStore.GetSingleton.RemovePassing(APassingNumber);
+  try
+    LogOnDebug(cLogger, ['RemovePassing']);
+    MainDataModule.RemovePassingFromDatabase(APassingNumber);
+    TPassingStore.GetSingleton.RemovePassing(APassingNumber);
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['RemovePassing']);
+  end;
 end;
 
 end.
