@@ -48,7 +48,10 @@ var
 implementation
 
 uses
-  FormMain, SmartTiming.Cache;
+  FormMain, SmartTiming.Cache, Tools.Logger;
+
+const
+  cLogger = 'SmartTiming.Settings';
 
 {==============================================================================}
 constructor TSmartTimingController.Create;
@@ -93,6 +96,8 @@ procedure TSmartTimingController.LoadSettings;
 begin
 //  Sound Effect by https://pixabay.com
   FPlayPassingSound := SmartTimingTools.RegistryReadBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'BeepOnPassing', true);
+
+  LogOnInfo(cLogger, ['TSmartTimingController.LoadSettings', 'PlayPassingSound=' + BoolToStr(FPlayPassingSound, true)]);
 end;
 
 {==============================================================================}

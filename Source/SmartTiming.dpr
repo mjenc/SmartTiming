@@ -36,7 +36,8 @@ uses
   FormTime in 'FormTime.pas' {FormEditTime},
   FormAddPassing in 'FormAddPassing.pas' {FormManuallyAddPassing},
   Tools.DBGrid in 'Tools.DBGrid.pas',
-  FormAssignCompetitorToTransponder in 'FormAssignCompetitorToTransponder.pas' {FormAssignCompetitor};
+  FormAssignCompetitorToTransponder in 'FormAssignCompetitorToTransponder.pas' {FormAssignCompetitor},
+  Tools.Logger in 'Tools.Logger.pas';
 
 {$R *.res}
 

@@ -89,7 +89,9 @@
         <VerInfo_Locale>1031</VerInfo_Locale>
         <DCC_ExeOutput>..\bin</DCC_ExeOutput>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
-        <VerInfo_Keys>CompanyName=Michael Jenc;FileDescription=SmartTiming;FileVersion=1.0.0.0;InternalName=SmartTiming;LegalCopyright=© Michael Jenc 2023;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=SmartTiming;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=Michael Jenc;FileDescription=SmartTiming;FileVersion=1.1.0.3;InternalName=SmartTiming;LegalCopyright=© Michael Jenc 2023;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=SmartTiming;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Build>3</VerInfo_Build>
+        <VerInfo_MinorVer>1</VerInfo_MinorVer>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -167,6 +169,7 @@
             <Form>FormAssignCompetitor</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="Tools.Logger.pas"/>
         <None Include="..\Resources\PassingBeep.wav"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
