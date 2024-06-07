@@ -202,7 +202,7 @@ begin
   lJSON := TStringList.Create;
   try
     lJSON.LoadFromFile(gStdDataPath + '\TableColumnDescriptions.json');
-    GFieldDescriptionsSuperObject := TSuperObject.ParseString(PChar(lJSON.Text), false);
+    GFieldDescriptionsSuperObject := TSuperObject.Create(PChar(lJSON.Text));
   finally
     FreeAndNil(lJSON);
   end;
@@ -412,9 +412,9 @@ class procedure SmartTimingTools.SetColumnProperties(const ATable: string; AColu
   end;
 
 var
-  lTables: TSuperArray;
+  lTables: ISuperArray;
   i: integer;
-  lColumns: TSuperArray;
+  lColumns: ISuperArray;
   j: integer;
   lColumn: ISuperObject;
   lFieldType: TFieldType;

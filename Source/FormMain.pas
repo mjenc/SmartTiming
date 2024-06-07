@@ -14,7 +14,7 @@ uses
   FormRaceDetails, FormSettings, FormCompetitorDetails,
   FormCompetitorImport, FormPassingSimulator, FormGenerateTransponderMappings,
   SmartTiming.Consts, Vcl.DBCtrls,
-  DataModule, SimpleDS, uSuperObject, System.ImageList, Vcl.ImgList,
+  DataModule, SimpleDS, Tools.SuperObject, System.ImageList, Vcl.ImgList,
   SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
   VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
   VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider,

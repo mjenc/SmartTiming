@@ -7,7 +7,7 @@ uses
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.TabControl, FMX.StdCtrls, FMX.Controls.Presentation,
   FMX.Gestures, System.Actions, FMX.ActnList, System.Rtti, FMX.Grid.Style,
   FMX.ScrollBox, FMX.Grid, System.ImageList, FMX.ImgList,
-  SmartRankingViewer.WebClient, Generics.Collections, XSuperObject,
+  SmartRankingViewer.WebClient, Generics.Collections, Tools.SuperObject,
   FMX.WebBrowser;
 
 type

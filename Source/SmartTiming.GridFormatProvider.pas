@@ -48,7 +48,7 @@ begin
     lJSONStr := lJSONStr + Format(',"Title":"%s"', [AColumn.Title.Caption]);
 
   lJSONStr := lJSONStr + '}';
-  result := TSuperObject.ParseString(PChar(lJSONStr), true);
+  result := TSuperObject.Create(PChar(lJSONStr));
 end;
 
 {==============================================================================}
@@ -58,7 +58,7 @@ var
 begin
   if AGrid = nil then
     Exit(nil);
-  result := TSuperObject.ParseString('{"columns":[]}', true);
+  result := TSuperObject.Create('{"columns":[]}');
 
   for i := 0 to AGrid.Columns.Count - 1 do
     result.A['columns'].Add(ColumnToSO(AGrid.Columns[i]));
@@ -94,7 +94,7 @@ var
   lReg : TRegistry;
   lText: string;
   lSO: ISuperObject;
-  lColumnsArray: TSuperArray;
+  lColumnsArray: ISuperArray;
 begin
   result := true;
   if AGrid = nil then
@@ -115,7 +115,7 @@ begin
     if lText.IsEmpty then
       lText := ADefaultFormat;
 
-    lSO := TSuperObject.ParseString(PChar(lText), true);
+    lSO := TSuperObject.Create(PChar(lText));
     lColumnsArray := lSO.A['columns'];
     if lColumnsArray = nil then
       Exit;
@@ -173,7 +173,7 @@ var
   lReg : TRegistry;
   lText: string;
   lSO: ISuperObject;
-  lColumnsArray: TSuperArray;
+  lColumnsArray: ISuperArray;
 begin
   if AList = nil then
     Exit;
@@ -190,7 +190,7 @@ begin
     if lText.IsEmpty then
       lText := ADefaultFormat;
 
-    lSO := TSuperObject.ParseString(PChar(lText), true);
+    lSO := TSuperObject.Create(PChar(lText));
     lColumnsArray := lSO.A['titles'];
     if lColumnsArray = nil then
       Exit;

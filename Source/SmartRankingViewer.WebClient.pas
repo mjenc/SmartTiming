@@ -5,7 +5,7 @@ interface
 uses
   SysUtils, DateUtils, FMX.Forms,
   System.Net.HttpClient, System.Net.HttpClientComponent,
-  XSuperObject;
+  Tools.SuperObject;
 
 type
   TSRVRaceItem = class

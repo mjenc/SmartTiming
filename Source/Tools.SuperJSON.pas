@@ -26,7 +26,7 @@
   *
   *)
 
-unit XSuperJSON;
+unit Tools.SuperJSON;
 
 interface
 
@@ -576,7 +576,7 @@ type
 implementation
 
 uses
-  XSuperObject;
+  Tools.SuperObject;
 
 const
   FloatFormat : TFormatSettings = ( DecimalSeparator : '.' );

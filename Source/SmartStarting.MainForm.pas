@@ -86,7 +86,7 @@ uses
 {$IFDEF ANDROID}
   Androidapi.Helpers, Androidapi.Jni.GraphicsContentViewText,
 {$ENDIF}
-  XSuperObject;
+  Tools.SuperObject;
 
 resourcestring
 {$IFDEF ANDROID}
