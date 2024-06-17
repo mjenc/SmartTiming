@@ -8,6 +8,7 @@ uses
 type
   TGridFormatProvider = class
   private
+    class function BoolToStr(AValue: boolean): String;
     class function ColumnToSO(AColumn: TColumn): ISuperObject;
     class function GridColumnsToSO(AGrid: TDBGrid): ISuperObject;
     class function GetComponentNamePath(AComponent: TComponent): string;
@@ -30,6 +31,15 @@ uses
   Registry;
 
 {==============================================================================}
+class function TGridFormatProvider.BoolToStr(AValue: boolean): string;
+begin
+  if AValue then
+    result := 'true'
+  else
+    result := 'false';
+end;
+
+{==============================================================================}
 class function TGridFormatProvider.ColumnToSO(AColumn: TColumn): ISuperObject;
 var
   lJSONStr: string;
@@ -37,9 +47,9 @@ begin
   if AColumn = nil then
     Exit(nil);
 
-  lJSONStr := Format('{"Fieldname":"%s","Visible":%d,"Alignment":%d,"Width":%d,"Index":%d',
+  lJSONStr := Format('{"Fieldname":"%s","Visible":%s,"Alignment":%d,"Width":%d,"Index":%d',
                      [AColumn.FieldName,
-                      AColumn.Visible.ToInteger,
+                      BoolToStr(AColumn.Visible),
                       Ord(AColumn.Alignment),
                       AColumn.Width,
                       AColumn.Index]);
@@ -77,7 +87,7 @@ begin
     if not SameText(lFieldName, AColumns[i].FieldName) then
       Continue;
     lColumn := AColumns[i];
-    lColumn.Visible := ASOColumn.B['Visible'];
+     lColumn.Visible := ASOColumn.B['Visible'];
     lColumn.Alignment := TAlignment(ASOColumn.I['Alignment']);
     lColumn.Width := ASOColumn.I['Width'];
     lColumn.Title.Caption := ASOColumn.S['Title'];

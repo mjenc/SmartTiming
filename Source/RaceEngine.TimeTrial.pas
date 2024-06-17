@@ -65,21 +65,21 @@ begin
   FFormatSuffix := '.TimeTrial';
   FDefaultListFormatRanking :=
     '{"columns":[' +
-    '{"Alignment":0,"Fieldname":"CLASS","Visible":1,"Width":100,"Title":"Klasse","Index":0},' +
-    '{"Alignment":0,"Fieldname":"Column0","Visible":1,"Width":30,"Title":"Platz","Index":1,"Alignment":2},' +
-    '{"Alignment":1,"Fieldname":"BIB","Visible":1,"Width":35,"Title":"Start#","Index":2,"Alignment":2},' +
-    '{"Alignment":0,"Fieldname":"Column3","Visible":1,"Width":130,"Title":"Name","Index":3,"Alignment":0},' +
-    '{"Alignment":0,"Fieldname":"Column4","Visible":1,"Width":130,"Title":"Team","Index":4,"Alignment":0},' +
-    '{"Alignment":0,"Fieldname":"RANKINGTIME","Visible":1,"Width":100,"Title":"Wertungszeit","Index":5,"Alignment":2},' +
-    '{"Alignment":0,"Fieldname":"Column6","Visible":1,"Width":64,"Title":"Diff","Index":6,"Alignment":2},' +
-    '{"Alignment":0,"Fieldname":"FINISHTIME","Visible":1,"Width":100,"Title":"Zielzeit","Index":7,"Alignment":2},' +
-    '{"Alignment":1,"Fieldname":"STARTTIME","Visible":0,"Width":-1,"Title":"Startzeit","Index":8,"Alignment":2},' +
-    '{"Alignment":1,"Fieldname":"DNS","Visible":1,"Width":30,"Index":9},' +
-    '{"Alignment":1,"Fieldname":"DNF","Visible":1,"Width":30,"Index":10},' +
-    '{"Alignment":1,"Fieldname":"DSQ","Visible":1,"Width":30,"Index":11},' +
-    '{"Alignment":1,"Fieldname":"PENALTIES","Visible":0,"Width":-1,"Title":"Strafen","Index":12,"Alignment":0},' +
-    '{"Alignment":1,"Fieldname":"PARTICIPATIONID","Visible":0,"Width":-1,"Index":13},' +
-    '{"Alignment":1,"Fieldname":"COMPETITORID","Visible":0,"Width":-1,"Index":14}]}';
+    '{"Alignment":0,"Fieldname":"CLASS","Visible":true,"Width":100,"Title":"Klasse","Index":0},' +
+    '{"Alignment":0,"Fieldname":"Column0","Visible":true,"Width":30,"Title":"Platz","Index":1,"Alignment":2},' +
+    '{"Alignment":1,"Fieldname":"BIB","Visible":true,"Width":35,"Title":"Start#","Index":2,"Alignment":2},' +
+    '{"Alignment":0,"Fieldname":"Column3","Visible":true,"Width":130,"Title":"Name","Index":3,"Alignment":0},' +
+    '{"Alignment":0,"Fieldname":"Column4","Visible":true,"Width":130,"Title":"Team","Index":4,"Alignment":0},' +
+    '{"Alignment":0,"Fieldname":"RANKINGTIME","Visible":true,"Width":100,"Title":"Wertungszeit","Index":5,"Alignment":2},' +
+    '{"Alignment":0,"Fieldname":"Column6","Visible":true,"Width":64,"Title":"Diff","Index":6,"Alignment":2},' +
+    '{"Alignment":0,"Fieldname":"FINISHTIME","Visible":true,"Width":100,"Title":"Zielzeit","Index":7,"Alignment":2},' +
+    '{"Alignment":1,"Fieldname":"STARTTIME","Visible":false,"Width":-1,"Title":"Startzeit","Index":8,"Alignment":2},' +
+    '{"Alignment":1,"Fieldname":"DNS","Visible":true,"Width":30,"Index":9},' +
+    '{"Alignment":1,"Fieldname":"DNF","Visible":true,"Width":30,"Index":10},' +
+    '{"Alignment":1,"Fieldname":"DSQ","Visible":true,"Width":30,"Index":11},' +
+    '{"Alignment":1,"Fieldname":"PENALTIES","Visible":false,"Width":-1,"Title":"Strafen","Index":12,"Alignment":0},' +
+    '{"Alignment":1,"Fieldname":"PARTICIPATIONID","Visible":false,"Width":-1,"Index":13},' +
+    '{"Alignment":1,"Fieldname":"COMPETITORID","Visible":false,"Width":-1,"Index":14}]}';
 
   inherited Create(AParent, AEvent, ARaceItem);
 

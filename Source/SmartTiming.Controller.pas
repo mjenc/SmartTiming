@@ -3,7 +3,7 @@ unit SmartTiming.Controller;
 interface
 
 uses
-  Windows, MMSystem, SysUtils, Generics.Collections,
+  Windows, MMSystem, SysUtils, Generics.Collections, Classes,
   SmartTiming.Consts, SmartTiming.DecoderEngine, DecoderInterface, SmartTiming.Tools,
   DataModule, SmartTiming.Event, SmartTiming.WebService,
   RaceEngine.Custom;
@@ -37,7 +37,7 @@ type
     procedure ResetRacesDataSet;
     procedure ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
     procedure RetryDecoderSearch;
-
+    procedure ImportTRIATimes(const AFileName: string);
     property Event: TEventDataObject read FEventDataObject;
     property RaceList: TDictionary<integer, TRaceItem> read FRaceList;
   end;
@@ -317,6 +317,30 @@ begin
     TDecoderEngine.GetSingleton.SendSimulatedPassing(APassing);
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['AddManualPassing']);
+  end;
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.ImportTRIATimes(const AFileName: string);
+var
+  lLines: TStringList;
+  i: Integer;
+  lBib: Integer;
+  lTime: TDatetime;
+  lPassing: TPassing;
+begin
+  lLines := TStringList.Create;
+  lLines.NameValueSeparator := #9;
+  lLines.LoadFromFile(AFileName);
+  for i := 0 to lLines.Count - 1 do
+  begin
+    if lLines[i].IsEmpty then
+      Continue;
+     lBib := lLines.Names[i].ToInteger;
+    if not TryStrToTime(lLines.ValueFromIndex[i], lTime) then
+      Continue;
+    lPassing.PassingNumber := i;
+    lPassing.PassingTime := lTime;
   end;
 end;
 
