@@ -859,6 +859,10 @@ object FormMain: TFormMain
         Caption = 'Ergebnis neu berechnen'
         OnClick = MenuItemRecalcClick
       end
+      object MenuItemImportTriaTimes: TMenuItem
+        Caption = 'TRIA-Zeiten importieren'
+        OnClick = MenuItemImportTriaTimesClick
+      end
     end
   end
   object SQLDataSetCompetitors: TSQLDataSet

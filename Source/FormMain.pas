@@ -121,6 +121,7 @@ type
     CardPanelPassings: TCardPanel;
     ImageListPassingStates: TImageList;
     MenuItemRecalc: TMenuItem;
+    MenuItemImportTriaTimes: TMenuItem;
 
     procedure DatePickerFromChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -172,6 +173,7 @@ type
     procedure PanelDecoderDblClick(Sender: TObject);
     procedure PanelTitleClick(Sender: TObject);
     procedure MenuItemRecalcClick(Sender: TObject);
+    procedure MenuItemImportTriaTimesClick(Sender: TObject);
 
   private
     FCurrentEventId: integer;
@@ -842,6 +844,22 @@ begin
       SetupCompetitorsGrid;
   finally
     FreeAndNil(lFormCompetitorImport);
+  end;
+end;
+
+{==============================================================================}
+procedure TFormMain.MenuItemImportTriaTimesClick(Sender: TObject);
+var
+  lOldExtension: String;
+begin
+  lOldExtension := FileOpenDialog.DefaultExtension;
+  try
+    FileOpenDialog.DefaultExtension := '.trz';
+    if not FileOpenDialog.Execute then
+      Exit;
+    GSmartTimingController.ImportTRIATimes(FileOpenDialog.FileName);
+  finally
+    FileOpenDialog.DefaultExtension := lOldExtension;
   end;
 end;
 
