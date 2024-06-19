@@ -169,12 +169,14 @@ begin
 
   LoadSettings;
 
+{$IFDEF ANDROID}
   lFlags :=
     TJWindowManager_LayoutParams.JavaClass.FLAG_TURN_SCREEN_ON or
     TJWindowManager_LayoutParams.JavaClass.FLAG_DISMISS_KEYGUARD or
     TJWindowManager_LayoutParams.JavaClass.FLAG_SHOW_WHEN_LOCKED or
     TJWindowManager_LayoutParams.JavaClass.FLAG_KEEP_SCREEN_ON;
   TAndroidHelper.Activity.getWindow.setFlags (lFlags, lFlags);
+{$ENDIF}
 
   FFormSettings := TFormSettings.Create(nil);
 end;
@@ -243,7 +245,7 @@ var
     if lTeam.IsEmpty then
       lTeam := ACompetitorObject.S['CLUB'];
     lCompetitorInfo.TeamName := lTeam;
-    lStartTime := ACompetitorObject.F['STARTTIME'];
+    lStartTime := ACompetitorObject.D['STARTTIME'];
     DecodeTime(lStartTime, lHour, lMin, lSec, lMSec);
     try
       lStartTime := EncodeTime(lHour, lMin, lSec, 0);
