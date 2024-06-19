@@ -838,6 +838,10 @@ object FormMain: TFormMain
           Caption = 'Editieren'
           Enabled = False
         end
+        object MenuItemCreateFakeMappings: TMenuItem
+          Caption = 'Pseudoeintr'#228'ge generieren'
+          OnClick = MenuItemCreateFakeMappingsClick
+        end
       end
       object MenuItemCheckBatteryStatus: TMenuItem
         Caption = 'Batteriestatus pr'#252'fen'

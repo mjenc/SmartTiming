@@ -122,6 +122,7 @@ type
     ImageListPassingStates: TImageList;
     MenuItemRecalc: TMenuItem;
     MenuItemImportTriaTimes: TMenuItem;
+    MenuItemCreateFakeMappings: TMenuItem;
 
     procedure DatePickerFromChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -174,6 +175,7 @@ type
     procedure PanelTitleClick(Sender: TObject);
     procedure MenuItemRecalcClick(Sender: TObject);
     procedure MenuItemImportTriaTimesClick(Sender: TObject);
+    procedure MenuItemCreateFakeMappingsClick(Sender: TObject);
 
   private
     FCurrentEventId: integer;
@@ -831,6 +833,17 @@ begin
   finally
     FreeAndNil(lFormBatteryCheck);
   end;
+end;
+
+{==============================================================================}
+procedure TFormMain.MenuItemCreateFakeMappingsClick(Sender: TObject);
+var
+  i: Integer;
+begin
+  TTransponderMappingStore.GetSingleton.Clear;
+  for i := 1 to 1000 do
+    TTransponderMappingStore.GetSingleton.AddTransponder(i, Format('ZZ-%.4d', [i]));
+  MainDataModule.SaveTransponderMappingCache;
 end;
 
 {==============================================================================}

@@ -339,8 +339,18 @@ begin
      lBib := lLines.Names[i].ToInteger;
     if not TryStrToTime(lLines.ValueFromIndex[i], lTime) then
       Continue;
-    lPassing.PassingNumber := i;
+
+    lPassing.PassingNumber := i + 1;
     lPassing.PassingTime := lTime;
+    lPassing.ChipId := Format('ZZ-%.4d', [lBib]);
+    lPassing.SignalStrength := 123;
+    lpAssing.Hits := 90;
+    lPassing.Flags := 0;
+    lPassing.Sport := sSportsIdCycling;
+    lPassing.Voltage := 9;
+    lPassing.Temperature := 20;
+    lPassing.DecoderId := 'TRIA';
+    TDecoderEngine.GetSingleton.SendSimulatedPassing(lPassing);
   end;
 end;
 
