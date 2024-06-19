@@ -84,8 +84,9 @@ object FormSettings: TFormSettings
   end
   object ComboBoxServer: TComboBox
     Items.Strings = (
+      'MJ-SmartTiming-1: 192.168.100.20'
       'LOCAL: 127.0.0.1'
-      'BRV-System2-PC1: 182.168.182.21'
+      'BRV-System2-PC1: 192.168.182.21'
       'CAS-N04798: 192.168.182.30')
     Position.X = 216.000000000000000000
     Position.Y = 24.000000000000000000
