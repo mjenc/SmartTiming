@@ -162,8 +162,11 @@
         <BT_BuildType>Debug</BT_BuildType>
         <DCC_ExeOutput>..\bin</DCC_ExeOutput>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Locale>1033</VerInfo_Locale>
+        <VerInfo_Locale>1031</VerInfo_Locale>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
+        <VerInfo_MinorVer>1</VerInfo_MinorVer>
+        <VerInfo_Build>4</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=MJ - SmartTiming;FileVersion=1.1.0.4;InternalName=SmartRankingViewer;LegalCopyright=© Michael Jenc 2023-2024;LegalTrademarks=;OriginalFilename=;ProductVersion=1.1.0.4;Comments=;ProgramID=de.jenc.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <BT_BuildType>Debug</BT_BuildType>

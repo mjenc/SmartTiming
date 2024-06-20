@@ -336,6 +336,8 @@ begin
   lPref := CreatePreferencesObject(cManufacturer, cSmartStartingAppName);
   FIntervalSeconds := lPref.GetInteger('IntervalSeconds', 60);
   FStartListServer := lPref.GetString('StartListServer');
+  if FStartListServer.IsEmpty then
+    FStartListServer := 'MJ-SmartTiming-1: 192.168.100.20';  // Default IP-Address of Server in MJ-SmartTiming environment.
   FPlaySound := lPref.GetBoolean('PlaySound', true);
 end;
 
@@ -418,6 +420,7 @@ var
   lNextStartTime: TDatetime;
   lCompetitorInfo: TCompetitorInfo;
 begin
+  GetStartListFromServer;
   LabelBib.Text := '';
   LabelCompetitorName.Text := '';
   LabelCompetitorTeam.Text := '';

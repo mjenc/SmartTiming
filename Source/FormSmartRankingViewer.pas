@@ -142,6 +142,8 @@ begin
   FormConnectionProperties.Show;
   {$ENDIF}
   FSmartTimingServer := FormConnectionProperties.SmartTimingServer;
+  if FSmartTimingServer.IsEmpty then
+    FSmartTimingServer := '192.168.100.20';
 end;
 
 {==============================================================================}

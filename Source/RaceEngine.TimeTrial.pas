@@ -173,9 +173,9 @@ begin
   if AAutoScroll then
     lListItem.MakeVisible(false);
 
-  if MilliSecondsBetween(Now, FLastChangeTimestamp) > cRecalcRankingMilliSeconds then
+  UpdateParticipationTable(APassing.PassingNumber);
+//  if MilliSecondsBetween(Now, FLastChangeTimestamp) > cRecalcRankingMilliSeconds then
   begin
-    UpdateParticipationTable(APassing.PassingNumber);
     FLastChangeTimestamp := Now;
   end;
 end;
