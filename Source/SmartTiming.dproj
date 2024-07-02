@@ -89,9 +89,10 @@
         <VerInfo_Locale>1031</VerInfo_Locale>
         <DCC_ExeOutput>..\bin</DCC_ExeOutput>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
-        <VerInfo_Keys>CompanyName=Michael Jenc;FileDescription=SmartTiming;FileVersion=1.1.0.4;InternalName=SmartTiming;LegalCopyright=© Michael Jenc 2023-2024;LegalTrademarks=;OriginalFilename=;ProgramID=de.jenc.$(MSBuildProjectName);ProductName=SmartTiming;ProductVersion=1.1.0.4;Comments=</VerInfo_Keys>
-        <VerInfo_Build>4</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Michael Jenc;FileDescription=SmartTiming;FileVersion=1.1.1.5;InternalName=SmartTiming;LegalCopyright=© Michael Jenc 2023-2024;LegalTrademarks=;OriginalFilename=;ProgramID=de.jenc.$(MSBuildProjectName);ProductName=SmartTiming;ProductVersion=1.1.0.4;Comments=</VerInfo_Keys>
+        <VerInfo_Build>5</VerInfo_Build>
         <VerInfo_MinorVer>1</VerInfo_MinorVer>
+        <VerInfo_Release>1</VerInfo_Release>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>

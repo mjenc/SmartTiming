@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Mask,
-  Vcl.DBCtrls, DB,  DBClient, DataModule, SmartTiming.Cache;
+  Vcl.DBCtrls, DB,  DBClient, DataModule, SmartTiming.Cache, SmartTiming.Consts;
 
 type
   TFormCompetitorDetails = class(TForm)
@@ -44,14 +44,17 @@ type
     Label14: TLabel;
     Label15: TLabel;
     DBEditStarttime: TDBEdit;
+    ButtonOkAndNext: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure ButtonOKClick(Sender: TObject);
+    procedure ButtonOkAndNextClick(Sender: TObject);
+    procedure ButtonCancelClick(Sender: TObject);
   private
     FDataSource: TDataSource;
     FEventId: Integer;
     FIsInsert: Boolean;
-
+    function IsTimeValid(const AValue: string): boolean;
   public
     constructor Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean); reintroduce;
   end;
@@ -60,6 +63,9 @@ type
 implementation
 
 {$R *.dfm}
+
+uses
+  DateUtils, SmartTiming.Tools, FormMain;
 
 {==============================================================================}
 constructor TFormCompetitorDetails.Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean);
@@ -118,7 +124,61 @@ end;
 {==============================================================================}
 procedure TFormCompetitorDetails.FormShow(Sender: TObject);
 begin
+  ButtonOkAndNext.Visible := FIsInsert;
   DBEditBib.SetFocus;
+end;
+
+{==============================================================================}
+function TFormCompetitorDetails.IsTimeValid(const AValue: string): boolean;
+var
+  lDateTime: TDatetime;
+begin
+  if AValue.IsEmpty then
+    Exit(true);
+
+  result := TryStrToDateTime(AValue, lDateTime);
+  if not result then
+  begin
+    Beep;
+    ShowMessage(cMessagesInvalidTimeFormat);
+  end;
+end;
+
+{==============================================================================}
+procedure TFormCompetitorDetails.ButtonCancelClick(Sender: TObject);
+begin
+  FDataSource.DataSet.Cancel;
+end;
+
+{==============================================================================}
+procedure TFormCompetitorDetails.ButtonOkAndNextClick(Sender: TObject);
+var
+  lClass: string;
+  lBib: Integer;
+  lStartTime: TDatetime;
+  lTimeStr: string;
+begin
+  lTimeStr := DBEditStarttime.Text;
+  if not IsTimeValid(lTimeStr) then
+  begin
+    DBEditStarttime.SetFocus;
+    Exit;
+  end;
+
+  lClass := DBComboBoxClass.Text;
+  lBib := String(DBEditBib.Text).ToInteger;
+  lStartTime := StrToDateTime(lTimeStr);
+
+  ButtonOKClick(Sender);
+
+  GFormMain.DataSourceCompetitors.DataSet.Append;
+
+  DBComboBoxClass.Text := lClass;
+  Inc(lBib);
+  lStartTime.AddMinute(1);
+  DBEditStarttime.Text := FormatDatetime('hh:mm:ss', lStarttime);
+  DBEditBib.SetFocus;
+  DBEditBib.Text := lBib.ToString;
 end;
 
 {==============================================================================}

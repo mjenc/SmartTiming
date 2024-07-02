@@ -276,9 +276,8 @@ object FormCompetitorDetails: TFormCompetitorDetails
       Height = 25
       Anchors = [akTop, akRight]
       Caption = 'OK'
-      Default = True
       ModalResult = 1
-      TabOrder = 0
+      TabOrder = 1
       OnClick = ButtonOKClick
     end
     object ButtonCancel: TButton
@@ -290,7 +289,18 @@ object FormCompetitorDetails: TFormCompetitorDetails
       Cancel = True
       Caption = 'Abbrechen'
       ModalResult = 2
-      TabOrder = 1
+      TabOrder = 2
+      OnClick = ButtonCancelClick
+    end
+    object ButtonOkAndNext: TButton
+      Left = 200
+      Top = 8
+      Width = 146
+      Height = 25
+      Caption = 'Speichern und n'#228'chster'
+      Default = True
+      TabOrder = 0
+      OnClick = ButtonOkAndNextClick
     end
   end
 end

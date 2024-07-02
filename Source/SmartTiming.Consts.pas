@@ -133,6 +133,7 @@ resourcestring
   cMessagesComptitorDeleteConfirm = '%d Teilnehmer wirklich löschen?';
   cMessagesPassingDeleteConfirm = 'Durchgang von %s wirklich löschen?';
   cMessagesOpenDirectory = 'Verzeichnis öffnen?';
+  cMessagesInvalidTimeFormat = 'Die eingebene Zeit ist ungültig.';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
