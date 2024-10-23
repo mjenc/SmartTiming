@@ -127,13 +127,31 @@ type
     procedure ExportResultsToCSV; virtual;
   end;
 
+  TRaceEngineFactory = class
+    class function CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
+  end;
+
 implementation
 
 uses
   SmartTiming.Tools, Math, SmartTiming.Controller, SmartTiming.GridFormatProvider,
   DataModule, FormMain, FormCompetitorDetails, FormPenalty, FormTime,
   SmartTiming.Cache, DateUtils, FormAssignCompetitorToTransponder,
-  Data.DBXCommon;
+  Data.DBXCommon,
+  RaceEngine.TimeTrial;
+
+{==============================================================================}
+class function TRaceEngineFactory.CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
+begin
+  case ARaceItem.RaceType of
+  rtIndividualTimeTrial:
+    Exit(TTimeTrialRaceEngine.Create(AParent, AEvent, ARaceItem));
+  rtTeamTimeTrial:
+    Exit(TTeamTimeTrialRaceEngine.Create(AParent, AEvent, ARaceItem));
+  else
+    raise Exception.Create('Race type is unknown');
+  end;
+end;
 
 {==============================================================================}
 destructor TRaceItem.Destroy;

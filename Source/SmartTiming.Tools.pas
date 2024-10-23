@@ -49,17 +49,14 @@ type
     class function ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]; ADefaultButton: TTaskDialogCommonButton = tcbCancel): TModalResult;
   end;
 
-  TRaceEngineFactory = class
-    class function CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
-  end;
-
 var
   GFieldDescriptionsSuperObject: ISuperObject;
 
 implementation
 
 uses
-  RaceEngine.TimeTrial, SmartTiming.Cache;
+//  RaceEngine.TimeTrial,
+  SmartTiming.Cache;
 
 {==============================================================================}
 class function SmartTimingTools.ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]; ADefaultButton: TTaskDialogCommonButton = tcbCancel): TModalResult;
@@ -578,19 +575,6 @@ begin
     DrawFrameControl(TDBGrid(Sender).Canvas.Handle,Rect, DFC_BUTTON, DFCS_BUTTONCHECK or DFCS_CHECKED)
   else
     DrawFrameControl(TDBGrid(Sender).Canvas.Handle,Rect, DFC_BUTTON, DFCS_BUTTONCHECK);
-end;
-
-{==============================================================================}
-class function TRaceEngineFactory.CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
-begin
-  case ARaceItem.RaceType of
-  rtIndividualTimeTrial:
-    Exit(TTimeTrialRaceEngine.Create(AParent, AEvent, ARaceItem));
-  rtTeamTimeTrial:
-    Exit(TTeamTimeTrialRaceEngine.Create(AParent, AEvent, ARaceItem));
-  else
-    raise Exception.Create('Race type is unknown');
-  end;
 end;
 
 {==============================================================================}

@@ -103,7 +103,7 @@ object FormMain: TFormMain
       Margins.Top = 6
       Margins.Right = 0
       Margins.Bottom = 6
-      ActivePage = TabSheetTiming
+      ActivePage = TabSheetCompetitors
       Align = alClient
       TabHeight = 30
       TabOrder = 0

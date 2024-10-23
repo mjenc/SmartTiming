@@ -15,6 +15,9 @@
         <Projects Include="SmartStarting.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="PZFStartListServer.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -59,14 +62,23 @@
     <Target Name="SmartStarting:Make">
         <MSBuild Projects="SmartStarting.dproj" Targets="Make"/>
     </Target>
+    <Target Name="PZFStartListServer">
+        <MSBuild Projects="PZFStartListServer.dproj"/>
+    </Target>
+    <Target Name="PZFStartListServer:Clean">
+        <MSBuild Projects="PZFStartListServer.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="PZFStartListServer:Make">
+        <MSBuild Projects="PZFStartListServer.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="SmartDecoderWatchDog;SmartTiming;SmartRankingViewer;SmartStarting"/>
+        <CallTarget Targets="SmartDecoderWatchDog;SmartTiming;SmartRankingViewer;SmartStarting;PZFStartListServer"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="SmartDecoderWatchDog:Clean;SmartTiming:Clean;SmartRankingViewer:Clean;SmartStarting:Clean"/>
+        <CallTarget Targets="SmartDecoderWatchDog:Clean;SmartTiming:Clean;SmartRankingViewer:Clean;SmartStarting:Clean;PZFStartListServer:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="SmartDecoderWatchDog:Make;SmartTiming:Make;SmartRankingViewer:Make;SmartStarting:Make"/>
+        <CallTarget Targets="SmartDecoderWatchDog:Make;SmartTiming:Make;SmartRankingViewer:Make;SmartStarting:Make;PZFStartListServer:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
