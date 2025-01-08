@@ -1,7 +1,6 @@
 unit SmartTiming.WebService;
-{$I Compiler_Settings}
 
-// Diese Unit nicht in die das CASablanca-Package mit aufnehmen!!!!
+// Diese Unit nicht in ein Package mit aufnehmen!!!!
 {$DENYPACKAGEUNIT ON}
 
 interface

@@ -7,7 +7,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Data.DB, Data.SqlExpr, Data.DbxSqlite,
   Data.FMTBcd, Datasnap.DBClient, Datasnap.Provider, Vcl.Grids, Vcl.DBGrids,
-  Vcl.ComCtrls, Vcl.Menus, AdvMenus, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.WinXPickers,
+  Vcl.ComCtrls, Vcl.Menus, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.WinXPickers,
   SQLite, Math, UITypes,
   MMSystem, Generics.Collections, Generics.Defaults,
   DecoderInterface, SmartTiming.DecoderEngine, Vcl.Buttons,
