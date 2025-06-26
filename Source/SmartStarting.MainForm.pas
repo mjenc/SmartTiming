@@ -42,6 +42,7 @@ type
     procedure TimerSecondsTimer(Sender: TObject);
     procedure ButtonImportStartingListClick(Sender: TObject);
     procedure ButtonSettingsClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     FStdFontSizeBib: integer;
     FStdFontSizeCompetitorInfo: integer;
@@ -56,6 +57,7 @@ type
     FNextCompetitorSecond: set of Byte;
 
     FIntervalSeconds: integer;
+    FUseStartListServer: boolean;
     FStartListServer: string;
     FPlaySound: boolean;
 
@@ -84,7 +86,7 @@ implementation
 uses
   SmartStarting.WebClient, Tools.Dialogs, Tools.Preferences,
 {$IFDEF ANDROID}
-  Androidapi.Helpers, Androidapi.Jni.GraphicsContentViewText,
+  Androidapi.Helpers, Androidapi.Jni.GraphicsContentViewText, Androidapi.JNI.App,
 {$ENDIF}
   Tools.SuperObject;
 
@@ -121,7 +123,6 @@ end;
 {==============================================================================}
 function TSmartStartingForm.SaveResourceAsTempFile(const AResourceId: string): string;
 var
-  lFileName: string;
   lResStream: TResourceStream;
 begin
   result := IOUtils.TPath.Combine(IOUtils.TPath.GetDocumentsPath, AResourceId + '.3gp');
@@ -154,10 +155,10 @@ begin
   FStartSeconds := cStartSeconds60;
   FLastSeconds := cLastSeconds60;
   FNextCompetitorSecond := cNextCompetitor60;
+  FUseStartListServer := false;
 
   CalibrateTimer;
   FCompetitors := TDictionary<TDatetime, TCompetitorInfo>.Create;
-//  DisplayNextCompetitor;
 
 {$IFDEF ANDROID}
   MediaPlayerLastSeconds.FileName := SaveResourceAsTempFile('LastSecondsBeep3gp');
@@ -207,8 +208,24 @@ begin
 end;
 
 {==============================================================================}
+procedure TSmartStartingForm.FormShow(Sender: TObject);
+begin
+  if not FUseStartListServer then
+  begin
+    LabelBib.Text := '';
+    LabelCompetitorName.Text := '';
+    LabelCompetitorTeam.Text := '';
+    ButtonImportStartingList.Enabled := false;
+  end
+  else
+    ButtonImportStartingList.Enabled := True;
+end;
+
+{==============================================================================}
 procedure TSmartStartingForm.ButtonImportStartingListClick(Sender: TObject);
 begin
+  if not FUseStartListServer then
+    Exit;
   GetStartListFromServer;
   DisplayNextCompetitor;
 end;
@@ -251,7 +268,6 @@ var
       lStartTime := EncodeTime(lHour, lMin, lSec, 0);
       FCompetitors.Add(lStartTime, lCompetitorInfo);
     except
-      lStartTime := 0.0;
     end;
   end;
 
@@ -276,7 +292,8 @@ end;
 procedure TSmartStartingForm.ButtonSettingsClick(Sender: TObject);
 begin
   FFormSettings.OnOK := SaveSettings;
-  FFormSettings.CheckBoxLastSecondsSound.IsChecked := FPlaySound;
+  FFormSettings.SwitchEnableStartListServer.IsChecked := FUseStartListServer;
+  FFormSettings.SwitchLastSecondsSound.IsChecked := FPlaySound;
   FFormSettings.Interval := FIntervalSeconds;
   FFormSettings.StartListServer := FStartListServer;
   FFormSettings.Show;
@@ -304,14 +321,16 @@ procedure TSmartStartingForm.SaveSettings;
 var
   lPref: TPreferences;
 begin
+  FUseStartListServer := FFormSettings.SwitchEnableStartListServer.IsChecked;
   FStartListServer := FFormSettings.StartListServer;
-  FPlaySound := FFormSettings.CheckBoxLastSecondsSound.IsChecked;
+  FPlaySound := FFormSettings.SwitchLastSecondsSound.IsChecked;
   FIntervalSeconds := FFormSettings.Interval;
 
   lPref := CreatePreferencesObject(cManufacturer, cSmartStartingAppName);
+  lPref.SetBoolean('UseStartListServer', FUseStartListServer);
   lPref.SetInteger('IntervalSeconds', FIntervalSeconds);
   lPref.SetString('StartListServer', FStartListServer);
-  lPref.GetBoolean('PlaySound', FPlaySound);
+  lPref.SetBoolean('PlaySound', FPlaySound);
   lPref.Save;
 
   if FIntervalSeconds = 30 then
@@ -326,6 +345,7 @@ begin
     FStartSeconds := cStartSeconds60;
     FNextCompetitorSecond := cNextCompetitor60;
   end;
+  FormShow(nil);
 end;
 
 {==============================================================================}
@@ -334,11 +354,13 @@ var
   lPref: TPreferences;
 begin
   lPref := CreatePreferencesObject(cManufacturer, cSmartStartingAppName);
+  FUseStartListServer := lPref.GetBoolean('UseStartListServer', false);
   FIntervalSeconds := lPref.GetInteger('IntervalSeconds', 60);
   FStartListServer := lPref.GetString('StartListServer');
   if FStartListServer.IsEmpty then
     FStartListServer := 'MJ-SmartTiming-1: 192.168.100.20';  // Default IP-Address of Server in MJ-SmartTiming environment.
   FPlaySound := lPref.GetBoolean('PlaySound', true);
+  FormShow(nil);
 end;
 
 {==============================================================================}
@@ -409,7 +431,7 @@ begin
   end;
 
   LabelTime.Text := FormatDatetime('hh:mm:ss', FNow);
-  if lSeconds in FNextCompetitorSecond then
+  if FUseStartListServer and (lSeconds in FNextCompetitorSecond) then
     DisplayNextCompetitor;
 end;
 

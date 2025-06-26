@@ -14,6 +14,7 @@ object SmartStartingForm: TSmartStartingForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnResize = FormResize
+  OnShow = FormShow
   DesignerMasterStyle = 0
   object TimerSeconds: TTimer
     OnTimer = TimerSecondsTimer
@@ -27,34 +28,34 @@ object SmartStartingForm: TSmartStartingForm
     Size.PlatformDefault = False
     object AreaCompetitorDescription: TRectangle
       Align = Client
-      Size.Width = 953.000000000000000000
+      Size.Width = 1263.000000000000000000
       Size.Height = 360.000000000000000000
       Size.PlatformDefault = False
       object LabelCompetitorName: TLabel
         Align = Top
         StyledSettings = []
-        Size.Width = 953.000000000000000000
+        Size.Width = 1263.000000000000000000
         Size.Height = 180.000000000000000000
         Size.PlatformDefault = False
         TextSettings.Font.Size = 80.000000000000000000
         TextSettings.Font.StyleExt = {00070000000000000004000000}
         TextSettings.HorzAlign = Center
         TextSettings.VertAlign = Trailing
-        Text = 'Michael Jenc'
+        Text = 'Firstname Lastname'
         TabOrder = 0
       end
       object LabelCompetitorTeam: TLabel
         Align = Bottom
         StyledSettings = []
         Position.Y = 180.000000000000000000
-        Size.Width = 953.000000000000000000
+        Size.Width = 1263.000000000000000000
         Size.Height = 180.000000000000000000
         Size.PlatformDefault = False
         TextSettings.Font.Size = 80.000000000000000000
         TextSettings.Font.StyleExt = {00070000000000000004000000}
         TextSettings.HorzAlign = Center
         TextSettings.VertAlign = Leading
-        Text = 'RSG Ried Rastatt'
+        Text = 'Team / Club'
         TabOrder = 1
       end
     end
@@ -65,14 +66,14 @@ object SmartStartingForm: TSmartStartingForm
       Margins.Left = 10.000000000000000000
       Margins.Right = 10.000000000000000000
       Position.X = 10.000000000000000000
-      Size.Width = 467.000000000000000000
+      Size.Width = 157.000000000000000000
       Size.Height = 360.000000000000000000
       Size.PlatformDefault = False
       TextSettings.Font.Family = 'Microsoft New Tai Lue'
       TextSettings.Font.Size = 180.000000000000000000
       TextSettings.Font.StyleExt = {00070000000000000004000000}
       TextSettings.WordWrap = False
-      Text = '# 123'
+      Text = '# '
       TabOrder = 1
     end
   end
@@ -119,6 +120,7 @@ object SmartStartingForm: TSmartStartingForm
       TabOrder = 3
       Text = 'Beenden'
       TextSettings.Font.Size = 30.000000000000000000
+      TextSettings.Trimming = None
       OnClick = ButtonExitClick
     end
     object ButtonImportStartingList: TButton
@@ -132,6 +134,7 @@ object SmartStartingForm: TSmartStartingForm
       TabOrder = 0
       Text = 'Startlistenimport'
       TextSettings.Font.Size = 30.000000000000000000
+      TextSettings.Trimming = None
       OnClick = ButtonImportStartingListClick
     end
     object ButtonSettings: TButton
@@ -145,6 +148,7 @@ object SmartStartingForm: TSmartStartingForm
       TabOrder = 1
       Text = 'Einstellungen'
       TextSettings.Font.Size = 30.000000000000000000
+      TextSettings.Trimming = None
       OnClick = ButtonSettingsClick
     end
     object ButtonSwitchDarkMode: TButton
@@ -158,6 +162,7 @@ object SmartStartingForm: TSmartStartingForm
       TabOrder = 2
       Text = 'Hell/Dunkel'
       TextSettings.Font.Size = 30.000000000000000000
+      TextSettings.Trimming = None
       OnClick = ButtonSwitchDarkModeClick
     end
   end

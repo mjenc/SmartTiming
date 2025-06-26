@@ -152,12 +152,12 @@ implementation
 
 {$IFDEF MSWINDOWS}
 uses
-  SmartTiming.Tools, Windows;
+  Tools.Registry, Windows;
 {$ENDIF}
 
 initialization
   {$IFDEF MSWINDOWS}
-  gSmartTimingRoot := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath, 'SmartTimingRoot');
+  gSmartTimingRoot := TToolsRegistry.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath, 'SmartTimingRoot');
   gStdDataPath := gSmartTimingRoot + 'Data\';
   gStdTemplatePath := gSmartTimingRoot + 'Templates\';
   {$ENDIF}

@@ -1,45 +1,37 @@
 object FormSettings: TFormSettings
   Left = 0
   Top = 0
+  BorderStyle = ToolWindow
   Caption = 'Einstellungen'
-  ClientHeight = 180
+  ClientHeight = 222
   ClientWidth = 504
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
   DesignerMasterStyle = 0
   object ButtonTestServerConnection: TButton
+    ControlType = Platform
     StyledSettings = []
-    Position.X = 441.000000000000000000
-    Position.Y = 25.000000000000000000
-    Size.Width = 42.000000000000000000
+    Position.X = 417.000000000000000000
+    Position.Y = 65.000000000000000000
+    Size.Width = 66.000000000000000000
     Size.Height = 22.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 0
     Text = 'Test'
+    TextSettings.Trimming = None
     OnClick = ButtonTestServerConnectionClick
-  end
-  object CheckBoxLastSecondsSound: TCheckBox
-    StyledSettings = []
-    IsChecked = True
-    Position.X = 24.000000000000000000
-    Position.Y = 64.000000000000000000
-    Size.Width = 185.000000000000000000
-    Size.Height = 19.000000000000000000
-    Size.PlatformDefault = False
-    TabOrder = 1
-    Text = 'Akustisches Signal'
   end
   object ComboBoxStartInterval: TComboBox
     Items.Strings = (
       '30'
       '60')
     Position.X = 184.000000000000000000
-    Position.Y = 95.000000000000000000
+    Position.Y = 135.000000000000000000
     Size.Width = 57.000000000000000000
     Size.Height = 22.000000000000000000
     Size.PlatformDefault = False
-    TabOrder = 2
+    TabOrder = 1
     object Label2: TLabel
       AutoSize = True
       StyledSettings = []
@@ -57,9 +49,10 @@ object FormSettings: TFormSettings
     StyledSettings = []
     ModalResult = 2
     Position.X = 403.000000000000000000
-    Position.Y = 136.000000000000000000
-    TabOrder = 4
+    Position.Y = 176.000000000000000000
+    TabOrder = 3
     Text = 'Abbrechen'
+    TextSettings.Trimming = None
     OnClick = ButtonCanceClick
   end
   object ButtonOK: TButton
@@ -67,20 +60,22 @@ object FormSettings: TFormSettings
     StyledSettings = []
     ModalResult = 1
     Position.X = 315.000000000000000000
-    Position.Y = 136.000000000000000000
-    TabOrder = 5
+    Position.Y = 176.000000000000000000
+    TabOrder = 4
     Text = 'OK'
+    TextSettings.Trimming = None
     OnClick = ButtonOKClick
   end
   object Label1: TLabel
+    ControlType = Platform
     StyledSettings = []
     Position.X = 24.000000000000000000
-    Position.Y = 25.000000000000000000
+    Position.Y = 65.000000000000000000
     Size.Width = 169.000000000000000000
     Size.Height = 16.000000000000000000
     Size.PlatformDefault = False
     Text = 'Startlisten-Server'
-    TabOrder = 6
+    TabOrder = 5
   end
   object ComboBoxServer: TComboBox
     Items.Strings = (
@@ -88,11 +83,40 @@ object FormSettings: TFormSettings
       'LOCAL: 127.0.0.1'
       'BRV-System2-PC1: 192.168.182.21'
       'CAS-N04798: 192.168.182.30')
-    Position.X = 216.000000000000000000
-    Position.Y = 24.000000000000000000
+    Position.X = 184.000000000000000000
+    Position.Y = 64.000000000000000000
     Size.Width = 217.000000000000000000
     Size.Height = 23.000000000000000000
     Size.PlatformDefault = False
+    TabOrder = 6
+  end
+  object SwitchEnableStartListServer: TSwitch
+    IsChecked = False
+    Position.X = 184.000000000000000000
+    Position.Y = 29.000000000000000000
     TabOrder = 7
+    OnSwitch = SwitchEnableStartListServerSwitch
+  end
+  object SwitchLastSecondsSound: TSwitch
+    IsChecked = False
+    Position.X = 184.000000000000000000
+    Position.Y = 100.000000000000000000
+    TabOrder = 8
+    OnSwitch = CheckBoxLastSecondsSoundChange
+  end
+  object Label3: TLabel
+    Position.X = 24.000000000000000000
+    Position.Y = 105.000000000000000000
+    Text = 'Akustisches Signal'
+    TabOrder = 9
+  end
+  object Label4: TLabel
+    Position.X = 24.000000000000000000
+    Position.Y = 33.000000000000000000
+    Size.Width = 152.000000000000000000
+    Size.Height = 17.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Startlisten-Server benutzen'
+    TabOrder = 10
   end
 end

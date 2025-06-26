@@ -13,15 +13,20 @@ type
   TFormSettings = class(TForm)
     Label1: TLabel;
     ButtonTestServerConnection: TButton;
-    CheckBoxLastSecondsSound: TCheckBox;
     ComboBoxStartInterval: TComboBox;
     Label2: TLabel;
     ButtonOK: TButton;
     ButtonCance: TButton;
     ComboBoxServer: TComboBox;
+    SwitchEnableStartListServer: TSwitch;
+    SwitchLastSecondsSound: TSwitch;
+    Label3: TLabel;
+    Label4: TLabel;
     procedure ButtonOKClick(Sender: TObject);
     procedure ButtonCanceClick(Sender: TObject);
     procedure ButtonTestServerConnectionClick(Sender: TObject);
+    procedure CheckBoxLastSecondsSoundChange(Sender: TObject);
+    procedure SwitchEnableStartListServerSwitch(Sender: TObject);
   private
     FOnOK: TOkMethod;
     procedure SetInterval(AValue: integer);
@@ -92,6 +97,11 @@ begin
   end;
 end;
 
+procedure TFormSettings.CheckBoxLastSecondsSoundChange(Sender: TObject);
+begin
+
+end;
+
 {==============================================================================}
 procedure TFormSettings.SetInterval(AValue: integer);
 begin
@@ -113,6 +123,13 @@ begin
   if lIndex < 0 then
     lIndex := ComboBoxServer.Items.Add(AValue);
   ComboBoxServer.ItemIndex := lIndex;
+end;
+
+{==============================================================================}
+procedure TFormSettings.SwitchEnableStartListServerSwitch(Sender: TObject);
+begin
+  ComboBoxServer.Enabled := SwitchEnableStartListServer.IsChecked;
+  ButtonTestServerConnection.Enabled := SwitchEnableStartListServer.IsChecked;
 end;
 
 {==============================================================================}
