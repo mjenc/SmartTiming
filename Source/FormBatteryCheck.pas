@@ -101,6 +101,9 @@ procedure TFormBatteryCheck.ListViewTransponderBatteryStatusCompare(Sender: TObj
 begin
   Compare := 0;
 
+  if (Item1.SubItems.Count = 0) or (Item2.SubItems.Count = 0) then
+    Exit;
+
   if (Item1.SubItems[0].ToInteger > Item2.SubItems[0].ToInteger) then
   begin
     Compare := 1;
@@ -285,8 +288,12 @@ var
   lActual: integer;
   lListItem: TListItem;
   lChipID: string;
+  lDummy: Integer;
 begin
   i := 1;
+  if ListViewTransponderBatteryStatus.Items.Count = 0 then
+    Exit;
+
   lPred := ListViewTransponderBatteryStatus.Items[0].SubItems[0].ToInteger;
   while i < ListViewTransponderBatteryStatus.Items.Count do
   begin
@@ -298,7 +305,10 @@ begin
       if SameText(lChipID, cNotFound) then
         Continue;
 
-      lListItem := ListViewTransponderBatteryStatus.Items.AddItem(nil);
+      if FReceivedIDs.TryGetValue(lChipId, lDummy) then
+        Continue;
+
+      lListItem := ListViewTransponderBatteryStatus.Items.Insert(i);
       lListItem.ImageIndex := 1;
       lListItem.Caption := lChipID;
       lListItem.SubItems.Add(lPred.ToString);
