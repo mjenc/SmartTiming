@@ -69,9 +69,9 @@ type
     function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer; var AStartTime: TDatetime): integer;
     procedure UpdateParticipationValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
 
-    procedure ImportTxMapping(const AFileName: string);
+    function ImportTxMapping(const AFileName: string): integer;
     procedure ExportTxMapping(const AFileName: string);
-    function FillTransponderMappingCache: boolean;
+    function FillTransponderMappingCache: Integer;
     procedure SaveTransponderMappingCache;
 
     procedure AddPassingToDatabase(APassing: TPassing; var ARaceId: integer);
@@ -831,15 +831,15 @@ begin
 end;
 
 {==============================================================================}
-procedure TMainDataModule.ImportTxMapping(const AFileName: string);
+function TMainDataModule.ImportTxMapping(const AFileName: string): Integer;
 var
-  lResultSet: TDataSet;
   lCmd: string;
   lLines: TStringList;
   i: integer;
   lShortId: integer;
   lChipId: string;
 begin
+  result := 0;
   lLines := TStringList.Create;
   try
     lLines.NameValueSeparator := #9;
@@ -856,10 +856,9 @@ begin
       SQLConnection.Execute(lCmd, nil);
     end;
 
-    FillTransponderMappingCache;
+    result := FillTransponderMappingCache;
   finally
     FreeAndNil(lLines);
-    FreeAndNil(lResultSet);
   end;
 end;
 
@@ -896,19 +895,19 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.FillTransponderMappingCache: boolean;
+function TMainDataModule.FillTransponderMappingCache: Integer;
 var
   lResultSet: TDataSet;
 begin
   TTransponderMappingStore.GetSingleton.Clear;
-  result := false;
+  result := 0;
 
   SQLConnection.Execute('SELECT SHORTID, CHIPID FROM TRANSPONDERS ORDER BY SHORTID', nil, lResultSet);
   try
     if lResultSet.IsEmpty or (lResultSet.RecordCount < 1) then
       Exit;
 
-    result := true;
+    result := lResultSet.RecordCount;
     lResultSet.First;
     while not lResultSet.Eof do
     begin

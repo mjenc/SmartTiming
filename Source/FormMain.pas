@@ -495,7 +495,7 @@ begin
 
   ReadSettings;
 
-  if not MainDataModule.FillTransponderMappingCache then
+  if MainDataModule.FillTransponderMappingCache = 0 then
   begin
     if SmartTimingTools.ShowDialog(cMessagesNoTxMapping, '', [tcbYes, tcbNo]) = mrYes then
       MenuItemTxMappingImportClick(nil);
@@ -939,12 +939,15 @@ end;
 
 {==============================================================================}
 procedure TFormMain.MenuItemTxMappingImportClick(Sender: TObject);
+var
+  lEntryCount: Integer;
 begin
   FileOpenDialog.DefaultExtension := 'txt';
   FileOpenDialog.OkButtonLabel := cButtonCaptionImport;
   if not FileOpenDialog.Execute then
     Exit;
-  MainDataModule.ImportTxMapping(FileOpenDialog.FileName);
+  lEntryCount := MainDataModule.ImportTxMapping(FileOpenDialog.FileName);
+  SmartTimingTools.ShowDialog(Format(cMessagesTxMappingLoaded, [lEntryCount]), '', [tcbOk])
 end;
 
 {==============================================================================}

@@ -129,6 +129,7 @@ resourcestring
   cMessagesBackupSucceeded = 'Das Datenbank-Backup wurde erfolgreich erstellt.';
   cMessagesBackupFailed = 'Das Erstellen eines Datenbank-Backup ist fehlgeschlagen.';
   cMessagesNoTxMapping = 'Es ist noch keine Transponder-Mapping-Tabelle importiert.'#13#10'Möchten Sie diese nun importieren?';
+  cMessagesTxMappingLoaded = 'Es wurden %d Transponder-Mapping-Einträge geladen.';
   cMessagesRaceNotFinishedYet = 'Das Rennen ist noch nicht beendet.';
   cMessagesComptitorDeleteConfirm = '%d Teilnehmer wirklich löschen?';
   cMessagesPassingDeleteConfirm = 'Durchgang von %s wirklich löschen?';
