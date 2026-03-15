@@ -50,7 +50,7 @@ type
       AResponseInfo: TIdHTTPResponseInfo);
     function ParseStartTimeFromCsv(const AValue: string): TDateTime;
     function FormatStartTimeForJson(AStartTime: TDateTime): string;
-    function BuildStartListJson: string;
+    function BuildStartListJson(var AIsUtf8: Boolean): string;
 
     procedure InitServer;
   public
@@ -182,8 +182,10 @@ begin
   end;
 end;
 
-procedure TStartListServer.HTTPCommand(AContext: TIdContext;
-  ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+procedure TStartListServer.HTTPCommand(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+var
+  lIsUtf8: Boolean;
+  lContent: String;
 begin
   if ARequestInfo = nil then
     Exit;
@@ -207,8 +209,10 @@ begin
   begin
     AResponseInfo.ResponseNo := 200;
     AResponseInfo.ContentType := 'text/json';
-    AResponseInfo.Charset := 'utf-8';
-    AResponseInfo.ContentText := BuildStartListJson;
+    lContent := BuildStartListJson(lIsUtf8);
+    if lIsUtf8 then
+      AResponseInfo.Charset := 'utf-8';
+    AResponseInfo.ContentText := lContent;
     Exit;
   end;
 
@@ -236,7 +240,7 @@ begin
     Result := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Trunc(Now) + Frac(AStartTime));
 end;
 
-function TStartListServer.BuildStartListJson: string;
+function TStartListServer.BuildStartListJson(var AIsUtf8: Boolean): string;
 var
   lines: TStringList;
   i: Integer;
@@ -278,11 +282,17 @@ begin
   if (FCsvFileName = '') or (not FileExists(FCsvFileName)) then
     Exit;
 
+  AIsUTF8 := false;
   lines := TStringList.Create;
   entries := TList<TStartListEntry>.Create;
   json := TStringBuilder.Create;
   try
-    lines.LoadFromFile(FCsvFileName, TEncoding.UTF8);
+    try
+      lines.LoadFromFile(FCsvFileName, TEncoding.UTF8);
+      AIsUTF8 := true;
+    except
+      lines.LoadFromFile(FCsvFileName);
+    end;
     if lines.Count < 2 then
       Exit;
 

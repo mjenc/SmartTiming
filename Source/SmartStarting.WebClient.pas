@@ -76,7 +76,10 @@ begin
   lResponse := FNetHTTPRequest.Execute;
   if lResponse.StatusCode <> 200 then
     raise Exception.Create(lResponse.StatusCode.ToString + ': ' + lResponse.StatusText);
-  result := lResponse.ContentAsString(TEncoding.UTF8);
+  if SameText(lResponse.ContentCharSet, 'utf-8')then
+    result := lResponse.ContentAsString(TEncoding.UTF8)
+  else
+    result := lResponse.ContentAsString
 end;
 
 end.
