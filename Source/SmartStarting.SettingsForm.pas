@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.ListBox,
-  FMX.StdCtrls, FMX.Controls.Presentation, FMX.Edit;
+  FMX.StdCtrls, FMX.Controls.Presentation, FMX.Edit, FMX.Layouts, FMX.Objects;
 
 type
   TOkMethod = procedure of object;
@@ -18,6 +18,7 @@ type
     ButtonOK: TButton;
     ButtonCance: TButton;
     ComboBoxServer: TComboBox;
+    EditServer: TEdit;
     SwitchEnableStartListServer: TSwitch;
     SwitchLastSecondsSound: TSwitch;
     Label3: TLabel;
@@ -26,6 +27,8 @@ type
     procedure ButtonCanceClick(Sender: TObject);
     procedure ButtonTestServerConnectionClick(Sender: TObject);
     procedure CheckBoxLastSecondsSoundChange(Sender: TObject);
+    procedure ComboBoxServerChange(Sender: TObject);
+    procedure FormShow(Sender: TObject);
     procedure SwitchEnableStartListServerSwitch(Sender: TObject);
   private
     FOnOK: TOkMethod;
@@ -74,10 +77,12 @@ procedure TFormSettings.ButtonTestServerConnectionClick(Sender: TObject);
 var
   lWebClient: TSmartStartingWebClient;
   lMessage: string;
+  lServerEntry: string;
   lSplitted: TArray<string>;
 begin
-  lSplitted := ComboBoxServer.Items[ComboBoxServer.ItemIndex].Split([':']);
-  if (Length(lSplitted) <> 2) or lSplitted[1].IsEmpty then
+  lServerEntry := GetStartListServer;
+  lSplitted := lServerEntry.Split([':']);
+  if (Length(lSplitted) <> 2) or lSplitted[1].Trim.IsEmpty then
   begin
     TApplication.InfoMessage(cConnectiontestWrongConfiguration);
     Exit;
@@ -119,15 +124,33 @@ procedure TFormSettings.SetStartListServer(const AValue: string);
 var
   lIndex: Integer;
 begin
-  lIndex := ComboBoxServer.Items.IndexOf(AValue);
-  if lIndex < 0 then
-    lIndex := ComboBoxServer.Items.Add(AValue);
-  ComboBoxServer.ItemIndex := lIndex;
+  EditServer.Text := AValue;
+  if AValue <> '' then
+  begin
+    lIndex := ComboBoxServer.Items.IndexOf(AValue);
+    if lIndex < 0 then
+      lIndex := ComboBoxServer.Items.Add(AValue);
+    ComboBoxServer.ItemIndex := lIndex;
+  end;
 end;
 
 {==============================================================================}
+procedure TFormSettings.ComboBoxServerChange(Sender: TObject);
+begin
+  if (ComboBoxServer.ItemIndex >= 0) and (ComboBoxServer.ItemIndex < ComboBoxServer.Items.Count) then
+    EditServer.Text := ComboBoxServer.Items[ComboBoxServer.ItemIndex];
+end;
+
+procedure TFormSettings.FormShow(Sender: TObject);
+begin
+  EditServer.Enabled := SwitchEnableStartListServer.IsChecked;
+  ComboBoxServer.Enabled := SwitchEnableStartListServer.IsChecked;
+  ButtonTestServerConnection.Enabled := SwitchEnableStartListServer.IsChecked;
+end;
+
 procedure TFormSettings.SwitchEnableStartListServerSwitch(Sender: TObject);
 begin
+  EditServer.Enabled := SwitchEnableStartListServer.IsChecked;
   ComboBoxServer.Enabled := SwitchEnableStartListServer.IsChecked;
   ButtonTestServerConnection.Enabled := SwitchEnableStartListServer.IsChecked;
 end;
@@ -135,7 +158,10 @@ end;
 {==============================================================================}
 function TFormSettings.GetStartListServer: string;
 begin
-  result := ComboBoxServer.Items[ComboBoxServer.ItemIndex];
+  Result := EditServer.Text.Trim;
+  if Result = '' then
+    if (ComboBoxServer.ItemIndex >= 0) and (ComboBoxServer.ItemIndex < ComboBoxServer.Items.Count) then
+      Result := ComboBoxServer.Items[ComboBoxServer.ItemIndex];
 end;
 
 end.

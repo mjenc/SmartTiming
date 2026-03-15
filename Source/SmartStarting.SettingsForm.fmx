@@ -3,121 +3,261 @@ object FormSettings: TFormSettings
   Top = 0
   BorderStyle = ToolWindow
   Caption = 'Einstellungen'
-  ClientHeight = 222
-  ClientWidth = 504
-  FormFactor.Width = 320
-  FormFactor.Height = 480
-  FormFactor.Devices = [Desktop]
+  ClientHeight = 480
+  ClientWidth = 360
+  FormFactor.Width = 360
+  FormFactor.Height = 640
+  FormFactor.Devices = [Desktop, iPhone, iPad]
+  OnShow = FormShow
   DesignerMasterStyle = 0
-  object ButtonTestServerConnection: TButton
-    ControlType = Platform
-    StyledSettings = []
-    Position.X = 417.000000000000000000
-    Position.Y = 65.000000000000000000
-    Size.Width = 66.000000000000000000
-    Size.Height = 22.000000000000000000
+  object RectHeader: TRectangle
+    Align = Top
+    Fill.Color = xFF1976D2
+    Size.Width = 360.000000000000000000
+    Size.Height = 56.000000000000000000
     Size.PlatformDefault = False
-    TabOrder = 0
-    Text = 'Test'
-    TextSettings.Trimming = None
-    OnClick = ButtonTestServerConnectionClick
-  end
-  object ComboBoxStartInterval: TComboBox
-    Items.Strings = (
-      '30'
-      '60')
-    Position.X = 184.000000000000000000
-    Position.Y = 135.000000000000000000
-    Size.Width = 57.000000000000000000
-    Size.Height = 22.000000000000000000
-    Size.PlatformDefault = False
-    TabOrder = 1
-    object Label2: TLabel
-      AutoSize = True
-      StyledSettings = []
-      Position.X = -160.000000000000000000
-      Position.Y = 2.000000000000000000
-      Size.Width = 156.000000000000000000
-      Size.Height = 16.000000000000000000
+    Stroke.Kind = None
+    object LabelTitle: TLabel
+      Align = Client
+      Margins.Left = 16.000000000000000000
+      Margins.Right = 16.000000000000000000
+      Size.Width = 328.000000000000000000
+      Size.Height = 56.000000000000000000
       Size.PlatformDefault = False
-      Text = 'Startintervall (in Sekunden)'
-      TabOrder = 86
+      TextSettings.Font.Size = 20.000000000000000000
+      TextSettings.FontColor = claWhite
+      TextSettings.HorzAlign = Center
+      Text = 'Einstellungen'
+      TabOrder = 0
     end
   end
-  object ButtonCance: TButton
-    Cancel = True
-    StyledSettings = []
-    ModalResult = 2
-    Position.X = 403.000000000000000000
-    Position.Y = 176.000000000000000000
-    TabOrder = 3
-    Text = 'Abbrechen'
-    TextSettings.Trimming = None
-    OnClick = ButtonCanceClick
-  end
-  object ButtonOK: TButton
-    Default = True
-    StyledSettings = []
-    ModalResult = 1
-    Position.X = 315.000000000000000000
-    Position.Y = 176.000000000000000000
-    TabOrder = 4
-    Text = 'OK'
-    TextSettings.Trimming = None
-    OnClick = ButtonOKClick
-  end
-  object Label1: TLabel
-    ControlType = Platform
-    StyledSettings = []
-    Position.X = 24.000000000000000000
-    Position.Y = 65.000000000000000000
-    Size.Width = 169.000000000000000000
-    Size.Height = 16.000000000000000000
+  object VertScrollBox: TVertScrollBox
+    Align = Client
+    Padding.Left = 8.000000000000000000
+    Padding.Top = 8.000000000000000000
+    Padding.Right = 8.000000000000000000
+    Padding.Bottom = 8.000000000000000000
+    Size.Width = 360.000000000000000000
+    Size.Height = 360.000000000000000000
     Size.PlatformDefault = False
-    Text = 'Startlisten-Server'
-    TabOrder = 5
+    TabOrder = 0
+    Viewport.Width = 344.000000000000000000
+    Viewport.Height = 360.000000000000000000
+    object LayoutContent: TLayout
+      Size.Width = 328.000000000000000000
+      Size.Height = 400.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      object CardServer: TRectangle
+        Fill.Color = claWhitesmoke
+        Position.X = 16.000000000000000000
+        Position.Y = 16.000000000000000000
+        Size.Width = 328.000000000000000000
+        Size.Height = 184.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Color = xFFE0E0E0
+        XRadius = 4.000000000000000000
+        YRadius = 4.000000000000000000
+        object LabelSectionServer: TLabel
+          Position.X = 12.000000000000000000
+          Position.Y = 8.000000000000000000
+          Size.Width = 200.000000000000000000
+          Size.Height = 18.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.FontColor = xFF757575
+          Text = 'Startlisten-Server'
+          TabOrder = 0
+        end
+        object LayoutRowSwitch: TLayout
+          Position.Y = 32.000000000000000000
+          Size.Width = 328.000000000000000000
+          Size.Height = 48.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 1
+          object Label4: TLabel
+            Position.X = 16.000000000000000000
+            Position.Y = 14.000000000000000000
+            Size.Width = 220.000000000000000000
+            Size.Height = 22.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 16.000000000000000000
+            Text = 'Startlisten-Server benutzen'
+            TabOrder = 0
+          end
+          object SwitchEnableStartListServer: TSwitch
+            ControlType = Platform
+            IsChecked = False
+            Position.X = 272.000000000000000000
+            Position.Y = 10.000000000000000000
+            Size.Width = 51.000000000000000000
+            Size.Height = 28.000000000000000000
+            Size.PlatformDefault = False
+            TabOrder = 1
+            OnSwitch = SwitchEnableStartListServerSwitch
+          end
+        end
+        object LayoutRowServer: TLayout
+          Position.Y = 80.000000000000000000
+          Size.Width = 328.000000000000000000
+          Size.Height = 104.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 2
+          object Label1: TLabel
+            Position.X = 16.000000000000000000
+            Position.Y = 8.000000000000000000
+            Size.Width = 296.000000000000000000
+            Size.Height = 20.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 16.000000000000000000
+            Text = 'Server Auswahl oder Eingabe'
+            TabOrder = 0
+          end
+          object EditServer: TEdit
+            Touch.InteractiveGestures = [LongTap, DoubleTap]
+            TabOrder = 1
+            Position.X = 16.000000000000000000
+            Position.Y = 32.000000000000000000
+            Size.Width = 224.000000000000000000
+            Size.Height = 32.000000000000000000
+            Size.PlatformDefault = False
+          end
+          object ButtonTestServerConnection: TButton
+            Position.X = 248.000000000000000000
+            Position.Y = 32.000000000000000000
+            Size.Width = 80.000000000000000000
+            Size.Height = 32.000000000000000000
+            Size.PlatformDefault = False
+            TabOrder = 2
+            Text = 'Test'
+            TextSettings.Trimming = None
+            OnClick = ButtonTestServerConnectionClick
+          end
+          object ComboBoxServer: TComboBox
+            Items.Strings = (
+              'MP-JENC-01: 192.168.178.140'
+              'MJ-SmartTiming-1: 192.168.100.20'
+              'LOCAL: 127.0.0.1'
+              'BRV-System2-PC1: 192.168.182.21'
+              'CAS-N04798: 192.168.182.30')
+            Position.X = 16.000000000000000000
+            Position.Y = 68.000000000000000000
+            Size.Width = 312.000000000000000000
+            Size.Height = 28.000000000000000000
+            Size.PlatformDefault = False
+            TabOrder = 3
+            OnChange = ComboBoxServerChange
+          end
+        end
+      end
+      object CardInterval: TRectangle
+        Fill.Color = claWhitesmoke
+        Position.X = 16.000000000000000000
+        Position.Y = 216.000000000000000000
+        Size.Width = 328.000000000000000000
+        Size.Height = 80.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Color = xFFE0E0E0
+        XRadius = 4.000000000000000000
+        YRadius = 4.000000000000000000
+        object Label2: TLabel
+          Position.X = 16.000000000000000000
+          Position.Y = 16.000000000000000000
+          Size.Width = 250.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 16.000000000000000000
+          Text = 'Startintervall (in Sekunden)'
+          TabOrder = 0
+        end
+        object ComboBoxStartInterval: TComboBox
+          Items.Strings = (
+            '30'
+            '60')
+          Position.X = 16.000000000000000000
+          Position.Y = 44.000000000000000000
+          Size.Width = 120.000000000000000000
+          Size.Height = 28.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 1
+        end
+      end
+      object CardSound: TRectangle
+        Fill.Color = claWhitesmoke
+        Position.X = 16.000000000000000000
+        Position.Y = 312.000000000000000000
+        Size.Width = 328.000000000000000000
+        Size.Height = 80.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Color = xFFE0E0E0
+        XRadius = 4.000000000000000000
+        YRadius = 4.000000000000000000
+        object Label3: TLabel
+          Position.X = 16.000000000000000000
+          Position.Y = 14.000000000000000000
+          Size.Width = 250.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 16.000000000000000000
+          Text = 'Akustisches Signal'
+          TabOrder = 0
+        end
+        object LabelSoundHint: TLabel
+          Position.X = 16.000000000000000000
+          Position.Y = 38.000000000000000000
+          Size.Width = 296.000000000000000000
+          Size.Height = 18.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.FontColor = xFF757575
+          Text = 'Letzte Sekunden vor Start'
+          TabOrder = 1
+        end
+        object SwitchLastSecondsSound: TSwitch
+          ControlType = Platform
+          IsChecked = False
+          Position.X = 272.000000000000000000
+          Position.Y = 26.000000000000000000
+          Size.Width = 51.000000000000000000
+          Size.Height = 28.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 2
+          OnSwitch = CheckBoxLastSecondsSoundChange
+        end
+      end
+    end
   end
-  object ComboBoxServer: TComboBox
-    Items.Strings = (
-      'MP-JENC-01: 192.168.178.140'
-      'MJ-SmartTiming-1: 192.168.100.20'
-      'LOCAL: 127.0.0.1'
-      'BRV-System2-PC1: 192.168.182.21'
-      'CAS-N04798: 192.168.182.30')
-    Position.X = 184.000000000000000000
-    Position.Y = 64.000000000000000000
-    Size.Width = 217.000000000000000000
-    Size.Height = 23.000000000000000000
+  object RectFooter: TRectangle
+    Align = Bottom
+    Fill.Color = xFFFAFAFA
+    Position.Y = 416.000000000000000000
+    Size.Width = 360.000000000000000000
+    Size.Height = 64.000000000000000000
     Size.PlatformDefault = False
-    TabOrder = 6
-  end
-  object SwitchEnableStartListServer: TSwitch
-    IsChecked = False
-    Position.X = 184.000000000000000000
-    Position.Y = 29.000000000000000000
-    TabOrder = 7
-    OnSwitch = SwitchEnableStartListServerSwitch
-  end
-  object SwitchLastSecondsSound: TSwitch
-    IsChecked = False
-    Position.X = 184.000000000000000000
-    Position.Y = 100.000000000000000000
-    TabOrder = 8
-    OnSwitch = CheckBoxLastSecondsSoundChange
-  end
-  object Label3: TLabel
-    Position.X = 24.000000000000000000
-    Position.Y = 105.000000000000000000
-    Text = 'Akustisches Signal'
-    TabOrder = 9
-  end
-  object Label4: TLabel
-    Position.X = 24.000000000000000000
-    Position.Y = 33.000000000000000000
-    Size.Width = 152.000000000000000000
-    Size.Height = 17.000000000000000000
-    Size.PlatformDefault = False
-    Text = 'Startlisten-Server benutzen'
-    TabOrder = 10
+    Stroke.Color = xFFE0E0E0
+    object ButtonCance: TButton
+      Cancel = True
+      ModalResult = 2
+      Position.X = 16.000000000000000000
+      Position.Y = 12.000000000000000000
+      Size.Width = 100.000000000000000000
+      Size.Height = 40.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Text = 'Abbrechen'
+      TextSettings.Trimming = None
+      OnClick = ButtonCanceClick
+    end
+    object ButtonOK: TButton
+      Default = True
+      ModalResult = 1
+      Position.X = 244.000000000000000000
+      Position.Y = 12.000000000000000000
+      Size.Width = 100.000000000000000000
+      Size.Height = 40.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      Text = 'OK'
+      TextSettings.Trimming = None
+      OnClick = ButtonOKClick
+    end
   end
 end
