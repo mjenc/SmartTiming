@@ -65,6 +65,7 @@ begin
   lResponse := FNetHTTPRequest.Execute;
   if lResponse.StatusCode <> 200 then
     Exit(false);
+  result := true;
 end;
 
 {==============================================================================}

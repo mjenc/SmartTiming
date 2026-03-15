@@ -735,7 +735,6 @@ constructor TBaseJSON<T, Typ>.Create(JSON: String; const CheckDate: Boolean);
 type PInterface = ^IInterface;
 var
   JVal: IJSONAncestor;
-  PIntf: PInterface;
 begin
   FCheckDate := CheckDate;
   if (Self.InheritsFrom(TSuperArray)) and (Trim(JSON) = '{}') then JSON := '[]';
@@ -820,7 +819,7 @@ begin
        TJSONAncestor(FInterface).AsJSONString(SBuild);
     Result := SBuild.ToString;
   finally
-    SBuild.Free;
+    FreeAndNil(SBuild);
   end;
 
 end;
@@ -1050,9 +1049,10 @@ function TBaseJSON<T, Typ>.GetType(Key: Typ): TVarType;
 var
   Temp: IJSONAncestor;
 begin
+  result := varUnknown;
   Temp := GetData(Key);
   if Temp = Nil then
-     Result := varUnknown
+    Result := varUnknown
   else if Temp is TJSONString then
      Result := varString
   else if Temp is TJSONFloat then
@@ -1304,7 +1304,7 @@ end;
 class function TSuperObject.ParseStream(Stream: TStream; CheckDate: Boolean): TSuperObject;
 var
   Strm: TStringStream;
-  preamble, tmp: TBytes;
+  tmp: TBytes;
   preambleLength: integer;
   enc: TEncoding;
 begin
@@ -2108,13 +2108,16 @@ begin
   Ctx := TRttiContext.Create;
   try
     Typ := Ctx.GetType(Instance);
-    Mtd := nil;
     {$IFNDEF Android or IOS}
-      if Instance.InheritsFrom(TStringStream) then begin
-        for Mtd in Typ.GetMethods do
-           if (CompareText(Mtd.Name, 'Create') = 0) and InEncoding(Mtd.GetParameters) then
-              Break;
-       Assert(Assigned(Mtd));
+    Mtd := nil;
+    if Instance.InheritsFrom(TStringStream) then
+    begin
+      for Mtd in Typ.GetMethods do
+      begin
+        if (CompareText(Mtd.Name, 'Create') = 0) and InEncoding(Mtd.GetParameters) then
+          Break;
+      end;
+      Assert(Assigned(Mtd));
     end
     else
     {$ENDIF}
@@ -3276,10 +3279,8 @@ class function TJSON.Parse<T>(JSON: ISuperObject): T;
 var
   Ctx: TRttiContext;
   Typ: TRttiType;
-  DType: TDataType;
   _Array: ISuperArray;
   _PResult: Pointer;
-  I: Integer;
 type PTime = ^TTime;
 begin
   Ctx := TRttiContext.Create;
