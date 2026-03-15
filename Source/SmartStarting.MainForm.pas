@@ -74,8 +74,6 @@ type
     procedure PlayStartBeep;
     procedure GetStartListFromServer;
     function GetPureServerName: string;
-  public
-
   end;
 
 var
@@ -84,7 +82,7 @@ var
 implementation
 
 uses
-  SmartStarting.WebClient, Tools.Dialogs, Tools.Preferences,
+  System.Threading, SmartStarting.WebClient, Tools.Dialogs, Tools.Preferences,
 {$IFDEF ANDROID}
   Androidapi.Helpers, Androidapi.Jni.GraphicsContentViewText, Androidapi.JNI.App,
 {$ENDIF}
@@ -106,7 +104,18 @@ const
   cStartSeconds60 = [0];
   cNextCompetitor60 = [2];
 
+var
+  gWebClient: TSmartStartingWebClient;
+
 {$R *.fmx}
+
+{==============================================================================}
+function GetWebClient(const AServerName: string): TSmartStartingWebClient;
+begin
+  if gWebClient = nil then
+    gWebClient := TSmartStartingWebClient.Create(AServerName);
+  result := gWebClient;
+end;
 
 {==============================================================================}
 procedure TSmartStartingForm.ButtonExitClick(Sender: TObject);
@@ -242,60 +251,55 @@ begin
 end;
 {==============================================================================}
 procedure TSmartStartingForm.GetStartListFromServer;
-var
-  lWebClient: TSmartStartingWebClient;
-  lJSONString: string;
-  lSO: ISuperObject;
-  i: integer;
-
-  procedure AddCompetitorInfo(ACompetitorObject: ISuperObject);
-  var
-    lCompetitorInfo: TCompetitorInfo;
-    lTeam: string;
-    lHour, lMin, lSec, lMSec: Word;
-    lStartTime: TDatetime;
-  begin
-    lCompetitorInfo.Bib := ACompetitorObject.S['BIB'];
-    lCompetitorInfo.LastName := ACompetitorObject.S['LASTNAME'];
-    lCompetitorInfo.FirstName := ACompetitorObject.S['FIRSTNAME'];
-    lTeam := ACompetitorObject.S['TEAM'];
-    if lTeam.IsEmpty then
-      lTeam := ACompetitorObject.S['CLUB'];
-    lCompetitorInfo.TeamName := lTeam;
-    lStartTime := 0;
-    if ACompetitorObject.D['STARTTIME'] <> 0 then
-      lStartTime := ACompetitorObject.D['STARTTIME']
-    else if not ACompetitorObject.S['STARTTIME'].IsEmpty then
-      TryStrToDateTime(ACompetitorObject.S['STARTTIME'].Replace('T', ' '), lStartTime);
-    DecodeTime(lStartTime, lHour, lMin, lSec, lMSec);
-    try
-      lStartTime := EncodeTime(lHour, lMin, lSec, 0);
-      FCompetitors.Add(lStartTime, lCompetitorInfo);
-    except
-    end;
-  end;
-
 begin
   try
-    lWebClient := TSmartStartingWebClient.Create(GetPureServerName);
-    try
-      lJSONString := lWebClient.GetListOfStarters;
-      if lJSONString.IsEmpty then
-        Exit;
-
-      FCompetitors.Clear;
-
-      lSO := TSuperObject.Create(lJSONString);
-      for i := 0 to lSO.A['list'].Length - 1 do
+    TTask.Run(
+      procedure
+      var
+        lJSONString: string;
+        lCompetitorObject: ISuperObject;
       begin
-        try
-          AddCompetitorInfo(lSO.A['list'].O[i]);
-        except
-        end;
-      end;
-    finally
-      FreeAndNil(lWebClient);
-    end;
+        lJSONString := GetWebClient(GetPureServerName).GetListOfStarters;
+        if lJSONString.IsEmpty then
+          Exit;
+
+        TThread.Queue(nil,
+          procedure
+          var
+            lSO: ISuperObject;
+            i: integer;
+            lCompetitorInfo: TCompetitorInfo;
+            lTeam: string;
+            lHour, lMin, lSec, lMSec: Word;
+            lStartTime: TDatetime;
+          begin
+            FCompetitors.Clear;
+
+            lSO := TSuperObject.Create(lJSONString);
+            for i := 0 to lSO.A['list'].Length - 1 do
+            begin
+              try
+                lCompetitorObject := lSO.A['list'].O[i];
+                lCompetitorInfo.Bib := lCompetitorObject.S['BIB'];
+                lCompetitorInfo.LastName := lCompetitorObject.S['LASTNAME'];
+                lCompetitorInfo.FirstName := lCompetitorObject.S['FIRSTNAME'];
+                lTeam := lCompetitorObject.S['TEAM'];
+                if lTeam.IsEmpty then
+                  lTeam := lCompetitorObject.S['CLUB'];
+                lCompetitorInfo.TeamName := lTeam;
+                lStartTime := 0;
+                if lCompetitorObject.D['STARTTIME'] <> 0 then
+                  lStartTime := lCompetitorObject.D['STARTTIME']
+                else if not lCompetitorObject.S['STARTTIME'].IsEmpty then
+                  TryStrToDateTime(lCompetitorObject.S['STARTTIME'].Replace('T', ' '), lStartTime);
+                DecodeTime(lStartTime, lHour, lMin, lSec, lMSec);
+                lStartTime := EncodeTime(lHour, lMin, lSec, 0);
+                FCompetitors.Add(lStartTime, lCompetitorInfo);
+              except
+              end;
+            end;
+          end);
+      end);
   except
   end;
 end;
@@ -468,5 +472,11 @@ begin
     LabelCompetitorTeam.Text := lCompetitorInfo.TeamName;
   end;
 end;
+
+initialization
+  gWebClient := nil;
+
+finalization
+  FreeAndNil(gWebClient);
 
 end.

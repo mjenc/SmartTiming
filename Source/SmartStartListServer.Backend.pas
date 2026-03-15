@@ -26,6 +26,8 @@ type
 
   TColumnMapping = array[TStartListField] of Integer;
 
+  TFnLogPrcprocedure = procedure (const AMsg: string) of object;
+
   TStartListEntry = record
     RaceClass   : string;
     Bib         : string;
@@ -44,17 +46,18 @@ type
     FPort         : Integer;
     FCsvFileName  : string;
     FColumnMapping: TColumnMapping;
+    FOnLog: TFnLogPrcprocedure;
 
     procedure HTTPCommand(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo;
       AResponseInfo: TIdHTTPResponseInfo);
     function ParseStartTimeFromCsv(const AValue: string): TDateTime;
     function FormatStartTimeForJson(AStartTime: TDateTime): string;
-    function BuildStartListJson(var AIsUtf8: Boolean): string;
+    function BuildStartListJson(var AIsUtf8: Boolean; var ACount: Integer): string;
 
     procedure InitServer;
   public
-    constructor Create;
+    constructor Create(AOnLog: TFnLogPrcprocedure);
     destructor Destroy; override;
 
     procedure Start;
@@ -75,7 +78,7 @@ const
 
 { TStartListServer }
 
-constructor TStartListServer.Create;
+constructor TStartListServer.Create(AOnLog: TFnLogPrcprocedure);
 var
   f: TStartListField;
 begin
@@ -89,6 +92,7 @@ begin
 
   LoadMappingFromRegistry;
   InitServer;
+  FOnLog := AOnLOg;
 end;
 
 destructor TStartListServer.Destroy;
@@ -186,6 +190,7 @@ procedure TStartListServer.HTTPCommand(AContext: TIdContext; ARequestInfo: TIdHT
 var
   lIsUtf8: Boolean;
   lContent: String;
+  lCount: Integer;
 begin
   if ARequestInfo = nil then
     Exit;
@@ -209,10 +214,14 @@ begin
   begin
     AResponseInfo.ResponseNo := 200;
     AResponseInfo.ContentType := 'text/json';
-    lContent := BuildStartListJson(lIsUtf8);
+    lContent := BuildStartListJson(lIsUtf8, lCount);
     if lIsUtf8 then
       AResponseInfo.Charset := 'utf-8';
     AResponseInfo.ContentText := lContent;
+
+    if Assigned(FOnLog) then
+      FOnLog('Sending ' + lCount.ToString + ' entries to the caller.');
+
     Exit;
   end;
 
@@ -240,7 +249,7 @@ begin
     Result := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Trunc(Now) + Frac(AStartTime));
 end;
 
-function TStartListServer.BuildStartListJson(var AIsUtf8: Boolean): string;
+function TStartListServer.BuildStartListJson(var AIsUtf8: Boolean; var ACount: Integer): string;
 var
   lines: TStringList;
   i: Integer;
@@ -277,6 +286,7 @@ var
   end;
 
 begin
+  ACount := 0;
   Result := '{}';
 
   if (FCsvFileName = '') or (not FileExists(FCsvFileName)) then
@@ -338,6 +348,7 @@ begin
     end;
     json.Append(']}');
 
+    ACount := entries.Count;
     Result := json.ToString;
   finally
     json.Free;

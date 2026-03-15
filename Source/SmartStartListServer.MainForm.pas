@@ -67,10 +67,10 @@ implementation
 
 procedure TFormSmartStartListServer.FormCreate(Sender: TObject);
 begin
-  FServer := TStartListServer.Create;
+  FServer := TStartListServer.Create(Log);
   SpinEditPort.Value := FServer.Port;
   EditCsv.Text := FServer.CsvFileName;
-  MappingToUI;
+  UIToMapping;
 end;
 
 procedure TFormSmartStartListServer.FormDestroy(Sender: TObject);
@@ -90,6 +90,7 @@ begin
     EditCsv.Text := OpenDialogCsv.FileName;
     FServer.CsvFileName := EditCsv.Text;
     LoadHeaderColumnsToCombos;
+    ButtonLoadMappingClick(nil);
   end;
 end;
 
