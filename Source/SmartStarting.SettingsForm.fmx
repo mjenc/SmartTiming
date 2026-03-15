@@ -79,6 +79,7 @@ object FormSettings: TFormSettings
   end
   object ComboBoxServer: TComboBox
     Items.Strings = (
+      'MP-JENC-01: 192.168.178.140'
       'MJ-SmartTiming-1: 192.168.100.20'
       'LOCAL: 127.0.0.1'
       'BRV-System2-PC1: 192.168.182.21'

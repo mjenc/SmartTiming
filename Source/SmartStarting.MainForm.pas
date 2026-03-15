@@ -262,7 +262,11 @@ var
     if lTeam.IsEmpty then
       lTeam := ACompetitorObject.S['CLUB'];
     lCompetitorInfo.TeamName := lTeam;
-    lStartTime := ACompetitorObject.D['STARTTIME'];
+    lStartTime := 0;
+    if ACompetitorObject.D['STARTTIME'] <> 0 then
+      lStartTime := ACompetitorObject.D['STARTTIME']
+    else if not ACompetitorObject.S['STARTTIME'].IsEmpty then
+      TryStrToDateTime(ACompetitorObject.S['STARTTIME'].Replace('T', ' '), lStartTime);
     DecodeTime(lStartTime, lHour, lMin, lSec, lMSec);
     try
       lStartTime := EncodeTime(lHour, lMin, lSec, 0);
@@ -272,19 +276,27 @@ var
   end;
 
 begin
-  lWebClient := TSmartStartingWebClient.Create(GetPureServerName);
   try
-    lJSONString := lWebClient.GetListOfStarters;
-    if lJSONString.IsEmpty then
-      Exit;
+    lWebClient := TSmartStartingWebClient.Create(GetPureServerName);
+    try
+      lJSONString := lWebClient.GetListOfStarters;
+      if lJSONString.IsEmpty then
+        Exit;
 
-    FCompetitors.Clear;
+      FCompetitors.Clear;
 
-    lSO := TSuperObject.Create(lJSONString);
-    for i := 0 to lSO.A['list'].Length - 1 do
-      AddCompetitorInfo(lSO.A['list'].O[i]);
-  finally
-    FreeAndNil(lWebClient);
+      lSO := TSuperObject.Create(lJSONString);
+      for i := 0 to lSO.A['list'].Length - 1 do
+      begin
+        try
+          AddCompetitorInfo(lSO.A['list'].O[i]);
+        except
+        end;
+      end;
+    finally
+      FreeAndNil(lWebClient);
+    end;
+  except
   end;
 end;
 
