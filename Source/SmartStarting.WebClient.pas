@@ -29,6 +29,8 @@ implementation
 
 {==============================================================================}
 constructor TSmartStartingWebClient.Create(const AServer: string; APort: Integer = 9768);
+const
+  cTimeout = 3000;
 begin
   FServer := AServer;
   FPort := APort;
@@ -36,6 +38,12 @@ begin
   FNetHTTPClient := TNetHTTPClient.Create(nil);
   FNetHTTPRequest := TNetHTTPRequest.Create(nil);
   FNetHTTPRequest.Client := FNetHTTPClient;
+  FNetHTTPRequest.ConnectionTimeout := cTimeout;
+  FNetHTTPRequest.ResponseTimeout := cTimeout;
+  FNetHTTPRequest.SendTimeout := cTimeout;
+  FNetHTTPClient.ConnectionTimeout := cTimeout;
+  FNetHTTPClient.ResponseTimeout := cTimeout;
+  FNetHTTPClient.SendTimeout := cTimeout;
 end;
 
 destructor TSmartStartingWebClient.Destroy;
