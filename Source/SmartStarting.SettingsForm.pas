@@ -30,17 +30,22 @@ type
     procedure ComboBoxServerChange(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure SwitchEnableStartListServerSwitch(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
     FOnOK: TOkMethod;
     procedure SetInterval(AValue: integer);
     function GetInterval: Integer;
     procedure SetStartListServer(const AValue: string);
     function GetStartListServer: string;
+    procedure SetStartListServerHistory(const AValue: string);
+    function GetStartListServerHistory: string;
+    procedure UpdateStartListServerHistory;
 
   public
     property OnOK: TOkMethod read FOnOK write FOnOK;
     property Interval: Integer read GetInterval write SetInterval;
     property StartListServer: string read GetStartListServer write SetStartListServer;
+    property StartListServerHistory: string read GetStartListServerHistory write SetStartListServerHistory;
   end;
 
 var
@@ -67,6 +72,7 @@ end;
 {==============================================================================}
 procedure TFormSettings.ButtonOKClick(Sender: TObject);
 begin
+  UpdateStartListServerHistory;
   Close;
   if Assigned(FOnOK) then
     FOnOK;
@@ -78,25 +84,15 @@ var
   lWebClient: TSmartStartingWebClient;
   lMessage: string;
   lServerEntry: string;
-  lSplitted: TArray<string>;
 begin
   lServerEntry := GetStartListServer;
-  lSplitted := lServerEntry.Split([':']);
-  if (Length(lSplitted) <> 2) or lSplitted[1].Trim.IsEmpty then
-  begin
-    TApplication.InfoMessage(cConnectiontestWrongConfiguration);
-    Exit;
-  end;
-
-  lWebClient := TSmartStartingWebClient.Create(lSplitted[1].Trim);
+  lWebClient := TSmartStartingWebClient.Create(lServerEntry);
   try
-    if lWebClient.TestConnection(lSplitted[1].Trim) then
+    if lWebClient.TestConnection(lServerEntry) then
       lMessage := cConnectiontestSucceeded
     else
       lMessage := cConnectiontestFailed;
-
     TApplication.InfoMessage(lMessage);
-
   finally
     FreeAndNil(lWebClient);
   end;
@@ -141,6 +137,11 @@ begin
     EditServer.Text := ComboBoxServer.Items[ComboBoxServer.ItemIndex];
 end;
 
+procedure TFormSettings.FormCreate(Sender: TObject);
+begin
+end;
+
+{==============================================================================}
 procedure TFormSettings.FormShow(Sender: TObject);
 begin
   EditServer.Enabled := SwitchEnableStartListServer.IsChecked;
@@ -148,6 +149,7 @@ begin
   ButtonTestServerConnection.Enabled := SwitchEnableStartListServer.IsChecked;
 end;
 
+{==============================================================================}
 procedure TFormSettings.SwitchEnableStartListServerSwitch(Sender: TObject);
 begin
   EditServer.Enabled := SwitchEnableStartListServer.IsChecked;
@@ -162,6 +164,26 @@ begin
   if Result = '' then
     if (ComboBoxServer.ItemIndex >= 0) and (ComboBoxServer.ItemIndex < ComboBoxServer.Items.Count) then
       Result := ComboBoxServer.Items[ComboBoxServer.ItemIndex];
+end;
+
+{==============================================================================}
+procedure TFormSettings.SetStartListServerHistory(const AValue: string);
+begin
+  ComboBoxServer.Items.CommaText := AValue;
+end;
+
+{==============================================================================}
+function TFormSettings.GetStartListServerHistory: string;
+begin
+  result := ComboBoxServer.Items.CommaText;
+end;
+
+{==============================================================================}
+procedure TFormSettings.UpdateStartListServerHistory;
+begin
+  if ComboBoxServer.Items.IndexOf(EditServer.Text) >= 0 then
+    Exit;
+  ComboBoxServer.Items.Insert(0, EditServer.Text);
 end;
 
 end.

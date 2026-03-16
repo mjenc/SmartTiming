@@ -59,6 +59,7 @@ type
     FIntervalSeconds: integer;
     FUseStartListServer: boolean;
     FStartListServer: string;
+    FStartListServerHistory: string;
     FPlaySound: boolean;
 
     FCompetitors: TDictionary<TDatetime, TCompetitorInfo>;
@@ -73,7 +74,6 @@ type
     procedure PlayLastSecondsBeep;
     procedure PlayStartBeep;
     procedure GetStartListFromServer;
-    function GetPureServerName: string;
   end;
 
 var
@@ -240,16 +240,6 @@ begin
 end;
 
 {==============================================================================}
-function TSmartStartingForm.GetPureServerName: string;
-var
-  lSplitted: TArray<string>;
-begin
-  lSplitted := FStartListServer.Split([':']);
-  if (Length(lSplitted) <> 2) or lSplitted[1].IsEmpty then
-    Exit('');
-  result := Trim(lSplitted[1]);
-end;
-{==============================================================================}
 procedure TSmartStartingForm.GetStartListFromServer;
 begin
   try
@@ -259,7 +249,7 @@ begin
         lJSONString: string;
         lCompetitorObject: ISuperObject;
       begin
-        lJSONString := GetWebClient(GetPureServerName).GetListOfStarters;
+        lJSONString := GetWebClient(FStartListServer).GetListOfStarters;
         if lJSONString.IsEmpty then
           Exit;
 
@@ -312,6 +302,7 @@ begin
   FFormSettings.SwitchLastSecondsSound.IsChecked := FPlaySound;
   FFormSettings.Interval := FIntervalSeconds;
   FFormSettings.StartListServer := FStartListServer;
+  FFormSettings.StartListServerHistory := FStartListServerHistory;
   FFormSettings.Show;
 end;
 
@@ -339,6 +330,7 @@ var
 begin
   FUseStartListServer := FFormSettings.SwitchEnableStartListServer.IsChecked;
   FStartListServer := FFormSettings.StartListServer;
+  FStartListServerHistory := FFormSettings.StartListServerHistory;
   FPlaySound := FFormSettings.SwitchLastSecondsSound.IsChecked;
   FIntervalSeconds := FFormSettings.Interval;
 
@@ -346,6 +338,7 @@ begin
   lPref.SetBoolean('UseStartListServer', FUseStartListServer);
   lPref.SetInteger('IntervalSeconds', FIntervalSeconds);
   lPref.SetString('StartListServer', FStartListServer);
+  lPref.SetString('StartListServerHistory', FStartListServerHistory);
   lPref.SetBoolean('PlaySound', FPlaySound);
   lPref.Save;
 
@@ -371,11 +364,24 @@ var
 begin
   lPref := CreatePreferencesObject(cManufacturer, cSmartStartingAppName);
   FUseStartListServer := lPref.GetBoolean('UseStartListServer', false);
-  FIntervalSeconds := lPref.GetInteger('IntervalSeconds', 60);
-  FStartListServer := lPref.GetString('StartListServer');
-  if FStartListServer.IsEmpty then
-    FStartListServer := 'MJ-SmartTiming-1: 192.168.100.20';  // Default IP-Address of Server in MJ-SmartTiming environment.
-  FPlaySound := lPref.GetBoolean('PlaySound', true);
+  FIntervalSeconds    := lPref.GetInteger('IntervalSeconds', 60);
+  FStartListServer    := lPref.GetString('StartListServer');
+  FStartListServerHistory := lPref.GetString('StartListServerHistory');
+  FPlaySound          := lPref.GetBoolean('PlaySound', true);
+
+  if FIntervalSeconds = 30 then
+  begin
+    FLastSeconds        := cLastSeconds30;
+    FStartSeconds       := cStartSeconds30;
+    FNextCompetitorSecond := cNextCompetitor30;
+  end
+  else
+  begin
+    FLastSeconds        := cLastSeconds60;
+    FStartSeconds       := cStartSeconds60;
+    FNextCompetitorSecond := cNextCompetitor60;
+  end;
+
   FormShow(nil);
 end;
 

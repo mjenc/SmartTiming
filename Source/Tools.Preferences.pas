@@ -43,6 +43,7 @@ type
   TPreferencesAndroid = class(TPreferences)
   protected
     FPref: JSharedPreferences;
+    FEditor: JSharedPreferences_Editor;
 
     constructor Create(const ACreatorName, AAppName: string); override;
 
@@ -63,12 +64,13 @@ constructor TPreferencesAndroid.Create(const ACreatorName, AAppName: string);
 begin
   inherited Create(ACreatorName, AAppName);
   FPref := SharedActivity.getSharedPreferences(StringToJString(ACreatorName + '.' + AAppName), 0);
+  FEditor := FPref.edit;
 end;
 
 {==============================================================================}
 procedure TPreferencesAndroid.Save;
 begin
-  FPref.edit.commit;
+  FEditor.commit;
 end;
 
 {==============================================================================}
@@ -92,19 +94,19 @@ end;
 {==============================================================================}
 procedure TPreferencesAndroid.SetString(const AName: string; const AValue: string);
 begin
-  FPref.edit.putString(StringToJString(AName), StringToJString(AValue));
+  FEditor.putString(StringToJString(AName), StringToJString(AValue));
 end;
 
 {==============================================================================}
 procedure TPreferencesAndroid.SetBoolean(const AName: string; AValue: boolean);
 begin
-  FPref.edit.putBoolean(StringToJString(AName), AValue);
+  FEditor.putBoolean(StringToJString(AName), AValue);
 end;
 
 {==============================================================================}
 procedure TPreferencesAndroid.SetInteger(const AName: string; AValue: Integer);
 begin
-  FPref.edit.putInt(StringToJString(AName), AValue);
+  FEditor.putInt(StringToJString(AName), AValue);
 end;
 
 {$ELSE}
@@ -133,9 +135,9 @@ constructor TPreferencesWindows.Create(const ACreatorName, AAppName: string);
 begin
   inherited Create(ACreatorName, AAppName);
 
-  FReg := TRegistry.Create(KEY_WRITE);
+  FReg := TRegistry.Create(KEY_ALL_ACCESS);
   FReg.RootKey := HKEY_CURRENT_USER;
-  FReg.OpenKey(Format('SOFTWARE\%s\%s\Settings', [FCreatorName, FAppName]), true);
+  FReg.OpenKey(Format('\Software\%s\%s\Settings', [FCreatorName, FAppName]), true);
 end;
 
 {==============================================================================}
