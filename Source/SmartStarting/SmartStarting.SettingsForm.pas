@@ -62,6 +62,7 @@ resourcestring
   cConnectiontestSucceeded = 'Verbindungstest erfolgreich.';
   cConnectiontestFailed = 'Verbindungstest fehlgeschlagen.';
   cConnectiontestWrongConfiguration = 'Falsche Konfiguration';
+  cNoServerFound = 'Kein SmartStartListServer im Netzwerk gefunden.';
 
 {==============================================================================}
 procedure TFormSettings.ButtonCanceClick(Sender: TObject);
@@ -84,8 +85,20 @@ var
   lWebClient: TSmartStartingWebClient;
   lMessage: string;
   lServerEntry: string;
+  LServers: TArray<TDiscoveredStartListServer>;
 begin
   lServerEntry := GetStartListServer;
+  if lServerEntry.Trim = '' then
+  begin
+    LServers := TSmartStartingWebClient.DiscoverServers;
+    if Length(LServers) = 0 then
+    begin
+      TApplication.InfoMessage(cNoServerFound);
+      Exit;
+    end;
+    lServerEntry := Format('%s', [LServers[0].Address]);
+    SetStartListServer(lServerEntry);
+  end;
   lWebClient := TSmartStartingWebClient.Create(lServerEntry);
   try
     if lWebClient.TestConnection(lServerEntry) then

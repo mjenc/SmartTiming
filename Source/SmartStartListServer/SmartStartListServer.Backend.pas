@@ -10,7 +10,10 @@ uses
   System.Win.Registry,
   IdHTTPServer,
   IdCustomHTTPServer,
-  IdContext;
+  IdContext,
+  IdUDPServer,
+  IdGlobal,
+  IdSocketHandle;
 
 type
   TStartListField =
@@ -42,20 +45,24 @@ type
 
   TStartListServer = class
   private
-    FHTTPServer   : TIdHTTPServer;
-    FPort         : Integer;
-    FCsvFileName  : string;
-    FColumnMapping: TColumnMapping;
+    FHTTPServer     : TIdHTTPServer;
+    FDiscoveryServer: TIdUDPServer;
+    FPort           : Integer;
+    FCsvFileName    : string;
+    FColumnMapping  : TColumnMapping;
     FOnLog: TFnLogPrcprocedure;
 
     procedure HTTPCommand(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo;
       AResponseInfo: TIdHTTPResponseInfo);
+    procedure UDPRead(AThread: TIdUDPListenerThread; const AData: TIdBytes;
+      ABinding: TIdSocketHandle);
     function ParseStartTimeFromCsv(const AValue: string): TDateTime;
     function FormatStartTimeForJson(AStartTime: TDateTime): string;
     function BuildStartListJson(var AIsUtf8: Boolean; var ACount: Integer): string;
 
     procedure InitServer;
+    procedure InitDiscovery;
   public
     constructor Create(AOnLog: TFnLogPrcprocedure);
     destructor Destroy; override;
@@ -75,6 +82,9 @@ implementation
 
 const
   cRegKeyPath = 'Software\SmartTiming\SmartStartListServer';
+  cDiscoveryPort = 9767;
+  cDiscoveryRequest = 'SMARTSTARTLIST_DISCOVER';
+  cDiscoveryResponsePrefix = 'SMARTSTARTLIST_SERVER;';
 
 { TStartListServer }
 
@@ -84,6 +94,7 @@ var
 begin
   inherited Create;
   FHTTPServer := nil;
+  FDiscoveryServer := nil;
   FPort := 9768;
   FCsvFileName := '';
 
@@ -92,12 +103,14 @@ begin
 
   LoadMappingFromRegistry;
   InitServer;
+  InitDiscovery;
   FOnLog := AOnLOg;
 end;
 
 destructor TStartListServer.Destroy;
 begin
   Stop;
+  FreeAndNil(FDiscoveryServer);
   FreeAndNil(FHTTPServer);
   inherited;
 end;
@@ -113,15 +126,33 @@ begin
   FHTTPServer.OnCommandOther := HTTPCommand;
 end;
 
+procedure TStartListServer.InitDiscovery;
+begin
+  if FDiscoveryServer <> nil then
+    Exit;
+
+  FDiscoveryServer := TIdUDPServer.Create(nil);
+  FDiscoveryServer.DefaultPort := cDiscoveryPort;
+  FDiscoveryServer.OnUDPRead := UDPRead;
+end;
+
 procedure TStartListServer.Start;
 begin
   if FHTTPServer = nil then
     InitServer;
+  if FDiscoveryServer = nil then
+    InitDiscovery;
 
   if not FHTTPServer.Active then
   begin
     FHTTPServer.DefaultPort := FPort;
     FHTTPServer.Active := True;
+  end;
+
+  if not FDiscoveryServer.Active then
+  begin
+    FDiscoveryServer.DefaultPort := cDiscoveryPort;
+    FDiscoveryServer.Active := True;
   end;
 end;
 
@@ -129,6 +160,25 @@ procedure TStartListServer.Stop;
 begin
   if Assigned(FHTTPServer) and FHTTPServer.Active then
     FHTTPServer.Active := False;
+  if Assigned(FDiscoveryServer) and FDiscoveryServer.Active then
+    FDiscoveryServer.Active := False;
+end;
+
+procedure TStartListServer.UDPRead(AThread: TIdUDPListenerThread; const AData: TIdBytes;
+  ABinding: TIdSocketHandle);
+var
+  LText: string;
+  LResponse: string;
+begin
+  LText := BytesToString(AData, IndyTextEncoding_UTF8);
+  if SameText(LText.Trim, cDiscoveryRequest) then
+  begin
+    LResponse := Format('%s%d', [cDiscoveryResponsePrefix, FPort]);
+    if Assigned(FDiscoveryServer) then
+      FDiscoveryServer.Send(ABinding.PeerIP, ABinding.PeerPort, LResponse);
+    if Assigned(FOnLog) then
+      FOnLog(Format('Discovery request from %s, answered with port %d', [ABinding.PeerIP, FPort]));
+  end;
 end;
 
 procedure TStartListServer.LoadMappingFromRegistry;
