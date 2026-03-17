@@ -97,6 +97,8 @@
         <VerInfo_MinorVer>1</VerInfo_MinorVer>
         <UWP_DelphiLogo44>..\Resources\SmartTiming_44x44.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>..\Resources\SmartTiming_150x150.png</UWP_DelphiLogo150>
+        <DCC_UnitSearchPath>.\Commons;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>

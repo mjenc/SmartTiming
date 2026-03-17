@@ -1,6 +1,8 @@
 program SmartDecoderWatchDog;
 
-{$R 'SmartTimingResource.res' 'SmartTimingResource.rc'}
+
+
+{$R 'SmartTimingResource.res' '..\SmartTimingResource.rc'}
 
 uses
   Vcl.Forms,
