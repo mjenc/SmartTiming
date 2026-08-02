@@ -16,6 +16,7 @@ uses
   SmartTiming.Controller in 'SmartTiming.Controller.pas',
   FormSmartTimingLauncher in 'FormSmartTimingLauncher.pas',
   DecoderInterface.MyLaps in 'DecoderInterface.MyLaps.pas',
+  DecoderInterface.RaceResult in 'DecoderInterface.RaceResult.pas',
   DecoderInterface in 'DecoderInterface.pas',
   FormBatteryCheck in 'FormBatteryCheck.pas' {FormBatteryCheck},
   FormCompetitorDetails in 'FormCompetitorDetails.pas' {FormCompetitorDetails},

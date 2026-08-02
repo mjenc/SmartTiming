@@ -129,6 +129,7 @@
         <DCCReference Include="SmartTiming.Controller.pas"/>
         <DCCReference Include="FormSmartTimingLauncher.pas"/>
         <DCCReference Include="DecoderInterface.MyLaps.pas"/>
+        <DCCReference Include="DecoderInterface.RaceResult.pas"/>
         <DCCReference Include="DecoderInterface.pas"/>
         <DCCReference Include="FormBatteryCheck.pas">
             <Form>FormBatteryCheck</Form>
