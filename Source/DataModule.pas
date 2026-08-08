@@ -30,14 +30,6 @@ type
     function GetMinIdOf(const ATableName, AColumnName: string): Integer;
     function GetMaxIdOf(const ATableName, AColumnName: string): Integer;
     function GetSQLValueFromVariant(AValue: Variant): string;
-    procedure EnsureSchemaUpToDate;
-    function TableExists(const ATableName: string): Boolean;
-    function GetPassingsChipIdDeclaredType: string;
-    procedure MigratePassingsChipIdToText;
-    procedure EnsureTransponderAssignmentsTable;
-    procedure EnsurePassingsRaceIndex;
-    procedure SetSchemaVersion(AVersion: Integer);
-    function GetSchemaVersion: Integer;
   public
     procedure LoadEventHistory(AStrings: TStrings);
     procedure PushEventToHistory(const ATitle: string);
@@ -148,7 +140,6 @@ begin
   FDatabaseName := ADatabaseName;
   SQLConnection.Params.Add('Database=' + ADatabaseName);
   SQLConnection.Connected := true;
-  EnsureSchemaUpToDate;
 end;
 
 {==============================================================================}
@@ -218,186 +209,6 @@ begin
   finally
     FreeAndNil(lScriptLines);
   end;
-  EnsureSchemaUpToDate;
-end;
-
-{==============================================================================}
-function TMainDataModule.TableExists(const ATableName: string): Boolean;
-var
-  lResultSet: TCustomSQLDataSet;
-begin
-  Result := False;
-  SQLConnection.Execute(
-    Format('SELECT 1 FROM sqlite_master WHERE type = ''table'' AND name = %s',
-      [QuotedStr(ATableName)]), nil, lResultSet);
-  try
-    Result := (lResultSet <> nil) and not lResultSet.Eof;
-  finally
-    FreeAndNil(lResultSet);
-  end;
-end;
-
-{==============================================================================}
-function TMainDataModule.GetSchemaVersion: Integer;
-var
-  lResultSet: TCustomSQLDataSet;
-begin
-  Result := 0;
-  if not TableExists('SYSSETTINGS') then
-    Exit;
-  try
-    SQLConnection.Execute(
-      Format('SELECT SETTINGDATA FROM SYSSETTINGS WHERE SETTINGNAME = %s',
-        [QuotedStr(cSchemaVersionSettingName)]), nil, lResultSet);
-    try
-      if (lResultSet <> nil) and not lResultSet.Eof then
-        Result := StrToIntDef(lResultSet.FieldByName('SETTINGDATA').AsString, 0);
-    finally
-      FreeAndNil(lResultSet);
-    end;
-  except
-    Result := 0;
-  end;
-end;
-
-{==============================================================================}
-procedure TMainDataModule.SetSchemaVersion(AVersion: Integer);
-var
-  lResultSet: TCustomSQLDataSet;
-  lExists: Boolean;
-begin
-  lExists := False;
-  SQLConnection.Execute(
-    Format('SELECT SETTINGID FROM SYSSETTINGS WHERE SETTINGNAME = %s',
-      [QuotedStr(cSchemaVersionSettingName)]), nil, lResultSet);
-  try
-    lExists := (lResultSet <> nil) and not lResultSet.Eof;
-  finally
-    FreeAndNil(lResultSet);
-  end;
-
-  if lExists then
-    SQLConnection.ExecuteDirect(
-      Format('UPDATE SYSSETTINGS SET SETTINGDATA = %s WHERE SETTINGNAME = %s',
-        [QuotedStr(AVersion.ToString), QuotedStr(cSchemaVersionSettingName)]))
-  else
-    SQLConnection.ExecuteDirect(
-      Format('INSERT INTO SYSSETTINGS (SETTINGID, SETTINGNAME, SETTINGDATA) VALUES (%d, %s, %s)',
-        [GetMaxIdOf('SYSSETTINGS', 'SETTINGID') + 1,
-         QuotedStr(cSchemaVersionSettingName), QuotedStr(AVersion.ToString)]));
-end;
-
-{==============================================================================}
-function TMainDataModule.GetPassingsChipIdDeclaredType: string;
-var
-  lResultSet: TCustomSQLDataSet;
-begin
-  Result := '';
-  SQLConnection.Execute('PRAGMA table_info(PASSINGS)', nil, lResultSet);
-  try
-    if lResultSet = nil then
-      Exit;
-    while not lResultSet.Eof do
-    begin
-      if SameText(lResultSet.FieldByName('name').AsString, 'CHIPID') then
-      begin
-        Result := lResultSet.FieldByName('type').AsString;
-        Exit;
-      end;
-      lResultSet.Next;
-    end;
-  finally
-    FreeAndNil(lResultSet);
-  end;
-end;
-
-{==============================================================================}
-procedure TMainDataModule.MigratePassingsChipIdToText;
-begin
-  SQLConnection.ExecuteDirect('BEGIN TRANSACTION');
-  try
-    SQLConnection.ExecuteDirect(
-      'CREATE TABLE PASSINGS_NEW (' +
-      'PASSINGID INTEGER PRIMARY KEY, ' +
-      'PASSINGNUMBER INTEGER, ' +
-      'CHIPID VARCHAR(32), ' +
-      'PASSINGTIME TIMESTAMP, ' +
-      'SIGNALSTRENGTH INTEGER, ' +
-      'HITS INTEGER, ' +
-      'FLAGS INTEGER, ' +
-      'SPORT INTEGER, ' +
-      'DECODERID VARCHAR(30), ' +
-      'RACEID INTEGER DEFAULT -1, ' +
-      'PASSINGSTATUS INTEGER DEFAULT 0)');
-
-    SQLConnection.ExecuteDirect(
-      'INSERT INTO PASSINGS_NEW ' +
-      '(PASSINGID, PASSINGNUMBER, CHIPID, PASSINGTIME, SIGNALSTRENGTH, HITS, FLAGS, SPORT, DECODERID, RACEID, PASSINGSTATUS) ' +
-      'SELECT PASSINGID, PASSINGNUMBER, CAST(CHIPID AS TEXT), PASSINGTIME, SIGNALSTRENGTH, HITS, FLAGS, SPORT, DECODERID, RACEID, PASSINGSTATUS ' +
-      'FROM PASSINGS');
-
-    SQLConnection.ExecuteDirect('DROP TABLE PASSINGS');
-    SQLConnection.ExecuteDirect('ALTER TABLE PASSINGS_NEW RENAME TO PASSINGS');
-    SQLConnection.ExecuteDirect('CREATE INDEX IF NOT EXISTS IDX_PASSINGS_1 ON PASSINGS (CHIPID, PASSINGTIME)');
-    SQLConnection.ExecuteDirect('CREATE INDEX IF NOT EXISTS IDX_PASSINGS_2 ON PASSINGS (PASSINGTIME, CHIPID)');
-    SQLConnection.ExecuteDirect('CREATE INDEX IF NOT EXISTS IDX_PASSINGS_3 ON PASSINGS (RACEID, PASSINGTIME)');
-    SQLConnection.ExecuteDirect('COMMIT');
-  except
-    try
-      SQLConnection.ExecuteDirect('ROLLBACK');
-    except
-    end;
-    raise;
-  end;
-end;
-
-{==============================================================================}
-procedure TMainDataModule.EnsureTransponderAssignmentsTable;
-begin
-  if TableExists('TRANSPONDERASSIGNMENTS') then
-    Exit;
-
-  SQLConnection.ExecuteDirect(
-    'CREATE TABLE TRANSPONDERASSIGNMENTS (' +
-    'ASSIGNMENTID INTEGER PRIMARY KEY, ' +
-    'CHIPID VARCHAR(32) NOT NULL, ' +
-    'COMPETITORID INTEGER NOT NULL, ' +
-    'VALIDFROM TIMESTAMP NOT NULL, ' +
-    'VALIDTO TIMESTAMP, ' +
-    'RACEID INTEGER)');
-  SQLConnection.ExecuteDirect(
-    'CREATE INDEX IF NOT EXISTS IDX_TX_ASSIGN_CHIP ON TRANSPONDERASSIGNMENTS (CHIPID, VALIDFROM, VALIDTO)');
-  SQLConnection.ExecuteDirect(
-    'CREATE INDEX IF NOT EXISTS IDX_TX_ASSIGN_COMP ON TRANSPONDERASSIGNMENTS (COMPETITORID, VALIDFROM, VALIDTO)');
-  SQLConnection.ExecuteDirect(
-    'CREATE INDEX IF NOT EXISTS IDX_TX_ASSIGN_RACE ON TRANSPONDERASSIGNMENTS (RACEID, CHIPID)');
-end;
-
-{==============================================================================}
-procedure TMainDataModule.EnsurePassingsRaceIndex;
-begin
-  SQLConnection.ExecuteDirect(
-    'CREATE INDEX IF NOT EXISTS IDX_PASSINGS_3 ON PASSINGS (RACEID, PASSINGTIME)');
-end;
-
-{==============================================================================}
-procedure TMainDataModule.EnsureSchemaUpToDate;
-var
-  lChipType: string;
-begin
-  if not TableExists('PASSINGS') then
-    Exit;
-
-  lChipType := GetPassingsChipIdDeclaredType;
-  if (lChipType <> '') and (Pos('INT', UpperCase(lChipType)) > 0) then
-    MigratePassingsChipIdToText
-  else
-    EnsurePassingsRaceIndex;
-
-  EnsureTransponderAssignmentsTable;
-
-  if GetSchemaVersion < cCurrentSchemaVersion then
-    SetSchemaVersion(cCurrentSchemaVersion);
 end;
 
 {==============================================================================}

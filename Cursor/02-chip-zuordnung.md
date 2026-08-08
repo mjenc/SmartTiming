@@ -16,10 +16,11 @@ Trainierende Fahrer späterer Rennen können die Ziellinie passieren, ohne im la
 - **Keine doppelte Transpondervergabe** über alle aktiven Rennen (`WarmUp` / `Started` / ggf. weitere konfigurierbare Status).
 - Am selben Tag darf ein Chip nacheinander verschiedenen Fahrern / Rennen gehören (nach Ende bzw. explizitem Entzug).
 - Passagen ohne Treffer in einem aktiven Rennen sind erwartbar (Training) und werden separat geführt.
+- **Keine DB-Migration:** Event-Datenbanken werden stets neu über `CreateSchema.sql` angelegt. Alt-Daten und Upgrade-Pfade entfallen.
 
 ## Scope
 
-- Tabelle `TRANSPONDERASSIGNMENTS` (Schema v2 bereits angelegt, ggf. nachschärfen):
+- Tabelle `TRANSPONDERASSIGNMENTS` in `CreateSchema.sql`:
   - `AssignmentId`, `ChipId`, `CompetitorId`
   - `RaceId` **NOT NULL** (rennbezogen)
   - `ValidFrom`, `ValidTo` (NULL = aktuell gültig)
@@ -41,7 +42,7 @@ Typischer 0-Treffer-Fall: Fahrer eines späteren Rennens trainiert und quert die
 
 ## Schritte
 
-1. Schema nachschärfen (`RaceId` Pflicht, Indizes); optional Sync von `COMPETITORS.CHIPID` als Startwert je Participation/Rennen.
+1. Schema in `CreateSchema.sql` finalisieren (`RaceId` Pflicht, Indizes); bei Bedarf Assignment aus aktueller Chip-Vergabe beim Anlegen der Participation erzeugen.
 2. Service/Cache `TTransponderAssignmentStore` (Memory + DB), immer mit `RaceId`.
 3. Assign / Unassign / Transfer-API mit Konfliktprüfung (rennübergreifend gegen aktive Status).
 4. Passing-Pipeline (`GetRaceIdForPassing` / Controller) auf Assignment-Lookup umstellen.
@@ -52,7 +53,7 @@ Typischer 0-Treffer-Fall: Fahrer eines späteren Rennens trainiert und quert die
 ## Abhängigkeiten
 
 - Grundlage für [Plan 3](03-rundenprotokoll.md), [Plan 4](04-plausibilitaet.md), [Plan 5](05-manuelle-passagen.md).
-- Schema-Anteil überschneidet sich mit [Plan 8](08-architektur-qualitaet.md) (WP 8a; Tabelle bereits vorhanden).
+- Schema in [Plan 8](08-architektur-qualitaet.md) / `CreateSchema.sql` (Tabelle vorhanden, `RaceId` NOT NULL).
 
 ## Akzeptanzkriterien
 
@@ -64,10 +65,9 @@ Typischer 0-Treffer-Fall: Fahrer eines späteren Rennens trainiert und quert die
 
 ## Risiken
 
-- Alt-Daten haben nur `COMPETITORS.CHIPID` → Migrationsskript und Fallback nötig (z. B. Assignment je Participation erzeugen).
 - UI-Prozesse (Import, Live-Mapping) müssen alle denselben Konflikt-Check nutzen.
 - Liste nicht zugeordneter Passagen kann bei Dauerbetrieb wachsen → Filter/Limit/Löschen vorsehen.
 
 ## Empfohlene Reihenfolge im Gesamtprogramm
 
-Früh umsetzen (nach Plan-8-Fixes; 8a-Tabelle `TRANSPONDERASSIGNMENTS` nutzen und rennbezogen festziehen).
+Früh umsetzen; Schema nur über neue DBs / `CreateSchema.sql`.

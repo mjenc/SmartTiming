@@ -4,10 +4,10 @@ Pläne zur Weiterentwicklung von SmartTiming (Mehrdisziplinen, parallele Läufe,
 
 **Rahmenbedingungen gesamt**
 
-- Pro Wettkampftag eine SQLite-Datenbank (`CreateSchema.sql`).
+- Pro Wettkampftag eine SQLite-Datenbank, stets neu aus `CreateSchema.sql` (keine Alt-Daten-Migration).
 - Mehrere Rennen parallel möglich.
 - Keine doppelte Transpondervergabe über parallele aktive Läufe.
-- Transponder nacheinander am Tag wiederverwendbar.
+- Transponder nacheinander am Tag wiederverwendbar; Zuordnung rennbezogen.
 
 ## Pläne
 

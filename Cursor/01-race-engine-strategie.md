@@ -13,7 +13,7 @@ Die Basisklasse `TCustomRaceEngine` und die Factory `TRaceEngineFactory` sind de
 
 - An einem Wettkampftag können **mehrere Läufe parallel** laufen.
 - Doppelte Transpondervergabe über parallele Läufe ist verboten (siehe Plan 2).
-- Bestehende ITT-Events müssen ohne Verhaltensänderung weiterlaufen.
+- ITT-Verhalten als Referenz beibehalten; Event-DBs werden neu aufgesetzt (keine Migrationspflicht).
 
 ## Scope
 
@@ -30,7 +30,7 @@ Die Basisklasse `TCustomRaceEngine` und die Factory `TRaceEngineFactory` sind de
 3. Skelette anlegen: `RaceEngine.Circuit`, `RaceEngine.Criterium`, `RaceEngine.TeamTimeTrial` (TTT nicht mehr leere ITT-Ableitung).
 4. Pro Engine definieren: `AvailableRaceStates`, `UpdateParticipationTable`, Ranking-SQL-Hook.
 5. Controller und WebService: Ranking nur noch über Engine-API, nicht über hardcodierte View-Namen.
-6. Migration/Kompatibilität: bestehende DBs mit `RACETYPE` prüfen und ggf. mappen.
+6. UI/Factory für neue Typen verdrahten; unbekannte Typen ablehnen (keine DB-Migrationspfade).
 
 ## Abhängigkeiten
 

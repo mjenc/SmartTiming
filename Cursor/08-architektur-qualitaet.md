@@ -12,12 +12,13 @@ Neben den Fachlücken gibt es Schema-Unebenheiten (`PASSINGS.CHIPID` als INTEGER
 - Parallele Läufe und No-Duplicate-Chip sind Testfälle für dieses Fundament.
 - Änderungen sollen ITT nicht regressieren.
 - Kleine, reviewbare Workpackages statt Big-Bang.
+- **Keine Schema-Migrationen:** Event-DBs werden immer neu aus `CreateSchema.sql` erzeugt.
 
 ## Workpackages
 
 | WP | Inhalt |
 |----|--------|
-| **8a Schema** | `PASSINGS.CHIPID` als TEXT; Indizes prüfen; Assignment-Tabelle gemeinsam mit Plan 2 |
+| **8a Schema** | `PASSINGS.CHIPID` als TEXT; Indizes; Assignment-Tabelle — **erledigt** (nur `CreateSchema.sql`, keine Migration) |
 | **8b Pipeline** | Passing-Ingress aus Controller in eigenen Service; weniger God-Object |
 | **8c Cache** | `UpdatePassing` inkl. Status; `FillPassingListForRaceId` respektiert `OnlyActive` |
 | **8d Bugs** | `LoadRaces`-Prune prüfen/fixen; TTT in UI sperren, bis Plan 1 TTT liefert — **erledigt** |
@@ -27,7 +28,7 @@ Neben den Fachlücken gibt es Schema-Unebenheiten (`PASSINGS.CHIPID` als INTEGER
 ## Schritte
 
 1. **Sofort:** 8d Bugfix + TTT-Sperre.
-2. **Früh:** 8a Schema-Korrektur CHIPID (+ Migration bestehender Event-DBs).
+2. **Früh:** 8a Schema nur in `CreateSchema.sql` (neue DBs).
 3. **Mit Plan 3/4:** 8c Cache-Konsistenz für Status/Zeit.
 4. **Iterativ:** 8b PassingService-Extraktion neben Feature-Arbeit.
 5. **Vor Multi-Disziplin-Rollout:** 8e klären, 8f Checkliste einmal grün.
@@ -46,7 +47,6 @@ Neben den Fachlücken gibt es Schema-Unebenheiten (`PASSINGS.CHIPID` als INTEGER
 
 ## Risiken
 
-- Schema-Migration auf bestehenden Wettkampftags-DBs — Backup-Pfad des Launchers mitdenken.
 - Zu große Controller-Extraktion verzögert Features → in kleinen Schnitten.
 
 ## Empfohlene Reihenfolge im Gesamtprogramm
