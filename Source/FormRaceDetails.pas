@@ -90,12 +90,24 @@ begin
   else
     FStatus := FDataSource.DataSet.FieldByName('STATUS').AsInteger;
 
-  for lRaceType := rtUnknown to rtIndividualTimeTrial do
-    ComboBoxRaceType.Items.Add(SmartTimingTools.GetRaceTypeStringFromEnum(lRaceType));
+  for lRaceType := Low(TRaceType) to High(TRaceType) do
+  begin
+    if not SmartTimingTools.IsRaceTypeSupported(lRaceType) then
+      Continue;
+    ComboBoxRaceType.Items.AddObject(
+      SmartTimingTools.GetRaceTypeStringFromEnum(lRaceType), TObject(lRaceType));
+  end;
   if FIsInsert then
-    ComboBoxRaceType.ItemIndex := 0
+    ComboBoxRaceType.ItemIndex := ComboBoxRaceType.Items.IndexOfObject(TObject(rtIndividualTimeTrial))
   else
-    ComboBoxRaceType.ItemIndex := FDataSource.DataSet.FieldByName('RACETYPE').AsInteger;
+  begin
+    lRaceType := TRaceType(FDataSource.DataSet.FieldByName('RACETYPE').AsInteger);
+    if not SmartTimingTools.IsRaceTypeSupported(lRaceType) then
+      lRaceType := rtIndividualTimeTrial;
+    ComboBoxRaceType.ItemIndex := ComboBoxRaceType.Items.IndexOfObject(TObject(lRaceType));
+  end;
+  if ComboBoxRaceType.ItemIndex < 0 then
+    ComboBoxRaceType.ItemIndex := 0;
 
   DBEditLapCount.DataSource := FDataSource;
   DBEditLapCount.DataField := 'LAPS';
@@ -145,7 +157,11 @@ begin
     FDataSource.DataSet.FieldByName('RACEID').Value := MainDataModule.GetMaxRaceId(FEventId) + 1;
   end;
   FDataSource.DataSet.FieldByName('STARTTIME').Value := GetStartDatetime;
-  FDataSource.DataSet.FieldByName('RACETYPE').Value := ComboBoxRaceType.ItemIndex;
+  if ComboBoxRaceType.ItemIndex >= 0 then
+    FDataSource.DataSet.FieldByName('RACETYPE').Value :=
+      Integer(ComboBoxRaceType.Items.Objects[ComboBoxRaceType.ItemIndex])
+  else
+    FDataSource.DataSet.FieldByName('RACETYPE').Value := Ord(rtIndividualTimeTrial);
   if CBFirstPassingCounts.Checked then
     FDataSource.DataSet.FieldByName('FIRSTPASSINGISLAP').Value := 1
   else

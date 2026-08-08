@@ -90,6 +90,9 @@ const
 resourcestring
   cRaceTypeNameUnknown = 'Unbestimmt';
   cRaceTypeNameITT = 'Einzelzeitfahren';
+  cRaceTypeNameTTT = 'Mannschaftszeitfahren';
+  cRaceTypeNameTTTLocked = 'Mannschaftszeitfahren (nicht verfügbar)';
+  cMessagesRaceTypeLocked = 'Mannschaftszeitfahren ist derzeit gesperrt und wird später implementiert.';
 
   cRaceStatusNotStarted = 'Nicht gestartet';
   cRaceStatusWarmUp = 'Vorbereitung';

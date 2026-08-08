@@ -20,7 +20,7 @@ Neben den Fachlücken gibt es Schema-Unebenheiten (`PASSINGS.CHIPID` als INTEGER
 | **8a Schema** | `PASSINGS.CHIPID` als TEXT; Indizes prüfen; Assignment-Tabelle gemeinsam mit Plan 2 |
 | **8b Pipeline** | Passing-Ingress aus Controller in eigenen Service; weniger God-Object |
 | **8c Cache** | `UpdatePassing` inkl. Status; `FillPassingListForRaceId` respektiert `OnlyActive` |
-| **8d Bugs** | `LoadRaces`-Prune prüfen/fixen; TTT in UI sperren, bis Plan 1 TTT liefert |
+| **8d Bugs** | `LoadRaces`-Prune prüfen/fixen; TTT in UI sperren, bis Plan 1 TTT liefert — **erledigt** |
 | **8e Teams** | Entweder TTT an `TEAMS`/`TEAMMEMBERS` anbinden oder Menü/Typ deaktivieren |
 | **8f Tests** | Checkliste/Smoke: Parallelrennen, Chip-Konflikt, MinLap, Manual Passing |
 

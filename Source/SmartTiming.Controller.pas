@@ -144,11 +144,13 @@ var
   lRaceItem: TRaceItem;
   lRaceId: integer;
   i: integer;
-  lVisited: TList<string>;
+  lVisited: TList<Integer>;
+  lOrphanIds: TArray<Integer>;
+  lOrphanCount: Integer;
 begin
   try
     LogOnDebug(cLogger, ['LoadRaces']);
-    lVisited := TList<string>.Create;
+    lVisited := TList<Integer>.Create;
     try
       MainDataModule.SQLDataSetRaces.Refresh;
       MainDataModule.DataSourceRaces.DataSet.Refresh;
@@ -164,17 +166,45 @@ begin
 
         SmartTimingTools.FillRaceItemFromDataSet(MainDataModule.DataSourceRaces.DataSet, lRaceItem);
         if lRaceItem.RaceEngine = nil then
-          lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);
+        begin
+          if not SmartTimingTools.IsRaceTypeSupported(lRaceItem.RaceType) then
+          begin
+            LogOnDebug(cLogger, ['Unsupported race type locked; using ITT engine',
+              lRaceId.ToString, Ord(lRaceItem.RaceType).ToString]);
+            // Keep stored RaceType for display; factory only accepts supported types.
+            lRaceItem.RaceType := rtIndividualTimeTrial;
+            lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(
+              GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);
+            SmartTimingTools.FillRaceItemFromDataSet(MainDataModule.DataSourceRaces.DataSet, lRaceItem);
+          end
+          else
+            lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(
+              GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);
+        end;
 
-        lVisited.Add(lRaceItem.Id.ToString);
+        lVisited.Add(lRaceId);
         MainDataModule.DataSourceRaces.DataSet.Next;
       end;
 
+      // Remove races that no longer exist in the dataset (fix: use key i, not stale lRaceItem).
+      lOrphanCount := 0;
+      SetLength(lOrphanIds, FRaceList.Count);
       for i in FRaceList.Keys do
       begin
-        if lVisited.IndexOf(lRaceItem.Id.ToString) >= 0 then
-          Continue;
-        FRaceList.Remove(i);
+        if lVisited.IndexOf(i) < 0 then
+        begin
+          lOrphanIds[lOrphanCount] := i;
+          Inc(lOrphanCount);
+        end;
+      end;
+
+      for i := 0 to lOrphanCount - 1 do
+      begin
+        if FRaceList.TryGetValue(lOrphanIds[i], lRaceItem) then
+        begin
+          FRaceList.Remove(lOrphanIds[i]);
+          FreeAndNil(lRaceItem);
+        end;
       end;
 
     finally
