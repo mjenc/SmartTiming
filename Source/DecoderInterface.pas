@@ -1,4 +1,4 @@
-unit DecoderInterface;
+﻿unit DecoderInterface;
 
 interface
 

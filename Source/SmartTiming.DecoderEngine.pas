@@ -1,4 +1,4 @@
-unit SmartTiming.DecoderEngine;
+﻿unit SmartTiming.DecoderEngine;
 
 interface
 

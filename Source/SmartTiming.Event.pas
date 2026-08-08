@@ -1,4 +1,4 @@
-unit SmartTiming.Event;
+﻿unit SmartTiming.Event;
 
 interface
 

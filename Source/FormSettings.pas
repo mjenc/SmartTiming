@@ -1,4 +1,4 @@
-unit FormSettings;
+﻿unit FormSettings;
 
 interface
 

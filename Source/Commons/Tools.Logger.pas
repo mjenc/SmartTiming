@@ -1,4 +1,4 @@
-unit Tools.Logger;
+ï»¿unit Tools.Logger;
 
 {
   The contents of this file are subject to the Mozilla Public
@@ -4132,7 +4132,7 @@ end;
 procedure LogAndRaise(AErr: TObject; const ALoggerName: string; ALogLevel: TLogLevel; const ALogMessageParts: array of string);
 begin
   try
-    // Das ExceptObject muss mit Acquire geholt werden, da eine Referenz auf ExceptObject nicht über einen Funktionsaufruf gehalten wird!
+    // Das ExceptObject muss mit Acquire geholt werden, da eine Referenz auf ExceptObject nicht Ã¼ber einen Funktionsaufruf gehalten wird!
     AErr := GetCurrentExceptionReference(AErr);
     LogException(AErr, ALoggerName, ALogLevel, ALogMessageParts);
   except
@@ -4153,7 +4153,7 @@ begin
   SetString(s, Buffer, Windows.GetModuleFileName(Instance, Buffer, MAX_PATH));
   // Windows 2003 Server Fix
   s := StringReplace(ExtractFilePath( s ),'\\?\','',[rfReplaceAll]);
-  // Fix damit UNC Pfad aufgelöst wird
+  // Fix damit UNC Pfad aufgelÃ¶st wird
   if (pos('UNC', s) = 1) then
     Result := StringReplace(ExtractFilePath( s ),'UNC','\',[rfReplaceAll])
   else

@@ -1,4 +1,4 @@
-unit Tools.Preferences;
+﻿unit Tools.Preferences;
 
 interface
 

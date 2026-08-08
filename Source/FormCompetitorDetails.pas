@@ -1,4 +1,4 @@
-unit FormCompetitorDetails;
+﻿unit FormCompetitorDetails;
 
 interface
 
@@ -132,7 +132,7 @@ begin
   lTxId := DBEditTxId.EditText;
 
   if not TTransponderMappingStore.GetSingleton.ConvertToValidChipId(lTxId) then
-    ShowMessage('Keine g�ltige Transponder ID.');
+    ShowMessage('Keine gültige Transponder ID.');
 
   DBEditTxId.EditText := lTxId;
 

@@ -1,4 +1,4 @@
-unit FormCompetitorImport;
+﻿unit FormCompetitorImport;
 
 interface
 

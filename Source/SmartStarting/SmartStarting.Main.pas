@@ -1,4 +1,4 @@
-unit SmartStarting.Main;
+﻿unit SmartStarting.Main;
 
 interface
 
@@ -62,7 +62,7 @@ implementation
 
 resourcestring
   cMessageSureAboutExiting = 'Programm wirklich beenden?';
-  cMessageImportDeletesActualList = 'Der Import l�scht die aktuelle Starterliste. Sind Sie sicher?';
+  cMessageImportDeletesActualList = 'Der Import löscht die aktuelle Starterliste. Sind Sie sicher?';
 
 {==============================================================================}
 procedure TFormMain.ButtonExitClick(Sender: TObject);

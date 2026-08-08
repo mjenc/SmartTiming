@@ -1,4 +1,4 @@
-unit FormAssignCompetitorToTransponder;
+﻿unit FormAssignCompetitorToTransponder;
 
 interface
 

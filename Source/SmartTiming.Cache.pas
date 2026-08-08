@@ -1,4 +1,4 @@
-unit SmartTiming.Cache;
+﻿unit SmartTiming.Cache;
 
 interface
 
@@ -221,7 +221,7 @@ begin
         if (AFilterOnTransponderIDs = nil) or AFilterOnTransponderIDs.Contains(lPassing.TxId) then
           AList.Add(lPassingNumber, lPassing);
       end;
-// TODO Durchg�nge wurden nicht gespeichert
+// TODO Durchgänge wurden nicht gespeichert
 //      else
 
       Inc(lPassingNumber);

@@ -1,4 +1,4 @@
-unit SmartStartListServer.MainForm;
+﻿unit SmartStartListServer.MainForm;
 
 interface
 

@@ -1,4 +1,4 @@
-unit SmartTiming.GridFormatProvider;
+﻿unit SmartTiming.GridFormatProvider;
 
 interface
 

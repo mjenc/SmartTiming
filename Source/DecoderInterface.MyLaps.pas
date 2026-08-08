@@ -1,4 +1,4 @@
-unit DecoderInterface.MyLaps;
+﻿unit DecoderInterface.MyLaps;
 
 interface
 

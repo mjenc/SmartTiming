@@ -1,4 +1,4 @@
-unit SmartRankingViewer.WebClient;
+﻿unit SmartRankingViewer.WebClient;
 
 interface
 

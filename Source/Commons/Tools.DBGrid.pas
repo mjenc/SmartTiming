@@ -1,4 +1,4 @@
-unit Tools.DBGrid;
+﻿unit Tools.DBGrid;
 
 interface
 

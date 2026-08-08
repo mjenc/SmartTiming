@@ -1,4 +1,4 @@
-unit FormMain;
+ï»¿unit FormMain;
 
 interface
 
@@ -474,7 +474,7 @@ begin
 
   FTemperatureChart := TValueHistoryChart.Create(self);
   begin
-    FTemperatureChart.ValueLabel := 'Temperatur (°C) ';
+    FTemperatureChart.ValueLabel := 'Temperatur (Â°C) ';
     FTemperatureChart.MaxBufferSize := PanelTemperatureChart.Width;
     FTemperatureChart.GreenAreaTo := 49.0;
     FTemperatureChart.YellowAreaFrom := 49.0;
@@ -485,7 +485,7 @@ begin
 
   FNoiseChart := TValueHistoryChart.Create(self);
   begin
-    FNoiseChart.ValueLabel := 'Störlevel ';
+    FNoiseChart.ValueLabel := 'StÃ¶rlevel ';
     FNoiseChart.MaxBufferSize := PanelNoiseChart.Width;
     FNoiseChart.GreenAreaTo := 45.0;
     FNoiseChart.YellowAreaFrom := 45.0;

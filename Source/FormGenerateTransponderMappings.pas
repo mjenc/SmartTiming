@@ -1,4 +1,4 @@
-unit FormGenerateTransponderMappings;
+ï»¿unit FormGenerateTransponderMappings;
 
 interface
 
@@ -87,7 +87,7 @@ begin
   lShortId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(AChipCode);
   if lShortId >= 0 then
   begin
-    MemoLog.Lines.Add('Warnung: Übersetzung für ' + AChipCode + ' bereits vorhanden (' + lShortId.ToString + ')');
+    MemoLog.Lines.Add('Warnung: Ãœbersetzung fÃ¼r ' + AChipCode + ' bereits vorhanden (' + lShortId.ToString + ')');
     Exit;
   end;
 
@@ -96,7 +96,7 @@ begin
   else
     FindLastEntry;
   TTransponderMappingStore.GetSingleton.AddTransponder(FFirstGap, AChipCode);
-  MemoLog.Lines.Add('Übersetzung erzeugt für: ' + AChipCode + ': ' + FFirstGap.ToString);
+  MemoLog.Lines.Add('Ãœbersetzung erzeugt fÃ¼r: ' + AChipCode + ': ' + FFirstGap.ToString);
 end;
 
 {==============================================================================}

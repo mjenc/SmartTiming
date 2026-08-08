@@ -1,4 +1,4 @@
-unit RaceProtocol;
+ï»¿unit RaceProtocol;
 
 interface
 
@@ -9,7 +9,7 @@ uses
 type
   TPassingType = (ptRider, ptWarmUp, ptStartRace, ptNeutralize, ptLastLap, ptFinish, ptStop, ptNewLeader);
 
-  // Datenstruktur für einen einzelnen Eintrag (ein Kästchen)
+  // Datenstruktur fÃ¼r einen einzelnen Eintrag (ein KÃ¤stchen)
   TPassingItem = record
     Bib: Integer;
     HasDot: Boolean; // True, wenn eine Runde verpasst wurde
@@ -22,7 +22,7 @@ type
     LastLap: Integer;
   end;
 
-  // Datenstruktur für eine ganze Spalte (Runde)
+  // Datenstruktur fÃ¼r eine ganze Spalte (Runde)
   TLapColumn = class
   private
     FItems: TList<TPassingItem>;
@@ -39,7 +39,7 @@ type
     FCurrentColumnIndex: Integer;
     FLapCountingActive: boolean;
 
-    // Design-Konstanten (könnten auch Properties sein)
+    // Design-Konstanten (kÃ¶nnten auch Properties sein)
     FItemWidth: Integer;
     FItemHeight: Integer;
     FHeaderHeight: Integer;
@@ -64,7 +64,7 @@ type
     property Font;
     property ParentColor;
     property ParentFont;
-    // Größe der Komponente explizit freigeben
+    // GrÃ¶ÃŸe der Komponente explizit freigeben
     property Height;
     property Width;
   end;
@@ -105,7 +105,7 @@ begin
   FItemWidth := 35;
   FItemHeight := 20;
   FHeaderHeight := 30;
-  FColMargin := 2; // Abstand zwischen den Kästchen
+  FColMargin := 2; // Abstand zwischen den KÃ¤stchen
 
   FColumns := TObjectList<TLapColumn>.Create(True);
   FRidersLaps := TDictionary<Integer, TRiderItem>.Create;
@@ -161,7 +161,7 @@ begin
 
   if FLapCountingActive then
   begin
-    // Prüfen, ob Nummer schon in der aktuellen Spalte ist
+    // PrÃ¼fen, ob Nummer schon in der aktuellen Spalte ist
     for i := 0 to CurrentCol.Items.Count - 1 do
     begin
       if CurrentCol.Items[i].Bib = ARiderNumber then
@@ -172,7 +172,7 @@ begin
     end;
   end;
 
-  // Rundenrückstand prüfen
+  // RundenrÃ¼ckstand prÃ¼fen
   if FRidersLaps.TryGetValue(ARiderNumber, CurrentRider) then
   begin
     if FLapCountingActive then
@@ -182,7 +182,7 @@ begin
 
   FRidersLaps.AddOrSetValue(ARiderNumber, CurrentRider);
 
-  // Hinzufügen und Status aktualisieren
+  // HinzufÃ¼gen und Status aktualisieren
   CurrentCol.Items.Add(Item);
 
   // Neu zeichnen
@@ -217,7 +217,7 @@ begin
   Canvas.MoveTo(Rect.Right - 1, Rect.Top);
   Canvas.LineTo(Rect.Right - 1, Rect.Bottom);
 
-  // Große Zahl (Runde)
+  // GroÃŸe Zahl (Runde)
   Canvas.Font.Assign(Self.Font);
   Canvas.Font.Size := 14;
   Canvas.Font.Color := clWhite; // Schatten/Outline Effekt simpel
@@ -249,11 +249,11 @@ begin
   R := Rect(X, Y, X + FItemWidth, Y + FItemHeight);
   InflateRect(R, -1, -1); // Kleiner Abstand
 
-  // Rahmen (Grün)
+  // Rahmen (GrÃ¼n)
   case Item.PassingType of
     ptRider:
       begin
-        Canvas.Pen.Color := $00008000; // Dunkelgrün
+        Canvas.Pen.Color := $00008000; // DunkelgrÃ¼n
         Txt := IntToStr(Item.Bib);
       end;
     ptWarmUp:
@@ -308,7 +308,7 @@ begin
   Canvas.TextOut(R.Left + (R.Width - TxtSize.cx) div 2,
                  R.Top + (R.Height - TxtSize.cy) div 2, Txt);
 
-  // Der "schwarze Punkt" (Rundenrückstand)
+  // Der "schwarze Punkt" (RundenrÃ¼ckstand)
   if Item.HasDot then
   begin
     Canvas.Brush.Color := clBlack;
@@ -328,7 +328,7 @@ var
   SubCols: Integer;
   TotalItemHeight: Integer;
 
-  // Variablen für Item Position
+  // Variablen fÃ¼r Item Position
   ItemIdx: Integer;
   SubColIdx: Integer;
   RowIdx: Integer;
@@ -336,7 +336,7 @@ var
 begin
   inherited;
 
-  // Zeichenfläche löschen
+  // ZeichenflÃ¤che lÃ¶schen
   Canvas.Brush.Color := Color;
   Canvas.FillRect(ClientRect);
 
@@ -379,7 +379,7 @@ begin
       DrawItem(Canvas, DrawX, DrawY, ColObj.Items[j]);
     end;
 
-    // Offset für die nächste Hauptspalte verschieben + Trennlinie
+    // Offset fÃ¼r die nÃ¤chste Hauptspalte verschieben + Trennlinie
     // Graue Trennlinie zwischen Hauptspalten zeichnen
     Canvas.Pen.Color := clSilver;
     Canvas.Pen.Width := 1;

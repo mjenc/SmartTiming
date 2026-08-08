@@ -1,4 +1,4 @@
-unit Tools.Registry;
+﻿unit Tools.Registry;
 
 interface
 

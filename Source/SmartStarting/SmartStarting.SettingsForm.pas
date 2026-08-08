@@ -1,4 +1,4 @@
-unit SmartStarting.SettingsForm;
+﻿unit SmartStarting.SettingsForm;
 
 interface
 

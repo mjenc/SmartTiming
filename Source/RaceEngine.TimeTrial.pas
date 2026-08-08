@@ -1,4 +1,4 @@
-unit RaceEngine.TimeTrial;
+﻿unit RaceEngine.TimeTrial;
 
 interface
 

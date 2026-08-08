@@ -1,4 +1,4 @@
-unit Tools.Dialogs;
+﻿unit Tools.Dialogs;
 
 interface
 

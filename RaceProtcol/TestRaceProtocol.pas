@@ -1,4 +1,4 @@
-unit TestRaceProtocol;
+ï»¿unit TestRaceProtocol;
 
 interface
 
@@ -83,7 +83,7 @@ begin
   FRaceProtocol.AddPassing(7);
   FRaceProtocol.AddPassing(4);
 
-  // 3. Runde (#8 überrundet)
+  // 3. Runde (#8 Ã¼berrundet)
   FRaceProtocol.AddPassing(12);
   FRaceProtocol.AddPassing(1);
   FRaceProtocol.AddPassing(8);
@@ -96,7 +96,7 @@ begin
   FRaceProtocol.AddPassing(6);
   FRaceProtocol.AddPassing(7);
 
-  // 4. Runde (#4 überrundet)
+  // 4. Runde (#4 Ã¼berrundet)
   FRaceProtocol.AddPassing(12);
   FRaceProtocol.AddPassing(4);
   FRaceProtocol.AddPassing(1);
@@ -136,7 +136,7 @@ begin
   FRaceProtocol.AddPassing(6);
   FRaceProtocol.AddPassing(7);
 
-  // 7. Runde #8 und #4 wieder überrundet
+  // 7. Runde #8 und #4 wieder Ã¼berrundet
   FRaceProtocol.AddPassing(12);
   FRaceProtocol.AddPassing(4);
   FRaceProtocol.AddPassing(1);

@@ -1,4 +1,4 @@
-unit FormSmartRankingViewer;
+﻿unit FormSmartRankingViewer;
 
 interface
 

@@ -1,4 +1,4 @@
-unit SmartTiming.Consts;
+ï»¿unit SmartTiming.Consts;
 
 interface
 
@@ -18,7 +18,7 @@ const
   cManufacturer = 'MJ';
   cSmartStartingAppName = 'SmartStarting';
   cSmartTimingAppName = 'SmartTiming';
-  cCopyright = '© Michael Jenc 2024';
+  cCopyright = 'Â© Michael Jenc 2024';
 
   // Database
   cStdDatabaseName = 'SmartTiming.db';
@@ -112,7 +112,7 @@ resourcestring
   cFieldTitleLastName = 'Nachname';
   cFieldTitleClub = 'Verein';
   cFieldTitleTeam = 'Team';
-  cFieldTitleNationality = 'Nationalität';
+  cFieldTitleNationality = 'NationalitÃ¤t';
   cFieldTitleUCIID = 'UCI-ID';
   cFieldTitleTransponder = 'Transponder';
   cFieldTitleStartTime = 'Startzeit';
@@ -130,12 +130,12 @@ resourcestring
 
   cMessagesBackupSucceeded = 'Das Datenbank-Backup wurde erfolgreich erstellt.';
   cMessagesBackupFailed = 'Das Erstellen eines Datenbank-Backup ist fehlgeschlagen.';
-  cMessagesNoTxMapping = 'Es ist noch keine Transponder-Mapping-Tabelle importiert.'#13#10'Möchten Sie diese nun importieren?';
-  cMessagesTxMappingLoaded = 'Es wurden %d Transponder-Mapping-Einträge geladen.';
+  cMessagesNoTxMapping = 'Es ist noch keine Transponder-Mapping-Tabelle importiert.'#13#10'MÃ¶chten Sie diese nun importieren?';
+  cMessagesTxMappingLoaded = 'Es wurden %d Transponder-Mapping-EintrÃ¤ge geladen.';
   cMessagesRaceNotFinishedYet = 'Das Rennen ist noch nicht beendet.';
-  cMessagesComptitorDeleteConfirm = '%d Teilnehmer wirklich löschen?';
-  cMessagesPassingDeleteConfirm = 'Durchgang von %s wirklich löschen?';
-  cMessagesOpenDirectory = 'Verzeichnis öffnen?';
+  cMessagesComptitorDeleteConfirm = '%d Teilnehmer wirklich lÃ¶schen?';
+  cMessagesPassingDeleteConfirm = 'Durchgang von %s wirklich lÃ¶schen?';
+  cMessagesOpenDirectory = 'Verzeichnis Ã¶ffnen?';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);

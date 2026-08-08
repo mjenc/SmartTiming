@@ -1,4 +1,4 @@
-unit FormWatchDogSettings;
+﻿unit FormWatchDogSettings;
 
 interface
 

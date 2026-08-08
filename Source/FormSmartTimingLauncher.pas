@@ -1,4 +1,4 @@
-unit FormSmartTimingLauncher;
+﻿unit FormSmartTimingLauncher;
 
 interface
 

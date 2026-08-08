@@ -1,4 +1,4 @@
-unit FormRankingViewerConnectionProps;
+﻿unit FormRankingViewerConnectionProps;
 
 interface
 

@@ -1,4 +1,4 @@
-unit FormTime;
+﻿unit FormTime;
 
 interface
 

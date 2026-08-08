@@ -1,4 +1,4 @@
-unit RaceEngine.Custom;
+ï»¿unit RaceEngine.Custom;
 
 interface
 
@@ -236,13 +236,13 @@ begin
   AddMenuItem(FPopupMenuRanking, 'DSQ', OnDSQ);
   AddMenuItem(FPopupMenuRanking, 'Reaktivieren', OnActivateParticipant);
   AddMenuItem(FPopupMenuRanking, 'Strafen', OnPenalties);
-  AddMenuItem(FPopupMenuRanking, 'Zielzeit ändern', OnEditTime);
+  AddMenuItem(FPopupMenuRanking, 'Zielzeit Ã¤ndern', OnEditTime);
 
   FPopupMenuPassings := TPopupMenu.Create(nil);
-  AddMenuItem(FPopupMenuPassings, 'Ungültig', OnInvalidatePassing);
-  AddMenuItem(FPopupMenuPassings, 'Gültig', OnValidatePassing);
-  AddMenuItem(FPopupMenuPassings, 'Fahrer ändern', OnChangeCompetitorOfTransponder);
-  AddMenuItem(FPopupMenuPassings, 'Durchfahrtszeit ändern', OnChangePassingTime);
+  AddMenuItem(FPopupMenuPassings, 'UngÃ¼ltig', OnInvalidatePassing);
+  AddMenuItem(FPopupMenuPassings, 'GÃ¼ltig', OnValidatePassing);
+  AddMenuItem(FPopupMenuPassings, 'Fahrer Ã¤ndern', OnChangeCompetitorOfTransponder);
+  AddMenuItem(FPopupMenuPassings, 'Durchfahrtszeit Ã¤ndern', OnChangePassingTime);
   AddMenuItem(FPopupMenuPassings, 'Entfernen', OnRemovePassing);
 end;
 

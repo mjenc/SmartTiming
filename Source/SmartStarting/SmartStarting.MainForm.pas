@@ -1,4 +1,4 @@
-unit SmartStarting.MainForm;
+﻿unit SmartStarting.MainForm;
 
 interface
 
@@ -94,7 +94,7 @@ resourcestring
 {$ELSE}
   cMessageSureAboutExiting = 'Programm wirklich beenden?';
 {$ENDIF}
-  cMessageImportDeletesActualList = 'Der Import l�scht die aktuelle Starterliste. Sind Sie sicher?';
+  cMessageImportDeletesActualList = 'Der Import löscht die aktuelle Starterliste. Sind Sie sicher?';
 
 const
   cLastSeconds30 = [25,26,27,28,29,55,56,57,58,59];

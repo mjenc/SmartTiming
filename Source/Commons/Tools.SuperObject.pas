@@ -1,4 +1,4 @@
- (*
+﻿ (*
   *                       XSuperObject - Simple JSON Framework
   *
   * The MIT License (MIT)

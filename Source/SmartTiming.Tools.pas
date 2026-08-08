@@ -1,4 +1,4 @@
-unit SmartTiming.Tools;
+﻿unit SmartTiming.Tools;
 
 interface
 

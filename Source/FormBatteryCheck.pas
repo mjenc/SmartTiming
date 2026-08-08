@@ -1,4 +1,4 @@
-unit FormBatteryCheck;
+﻿unit FormBatteryCheck;
 
 interface
 
@@ -56,7 +56,7 @@ implementation
 
 
 resourcestring
-  cGapNotFunctional = 'L�cken / Ohne Funktion';
+  cGapNotFunctional = 'Lücken / Ohne Funktion';
   cWeak = 'Schwacher Batteriestatus';
   cHealthy = 'Gesund';
 
