@@ -42,7 +42,7 @@ Typischer 0-Treffer-Fall: Fahrer eines späteren Rennens trainiert und quert die
 
 ## Schritte
 
-1. Schema in `CreateSchema.sql` finalisieren (`RaceId` Pflicht, Indizes); bei Bedarf Assignment aus aktueller Chip-Vergabe beim Anlegen der Participation erzeugen.
+1. Schema in `CreateSchema.sql` finalisieren (`RaceId` Pflicht, Indizes); bei Bedarf Assignment aus aktueller Chip-Vergabe beim Anlegen der Participation erzeugen. — **erledigt**
 2. Service/Cache `TTransponderAssignmentStore` (Memory + DB), immer mit `RaceId`.
 3. Assign / Unassign / Transfer-API mit Konfliktprüfung (rennübergreifend gegen aktive Status).
 4. Passing-Pipeline (`GetRaceIdForPassing` / Controller) auf Assignment-Lookup umstellen.

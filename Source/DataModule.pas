@@ -47,6 +47,9 @@ type
     function GetMaxRaceId(AEventId: integer): integer;
     function GetMaxCompetitorId: integer;
     function GetMaxParticipationId: integer;
+    function GetMaxTransponderAssignmentId: integer;
+    procedure CreateTransponderAssignmentFromCompetitorChip(ARaceId, ACompetitorId: Integer);
+    procedure CloseTransponderAssignmentsForCompetitors(ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
     function GetMaxPassingNumber: integer;
     function GetMinPassingNumber: integer;
 
@@ -364,6 +367,98 @@ end;
 function TMainDataModule.GetMaxParticipationId: integer;
 begin
   result := GetMaxIdOf('PARTICIPATION', 'PARTICIPATIONID');
+end;
+
+{==============================================================================}
+function TMainDataModule.GetMaxTransponderAssignmentId: integer;
+begin
+  result := GetMaxIdOf('TRANSPONDERASSIGNMENTS', 'ASSIGNMENTID');
+end;
+
+{==============================================================================}
+procedure TMainDataModule.CreateTransponderAssignmentFromCompetitorChip(ARaceId, ACompetitorId: Integer);
+var
+  lResultSet: TCustomSQLDataSet;
+  lChipId: string;
+  lAssignmentId: Integer;
+  lValidFrom: string;
+  lCmd: string;
+begin
+  SQLConnection.Execute(
+    Format('SELECT CHIPID FROM COMPETITORS WHERE COMPETITORID = %d', [ACompetitorId]),
+    nil, lResultSet);
+  try
+    if (lResultSet = nil) or lResultSet.Eof then
+      Exit;
+    lChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
+  finally
+    FreeAndNil(lResultSet);
+  end;
+
+  if lChipId = '' then
+    Exit;
+
+  // Skip if this race already has an active assignment for the competitor.
+  SQLConnection.Execute(
+    Format(
+      'SELECT 1 FROM TRANSPONDERASSIGNMENTS WHERE RACEID = %d AND COMPETITORID = %d AND VALIDTO IS NULL',
+      [ARaceId, ACompetitorId]),
+    nil, lResultSet);
+  try
+    if (lResultSet <> nil) and not lResultSet.Eof then
+      Exit;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+
+  // Skip if chip is already actively assigned (parallel races / unique index).
+  SQLConnection.Execute(
+    Format(
+      'SELECT 1 FROM TRANSPONDERASSIGNMENTS WHERE CHIPID = %s AND VALIDTO IS NULL',
+      [QuotedStr(lChipId)]),
+    nil, lResultSet);
+  try
+    if (lResultSet <> nil) and not lResultSet.Eof then
+      Exit;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+
+  lAssignmentId := GetMaxTransponderAssignmentId + 1;
+  lValidFrom := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now).QuotedString;
+  lCmd := Format(
+    'INSERT INTO TRANSPONDERASSIGNMENTS ' +
+    '(ASSIGNMENTID, CHIPID, COMPETITORID, VALIDFROM, VALIDTO, RACEID) VALUES ' +
+    '(%d, %s, %d, %s, NULL, %d)',
+    [lAssignmentId, QuotedStr(lChipId), ACompetitorId, lValidFrom, ARaceId]);
+  SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+procedure TMainDataModule.CloseTransponderAssignmentsForCompetitors(ARaceId: Integer;
+  const ACompetitorIDs: TArray<integer>);
+var
+  i: Integer;
+  lIDs: TStringList;
+  lCmd: string;
+  lValidTo: string;
+begin
+  if Length(ACompetitorIDs) = 0 then
+    Exit;
+
+  lIDs := TStringList.Create;
+  try
+    for i := 0 to High(ACompetitorIDs) do
+      lIDs.Add(ACompetitorIDs[i].ToString);
+    lValidTo := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now).QuotedString;
+    lCmd := Format(
+      'UPDATE TRANSPONDERASSIGNMENTS SET VALIDTO = %s ' +
+      'WHERE RACEID = %d AND COMPETITORID IN (%s) AND VALIDTO IS NULL',
+      [lValidTo, ARaceId, lIDs.CommaText]);
+    SQLConnection.Execute(lCmd, nil);
+  finally
+    FreeAndNil(lIDs);
+  end;
 end;
 
 {==============================================================================}
@@ -692,8 +787,12 @@ begin
   begin
     if IsCompetitorAssignedToRace(ARaceId, ACompetitorIDs[i]) then
       Continue;
-    lCmd := Format('INSERT INTO PARTICIPATION (PARTICIPATIONID, RACEID, COMPETITORID, STARTTIME) SELECT %d, %d, COMPETITORID, STARTTIME FROM COMPETITORS WHERE COMPETITORID = %d', [lParticipationId, ARaceId, ACompetitorIDs[i]]);
+    lCmd := Format(
+      'INSERT INTO PARTICIPATION (PARTICIPATIONID, RACEID, COMPETITORID, STARTTIME) ' +
+      'SELECT %d, %d, COMPETITORID, STARTTIME FROM COMPETITORS WHERE COMPETITORID = %d',
+      [lParticipationId, ARaceId, ACompetitorIDs[i]]);
     SQLConnection.Execute(lCmd, nil);
+    CreateTransponderAssignmentFromCompetitorChip(ARaceId, ACompetitorIDs[i]);
     Inc(lParticipationId);
   end;
 end;
@@ -707,6 +806,8 @@ var
 begin
   if Length(ACompetitorIDs) = 0 then
     Exit;
+
+  CloseTransponderAssignmentsForCompetitors(ARaceId, ACompetitorIDs);
 
   lIDs := TStringList.Create;
   try
@@ -768,6 +869,11 @@ begin
   try
     for i := 0 to High(ACompetitorIDs) do
       lIDs.Add(ACompetitorIDs[i].ToString);
+    lCmd := Format(
+      'UPDATE TRANSPONDERASSIGNMENTS SET VALIDTO = %s ' +
+      'WHERE COMPETITORID IN (%s) AND VALIDTO IS NULL',
+      [FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now).QuotedString, lIDs.CommaText]);
+    SQLConnection.Execute(lCmd, nil);
     lCmd := Format('DELETE FROM PARTICIPATION WHERE COMPETITORID IN (%s)', [lIDs.CommaText]);
     SQLConnection.Execute(lCmd, nil);
     lCmd := Format('DELETE FROM TEAMMEMBERS WHERE COMPETITORID IN (%s)', [lIDs.CommaText]);
