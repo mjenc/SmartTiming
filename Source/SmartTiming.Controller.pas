@@ -132,6 +132,7 @@ begin
     MainDataModule.RefreshRacesDataSet(FEventDataObject.EventId);
     ResetRacesDataSet;
     LoadRaces;
+    MainDataModule.FillTransponderAssignmentCache;
     RestorePassings;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['LoadEventData']);

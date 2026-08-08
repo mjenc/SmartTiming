@@ -76,6 +76,7 @@ type
     procedure ExportTxMapping(const AFileName: string);
     function FillTransponderMappingCache: Integer;
     procedure SaveTransponderMappingCache;
+    function FillTransponderAssignmentCache: Integer;
 
     procedure AddPassingToDatabase(APassing: TPassing; var ARaceId: integer);
     procedure UpdatePassingInDatabase(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
@@ -381,8 +382,10 @@ var
   lResultSet: TCustomSQLDataSet;
   lChipId: string;
   lAssignmentId: Integer;
+  lValidFromDt: TDateTime;
   lValidFrom: string;
   lCmd: string;
+  lAssignment: TTransponderAssignment;
 begin
   SQLConnection.Execute(
     Format('SELECT CHIPID FROM COMPETITORS WHERE COMPETITORID = %d', [ACompetitorId]),
@@ -425,13 +428,22 @@ begin
   end;
 
   lAssignmentId := GetMaxTransponderAssignmentId + 1;
-  lValidFrom := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now).QuotedString;
+  lValidFromDt := Now;
+  lValidFrom := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', lValidFromDt).QuotedString;
   lCmd := Format(
     'INSERT INTO TRANSPONDERASSIGNMENTS ' +
     '(ASSIGNMENTID, CHIPID, COMPETITORID, VALIDFROM, VALIDTO, RACEID) VALUES ' +
     '(%d, %s, %d, %s, NULL, %d)',
     [lAssignmentId, QuotedStr(lChipId), ACompetitorId, lValidFrom, ARaceId]);
   SQLConnection.Execute(lCmd, nil);
+
+  lAssignment.AssignmentId := lAssignmentId;
+  lAssignment.ChipId := lChipId;
+  lAssignment.CompetitorId := ACompetitorId;
+  lAssignment.RaceId := ARaceId;
+  lAssignment.ValidFrom := lValidFromDt;
+  lAssignment.ValidTo := 0;
+  TTransponderAssignmentStore.GetSingleton.Upsert(lAssignment);
 end;
 
 {==============================================================================}
@@ -441,6 +453,7 @@ var
   i: Integer;
   lIDs: TStringList;
   lCmd: string;
+  lValidToDt: TDateTime;
   lValidTo: string;
 begin
   if Length(ACompetitorIDs) = 0 then
@@ -450,12 +463,15 @@ begin
   try
     for i := 0 to High(ACompetitorIDs) do
       lIDs.Add(ACompetitorIDs[i].ToString);
-    lValidTo := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now).QuotedString;
+    lValidToDt := Now;
+    lValidTo := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', lValidToDt).QuotedString;
     lCmd := Format(
       'UPDATE TRANSPONDERASSIGNMENTS SET VALIDTO = %s ' +
       'WHERE RACEID = %d AND COMPETITORID IN (%s) AND VALIDTO IS NULL',
       [lValidTo, ARaceId, lIDs.CommaText]);
     SQLConnection.Execute(lCmd, nil);
+    TTransponderAssignmentStore.GetSingleton.CloseAssignmentsForCompetitors(
+      ARaceId, ACompetitorIDs, lValidToDt);
   finally
     FreeAndNil(lIDs);
   end;
@@ -1018,6 +1034,46 @@ begin
     while not lResultSet.Eof do
     begin
       TTransponderMappingStore.GetSingleton.AddTransponder(lResultSet.Fields[0].AsInteger, lResultSet.Fields[1].AsString);
+      lResultSet.Next;
+    end;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.FillTransponderAssignmentCache: Integer;
+var
+  lResultSet: TDataSet;
+  lAssignment: TTransponderAssignment;
+  lValidToField: TField;
+begin
+  TTransponderAssignmentStore.GetSingleton.Clear;
+  Result := 0;
+
+  SQLConnection.Execute(
+    'SELECT ASSIGNMENTID, CHIPID, COMPETITORID, VALIDFROM, VALIDTO, RACEID ' +
+    'FROM TRANSPONDERASSIGNMENTS ORDER BY ASSIGNMENTID',
+    nil, lResultSet);
+  try
+    if (lResultSet = nil) or lResultSet.IsEmpty then
+      Exit;
+
+    Result := lResultSet.RecordCount;
+    lResultSet.First;
+    while not lResultSet.Eof do
+    begin
+      lAssignment.AssignmentId := lResultSet.FieldByName('ASSIGNMENTID').AsInteger;
+      lAssignment.ChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
+      lAssignment.CompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
+      lAssignment.RaceId := lResultSet.FieldByName('RACEID').AsInteger;
+      lAssignment.ValidFrom := lResultSet.FieldByName('VALIDFROM').AsDateTime;
+      lValidToField := lResultSet.FieldByName('VALIDTO');
+      if lValidToField.IsNull then
+        lAssignment.ValidTo := 0
+      else
+        lAssignment.ValidTo := lValidToField.AsDateTime;
+      TTransponderAssignmentStore.GetSingleton.Upsert(lAssignment);
       lResultSet.Next;
     end;
   finally

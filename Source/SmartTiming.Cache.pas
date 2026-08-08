@@ -92,6 +92,48 @@ type
     property ShortIdToTxId: TDictionary<integer, string> read GetShortIdToTxId;
   end;
 
+  (* Race-scoped chip assignment. ValidTo = 0 means open (VALIDTO IS NULL in DB). *)
+  TTransponderAssignment = record
+    AssignmentId: Integer;
+    ChipId: string;
+    CompetitorId: Integer;
+    RaceId: Integer;
+    ValidFrom: TDateTime;
+    ValidTo: TDateTime;
+    function IsOpen: Boolean;
+    function CoversTime(ATime: TDateTime): Boolean;
+  end;
+
+  TTransponderAssignmentStore = class(TSynchronizedObject)
+  private
+    FById: TDictionary<Integer, TTransponderAssignment>;
+    FActiveByChip: TDictionary<string, Integer>;
+    FActiveByRaceCompetitor: TDictionary<string, Integer>;
+    class function RaceCompetitorKey(ARaceId, ACompetitorId: Integer): string; static;
+    procedure IndexOpenAssignment(const AAssignment: TTransponderAssignment);
+    procedure UnindexOpenAssignment(const AAssignment: TTransponderAssignment);
+  protected
+    constructor Create; override;
+  public
+    class function GetSingleton: TTransponderAssignmentStore;
+    destructor Destroy; override;
+    procedure Clear;
+
+    procedure Upsert(const AAssignment: TTransponderAssignment);
+    procedure CloseAssignment(AAssignmentId: Integer; AValidTo: TDateTime);
+    procedure CloseAssignmentsForCompetitors(ARaceId: Integer;
+      const ACompetitorIDs: TArray<Integer>; AValidTo: TDateTime);
+
+    function TryGetById(AAssignmentId: Integer; out AAssignment: TTransponderAssignment): Boolean;
+    function TryGetActiveByChip(const AChipId: string; out AAssignment: TTransponderAssignment): Boolean;
+    function TryGetActiveByRaceAndCompetitor(ARaceId, ACompetitorId: Integer;
+      out AAssignment: TTransponderAssignment): Boolean;
+    function FindAssignmentsForChipAtTime(const AChipId: string; APassingTime: TDateTime;
+      AList: TList<TTransponderAssignment>): Integer;
+    procedure FillAssignmentsForRace(ARaceId: Integer; AList: TList<TTransponderAssignment>;
+      AOpenOnly: Boolean = False);
+  end;
+
 implementation
 
 var
@@ -99,6 +141,7 @@ var
   gStatusStore: TStatusStore;
   gDecoderStore: TDecoderStore;
   gMappingStore: TTransponderMappingStore;
+  gAssignmentStore: TTransponderAssignmentStore;
 
   gCriticalSection: TCriticalSection;
 
@@ -533,12 +576,254 @@ begin
   end;
 end;
 
+{==============================================================================}
+function TTransponderAssignment.IsOpen: Boolean;
+begin
+  Result := ValidTo = 0;
+end;
+
+{==============================================================================}
+function TTransponderAssignment.CoversTime(ATime: TDateTime): Boolean;
+begin
+  Result := (ValidFrom <= ATime) and (IsOpen or (ValidTo >= ATime));
+end;
+
+{==============================================================================}
+constructor TTransponderAssignmentStore.Create;
+begin
+  inherited Create;
+  FById := TDictionary<Integer, TTransponderAssignment>.Create;
+  FActiveByChip := TDictionary<string, Integer>.Create;
+  FActiveByRaceCompetitor := TDictionary<string, Integer>.Create;
+end;
+
+{==============================================================================}
+class function TTransponderAssignmentStore.GetSingleton: TTransponderAssignmentStore;
+begin
+  gCriticalSection.Enter;
+  try
+    if gAssignmentStore = nil then
+      gAssignmentStore := TTransponderAssignmentStore.Create;
+  finally
+    gCriticalSection.Leave;
+  end;
+  Result := gAssignmentStore;
+end;
+
+{==============================================================================}
+destructor TTransponderAssignmentStore.Destroy;
+begin
+  try
+    FreeAndNil(FById);
+    FreeAndNil(FActiveByChip);
+    FreeAndNil(FActiveByRaceCompetitor);
+  finally
+    inherited Destroy;
+  end;
+end;
+
+{==============================================================================}
+class function TTransponderAssignmentStore.RaceCompetitorKey(ARaceId, ACompetitorId: Integer): string;
+begin
+  Result := Format('%d:%d', [ARaceId, ACompetitorId]);
+end;
+
+{==============================================================================}
+procedure TTransponderAssignmentStore.IndexOpenAssignment(const AAssignment: TTransponderAssignment);
+begin
+  if not AAssignment.IsOpen then
+    Exit;
+  FActiveByChip.AddOrSetValue(AAssignment.ChipId, AAssignment.AssignmentId);
+  FActiveByRaceCompetitor.AddOrSetValue(
+    RaceCompetitorKey(AAssignment.RaceId, AAssignment.CompetitorId),
+    AAssignment.AssignmentId);
+end;
+
+{==============================================================================}
+procedure TTransponderAssignmentStore.UnindexOpenAssignment(const AAssignment: TTransponderAssignment);
+var
+  lId: Integer;
+begin
+  if FActiveByChip.TryGetValue(AAssignment.ChipId, lId) and (lId = AAssignment.AssignmentId) then
+    FActiveByChip.Remove(AAssignment.ChipId);
+  if FActiveByRaceCompetitor.TryGetValue(
+       RaceCompetitorKey(AAssignment.RaceId, AAssignment.CompetitorId), lId) and
+     (lId = AAssignment.AssignmentId) then
+    FActiveByRaceCompetitor.Remove(RaceCompetitorKey(AAssignment.RaceId, AAssignment.CompetitorId));
+end;
+
+{==============================================================================}
+procedure TTransponderAssignmentStore.Clear;
+begin
+  Synchronizer.BeginWrite;
+  try
+    FById.Clear;
+    FActiveByChip.Clear;
+    FActiveByRaceCompetitor.Clear;
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+procedure TTransponderAssignmentStore.Upsert(const AAssignment: TTransponderAssignment);
+var
+  lExisting: TTransponderAssignment;
+begin
+  Synchronizer.BeginWrite;
+  try
+    if FById.TryGetValue(AAssignment.AssignmentId, lExisting) then
+      UnindexOpenAssignment(lExisting);
+    FById.AddOrSetValue(AAssignment.AssignmentId, AAssignment);
+    IndexOpenAssignment(AAssignment);
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+procedure TTransponderAssignmentStore.CloseAssignment(AAssignmentId: Integer; AValidTo: TDateTime);
+var
+  lAssignment: TTransponderAssignment;
+begin
+  Synchronizer.BeginWrite;
+  try
+    if not FById.TryGetValue(AAssignmentId, lAssignment) then
+      Exit;
+    if not lAssignment.IsOpen then
+      Exit;
+    UnindexOpenAssignment(lAssignment);
+    lAssignment.ValidTo := AValidTo;
+    FById.AddOrSetValue(AAssignmentId, lAssignment);
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+procedure TTransponderAssignmentStore.CloseAssignmentsForCompetitors(ARaceId: Integer;
+  const ACompetitorIDs: TArray<Integer>; AValidTo: TDateTime);
+var
+  i: Integer;
+  lAssignment: TTransponderAssignment;
+  lId: Integer;
+begin
+  Synchronizer.BeginWrite;
+  try
+    for i := 0 to High(ACompetitorIDs) do
+    begin
+      if not FActiveByRaceCompetitor.TryGetValue(
+           RaceCompetitorKey(ARaceId, ACompetitorIDs[i]), lId) then
+        Continue;
+      if not FById.TryGetValue(lId, lAssignment) then
+        Continue;
+      UnindexOpenAssignment(lAssignment);
+      lAssignment.ValidTo := AValidTo;
+      FById.AddOrSetValue(lId, lAssignment);
+    end;
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+function TTransponderAssignmentStore.TryGetById(AAssignmentId: Integer;
+  out AAssignment: TTransponderAssignment): Boolean;
+begin
+  Synchronizer.BeginRead;
+  try
+    Result := FById.TryGetValue(AAssignmentId, AAssignment);
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+function TTransponderAssignmentStore.TryGetActiveByChip(const AChipId: string;
+  out AAssignment: TTransponderAssignment): Boolean;
+var
+  lId: Integer;
+begin
+  Synchronizer.BeginRead;
+  try
+    Result := FActiveByChip.TryGetValue(AChipId, lId) and FById.TryGetValue(lId, AAssignment);
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+function TTransponderAssignmentStore.TryGetActiveByRaceAndCompetitor(ARaceId, ACompetitorId: Integer;
+  out AAssignment: TTransponderAssignment): Boolean;
+var
+  lId: Integer;
+begin
+  Synchronizer.BeginRead;
+  try
+    Result := FActiveByRaceCompetitor.TryGetValue(RaceCompetitorKey(ARaceId, ACompetitorId), lId) and
+              FById.TryGetValue(lId, AAssignment);
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+function TTransponderAssignmentStore.FindAssignmentsForChipAtTime(const AChipId: string;
+  APassingTime: TDateTime; AList: TList<TTransponderAssignment>): Integer;
+var
+  lPair: TPair<Integer, TTransponderAssignment>;
+begin
+  Result := 0;
+  if AList = nil then
+    Exit;
+
+  Synchronizer.BeginRead;
+  try
+    for lPair in FById do
+    begin
+      if not SameText(lPair.Value.ChipId, AChipId) then
+        Continue;
+      if not lPair.Value.CoversTime(APassingTime) then
+        Continue;
+      AList.Add(lPair.Value);
+      Inc(Result);
+    end;
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+procedure TTransponderAssignmentStore.FillAssignmentsForRace(ARaceId: Integer;
+  AList: TList<TTransponderAssignment>; AOpenOnly: Boolean);
+var
+  lPair: TPair<Integer, TTransponderAssignment>;
+begin
+  if AList = nil then
+    Exit;
+
+  Synchronizer.BeginRead;
+  try
+    for lPair in FById do
+    begin
+      if lPair.Value.RaceId <> ARaceId then
+        Continue;
+      if AOpenOnly and not lPair.Value.IsOpen then
+        Continue;
+      AList.Add(lPair.Value);
+    end;
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
 initialization
   gCriticalSection := TCriticalSection.Create;
   gPassingStore := nil;
   gStatusStore := nil;
   gDecoderStore := nil;
   gMappingStore := nil;
+  gAssignmentStore := nil;
 
 finalization
   try
@@ -546,6 +831,7 @@ finalization
     FreeAndNil(gPassingStore);
     FreeAndNil(gStatusStore);
     FreeAndNil(gMappingStore);
+    FreeAndNil(gAssignmentStore);
 
     gCriticalSection.Free;
   except
