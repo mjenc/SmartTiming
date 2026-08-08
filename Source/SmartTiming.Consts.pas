@@ -23,6 +23,8 @@ const
   // Database
   cStdDatabaseName = 'SmartTiming.db';
   cCreateSchemaScriptName = 'CreateSchema.sql';
+  cSchemaVersionSettingName = 'SchemaVersion';
+  cCurrentSchemaVersion = 2;
 
   cRegKeyPath = 'SOFTWARE\' + cManufacturer + '\' + cSmartTimingAppName;
 

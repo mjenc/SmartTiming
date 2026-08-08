@@ -1,33 +1,32 @@
-unit DecoderInterface.RaceResult;
+﻿unit DecoderInterface.RaceResult;
 
-{==============================================================================
+(*==============================================================================
   RaceResult Ubidium adapter via local JSON-Lines bridge (TCP).
 
-  Protocol (one JSON object per line, UTF-8, LF-terminated):
+  Protocol: one JSON object per line, UTF-8, LF-terminated.
 
-  Delphi -> Bridge
+  Delphi -> Bridge:
     {"type":"ping"}
     {"type":"discover"}
-    {"type":"connect","address":"<ubidium-ip>","device_id":"<U-xxxxx>"}
+    {"type":"connect","address":"<ip>","device_id":"<U-xxxxx>"}
     {"type":"disconnect"}
 
-  Bridge -> Delphi
+  Bridge -> Delphi:
     {"type":"pong"}
-    {"type":"decoder_found","device_id":"...","address":"...","firmware":"...","decoder_type":"..."}
+    {"type":"decoder_found", ...}
     {"type":"connected","device_id":"..."}
     {"type":"disconnected","device_id":"..."}
     {"type":"error","message":"..."}
-    {"type":"passing","passing_number":1,"chip_id":"...","passing_time":"2026-07-28T12:00:00.000Z",
-     "signal":-45,"decoder_id":"..."}
+    {"type":"passing","passing_number":1,"chip_id":"...","passing_time":"...Z","signal":-45,"decoder_id":"..."}
     {"type":"status","noise":0,"gps":true,"temperature":35.0,"input_voltage":12.0,"decoder_id":"..."}
-==============================================================================}
+==============================================================================*)
 
 interface
 
 uses
   Classes, SysUtils, DateUtils, SyncObjs,
   System.JSON,
-  IdTCPClient, IdGlobal, IdException,
+  IdTCPClient, IdGlobal,
   DecoderInterface;
 
 const
@@ -78,7 +77,7 @@ type
     FBridgeHost: string;
     FBridgePort: Word;
     FLine: string;
-    FSessionConnected: Integer; // 0/1 via TInterlocked
+    FSessionConnected: Integer;
     FTcpLock: TCriticalSection;
     procedure PostLine;
     procedure SendCommand(const AJson: string);
@@ -86,6 +85,8 @@ type
     procedure SetSessionConnected(AValue: Boolean);
     procedure HandleBridgeState(const AEventType, AMessage: string);
     procedure SafeDisconnect;
+    function EnsureTcpConnected: Boolean;
+    function TryReadLine(out ALine: string): Boolean;
   protected
     function GetConnected: Boolean; override;
     procedure UnblockIO; override;
@@ -131,7 +132,8 @@ type
     constructor Create(AOwner: TUbidiumDecoderFinder);
   end;
 
-{==============================================================================}
+{ TUbidiumBridgeMessageParser }
+
 function TUbidiumBridgeMessageParser.JsonString(AObj: TJSONObject; const AName, ADefault: string): string;
 var
   V: TJSONValue;
@@ -142,7 +144,6 @@ begin
   Result := V.Value;
 end;
 
-{==============================================================================}
 function TUbidiumBridgeMessageParser.JsonInt(AObj: TJSONObject; const AName: string; ADefault: Integer): Integer;
 var
   V: TJSONValue;
@@ -157,7 +158,6 @@ begin
   end;
 end;
 
-{==============================================================================}
 function TUbidiumBridgeMessageParser.JsonFloat(AObj: TJSONObject; const AName: string; ADefault: Double): Double;
 var
   V: TJSONValue;
@@ -172,7 +172,6 @@ begin
   end;
 end;
 
-{==============================================================================}
 function TUbidiumBridgeMessageParser.JsonBool(AObj: TJSONObject; const AName: string; ADefault: Boolean): Boolean;
 var
   V: TJSONValue;
@@ -185,7 +184,6 @@ begin
   Result := SameText(V.Value, 'true') or (V.Value = '1');
 end;
 
-{==============================================================================}
 function TUbidiumBridgeMessageParser.ParsePassingTime(const AValue: string): TDateTime;
 begin
   if AValue = '' then
@@ -197,7 +195,6 @@ begin
   end;
 end;
 
-{==============================================================================}
 procedure TUbidiumBridgeMessageParser.HandleDecoderFound(AObj: TJSONObject);
 var
   LDecoder: TDecoder;
@@ -212,7 +209,6 @@ begin
     FOnDecoderFound(LDecoder);
 end;
 
-{==============================================================================}
 procedure TUbidiumBridgeMessageParser.HandlePassing(AObj: TJSONObject);
 var
   LPassing: TPassing;
@@ -229,7 +225,6 @@ begin
     FOnPassing(LPassing);
 end;
 
-{==============================================================================}
 procedure TUbidiumBridgeMessageParser.HandleStatus(AObj: TJSONObject);
 var
   LStatus: TDecoderStatus;
@@ -244,7 +239,6 @@ begin
     FOnStatus(LStatus);
 end;
 
-{==============================================================================}
 procedure TUbidiumBridgeMessageParser.ProcessLine(const ALine: string);
 var
   LTrimmed: string;
@@ -285,7 +279,8 @@ begin
   end;
 end;
 
-{==============================================================================}
+{ TUbidiumListener }
+
 constructor TUbidiumListener.Create(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent;
   AOnPassing: TDecoderPassingReceivedEvent);
 begin
@@ -303,7 +298,6 @@ begin
   FTcpClient.ConnectTimeout := 2000;
 end;
 
-{==============================================================================}
 destructor TUbidiumListener.Destroy;
 begin
   StopAndWait;
@@ -313,7 +307,6 @@ begin
   inherited;
 end;
 
-{==============================================================================}
 procedure TUbidiumListener.SetSessionConnected(AValue: Boolean);
 begin
   if AValue then
@@ -322,13 +315,11 @@ begin
     TInterlocked.Exchange(FSessionConnected, 0);
 end;
 
-{==============================================================================}
 function TUbidiumListener.GetConnected: Boolean;
 begin
-  Result := (TInterlocked.CompareExchange(FSessionConnected, 0, 0) = 1);
+  Result := TInterlocked.CompareExchange(FSessionConnected, 0, 0) = 1;
 end;
 
-{==============================================================================}
 procedure TUbidiumListener.HandleBridgeState(const AEventType, AMessage: string);
 begin
   if AEventType = cBridgeMsgConnected then
@@ -337,9 +328,10 @@ begin
     SetSessionConnected(False);
 end;
 
-{==============================================================================}
 procedure TUbidiumListener.SafeDisconnect;
 begin
+  if FTcpLock = nil then
+    Exit;
   FTcpLock.Enter;
   try
     if (FTcpClient <> nil) and FTcpClient.Connected then
@@ -355,13 +347,11 @@ begin
   SetSessionConnected(False);
 end;
 
-{==============================================================================}
 procedure TUbidiumListener.UnblockIO;
 begin
   SafeDisconnect;
 end;
 
-{==============================================================================}
 procedure TUbidiumListener.StopAndWait;
 begin
   if Finished then
@@ -372,31 +362,36 @@ begin
     WaitFor;
 end;
 
-{==============================================================================}
 function TUbidiumListener.BuildConnectCommand: string;
 var
   LObj: TJSONObject;
+  LAddress: string;
+  LDeviceId: string;
 begin
+  if FDecoder.Address <> '' then
+    LAddress := FDecoder.Address
+  else
+    LAddress := '127.0.0.1';
+  if FDecoder.DecoderId <> '' then
+    LDeviceId := FDecoder.DecoderId
+  else
+    LDeviceId := 'U-UNKNOWN';
+
   LObj := TJSONObject.Create;
   try
     LObj.AddPair('type', cBridgeMsgConnect);
-    if FDecoder.Address <> '' then
-      LObj.AddPair('address', FDecoder.Address)
-    else
-      LObj.AddPair('address', '127.0.0.1');
-    if FDecoder.DecoderId <> '' then
-      LObj.AddPair('device_id', FDecoder.DecoderId)
-    else
-      LObj.AddPair('device_id', 'U-UNKNOWN');
+    LObj.AddPair('address', LAddress);
+    LObj.AddPair('device_id', LDeviceId);
     Result := LObj.ToJSON;
   finally
     LObj.Free;
   end;
 end;
 
-{==============================================================================}
 procedure TUbidiumListener.SendCommand(const AJson: string);
 begin
+  if FTcpLock = nil then
+    Exit;
   FTcpLock.Enter;
   try
     if (FTcpClient = nil) or not FTcpClient.Connected then
@@ -407,7 +402,6 @@ begin
   end;
 end;
 
-{==============================================================================}
 procedure TUbidiumListener.PostLine;
 begin
   if FParser = nil then
@@ -416,40 +410,65 @@ begin
   FLine := '';
 end;
 
-{==============================================================================}
+function TUbidiumListener.EnsureTcpConnected: Boolean;
+begin
+  Result := False;
+  FTcpLock.Enter;
+  try
+    if FTcpClient = nil then
+      Exit;
+    if not FTcpClient.Connected then
+    begin
+      FTcpClient.Host := FBridgeHost;
+      FTcpClient.Port := FBridgePort;
+      FTcpClient.Connect;
+      FTcpClient.IOHandler.WriteLn(BuildConnectCommand, IndyTextEncoding_UTF8);
+    end;
+    Result := FTcpClient.Connected;
+  finally
+    FTcpLock.Leave;
+  end;
+end;
+
+function TUbidiumListener.TryReadLine(out ALine: string): Boolean;
+begin
+  Result := False;
+  ALine := '';
+  FTcpLock.Enter;
+  try
+    if (FTcpClient = nil) or not FTcpClient.Connected then
+      Exit;
+    if FTcpClient.IOHandler.InputBufferIsEmpty then
+      FTcpClient.IOHandler.CheckForDataOnSource(200);
+    if FTcpClient.IOHandler.InputBufferIsEmpty then
+      Exit;
+    ALine := FTcpClient.IOHandler.ReadLn(IndyTextEncoding_UTF8);
+    Result := ALine <> '';
+  finally
+    FTcpLock.Leave;
+  end;
+end;
+
 procedure TUbidiumListener.Execute;
 begin
   repeat
     try
-      FTcpLock.Enter;
-      try
-        if not FTcpClient.Connected then
-        begin
-          FTcpClient.Host := FBridgeHost;
-          FTcpClient.Port := FBridgePort;
-          FTcpClient.Connect;
-          FTcpClient.IOHandler.WriteLn(BuildConnectCommand, IndyTextEncoding_UTF8);
-        end;
-      finally
-        FTcpLock.Leave;
+      if not EnsureTcpConnected then
+      begin
+        Sleep(500);
+        Continue;
       end;
 
-      if FTcpClient.IOHandler.InputBufferIsEmpty then
-        FTcpClient.IOHandler.CheckForDataOnSource(200);
-
-      if not FTcpClient.IOHandler.InputBufferIsEmpty then
-      begin
-        FLine := FTcpClient.IOHandler.ReadLn(IndyTextEncoding_UTF8);
-        if FLine <> '' then
-          Synchronize(PostLine);
-      end
+      if TryReadLine(FLine) then
+        Synchronize(PostLine)
       else
         Sleep(50);
     except
-      on E: EIdReadTimeout do
-        { idle bridge — keep connection };
       on E: Exception do
       begin
+        if SameText(E.ClassName, 'EIdReadTimeout') then
+          Continue;
+
         SetSessionConnected(False);
         SafeDisconnect;
         if not Terminated then
@@ -459,14 +478,14 @@ begin
   until Terminated;
 
   try
-    if FTcpClient.Connected then
-      SendCommand(Format('{"type":"%s"}', [cBridgeMsgDisconnect]));
+    SendCommand(Format('{"type":"%s"}', [cBridgeMsgDisconnect]));
   except
   end;
   SafeDisconnect;
 end;
 
-{==============================================================================}
+{ TUbidiumFinderWorker }
+
 constructor TUbidiumFinderWorker.Create(AOwner: TUbidiumDecoderFinder);
 begin
   inherited Create(True);
@@ -474,26 +493,26 @@ begin
   FreeOnTerminate := False;
 end;
 
-{==============================================================================}
 procedure TUbidiumFinderWorker.Execute;
 begin
   FOwner.WorkerExecute;
 end;
 
-{==============================================================================}
+{ TUbidiumDecoderFinder }
+
 constructor TUbidiumDecoderFinder.Create(AOnDecoderFound: TDecoderFoundEvent);
 begin
-  // Do not call inherited Create — base TDecoderFinder is the composite owner.
+  // Do not call inherited Create: TDecoderFinder is the composite owner.
   FOnDecoderFound := AOnDecoderFound;
   FBridgeHost := cUbidiumBridgeDefaultHost;
   FBridgePort := cUbidiumBridgeDefaultPort;
   FWorkerStop := False;
+  FFoundCount := 0;
   FWakeEvent := TEvent.Create(nil, False, False, '');
   FWorker := TUbidiumFinderWorker.Create(Self);
   FWorker.Start;
 end;
 
-{==============================================================================}
 destructor TUbidiumDecoderFinder.Destroy;
 begin
   FWorkerStop := True;
@@ -502,22 +521,23 @@ begin
   if FWorker <> nil then
   begin
     FWorker.Terminate;
-    FWakeEvent.SetEvent;
+    if FWakeEvent <> nil then
+      FWakeEvent.SetEvent;
     FWorker.WaitFor;
     FreeAndNil(FWorker);
   end;
   FreeAndNil(FWakeEvent);
+  // Leaf finder: skip TDecoderFinder.Destroy child cleanup (fields are nil).
+  // Still run TObject finalization via inherited.
   inherited;
 end;
 
-{==============================================================================}
 procedure TUbidiumDecoderFinder.SyncDecoderFound;
 begin
   if Assigned(FOnDecoderFound) then
     FOnDecoderFound(FPendingDecoder);
 end;
 
-{==============================================================================}
 procedure TUbidiumDecoderFinder.CollectDecoderFound(ADecoder: TDecoder);
 begin
   if FFoundCount >= Length(FFoundDecoders) then
@@ -526,7 +546,6 @@ begin
   Inc(FFoundCount);
 end;
 
-{==============================================================================}
 procedure TUbidiumDecoderFinder.RunDiscover;
 var
   LClient: TIdTCPClient;
@@ -549,7 +568,8 @@ begin
 
     try
       LClient.Connect;
-      LClient.IOHandler.WriteLn(Format('{"type":"%s"}', [cBridgeMsgDiscover]), IndyTextEncoding_UTF8);
+      LClient.IOHandler.WriteLn(
+        Format('{"type":"%s"}', [cBridgeMsgDiscover]), IndyTextEncoding_UTF8);
 
       LDeadline := Now + (800 * OneMillisecond);
       while (Now < LDeadline) and not FWorkerStop do
@@ -563,7 +583,7 @@ begin
           LParser.ProcessLine(LLine);
       end;
     except
-      // Bridge unreachable or discover failed — fail quietly (search is optional).
+      // Bridge unreachable - optional search, fail quietly.
     end;
 
     for I := 0 to FFoundCount - 1 do
@@ -579,12 +599,11 @@ begin
         LClient.Disconnect;
     except
     end;
-    LParser.Free;
-    LClient.Free;
+    FreeAndNil(LParser);
+    FreeAndNil(LClient);
   end;
 end;
 
-{==============================================================================}
 procedure TUbidiumDecoderFinder.WorkerExecute;
 begin
   while not FWorkerStop do
@@ -594,17 +613,15 @@ begin
         if not FWorkerStop then
           RunDiscover;
       wrTimeout:
-        ; // idle
+        ;
     else
       Break;
     end;
   end;
 end;
 
-{==============================================================================}
 procedure TUbidiumDecoderFinder.Refresh;
 begin
-  // Non-blocking: wake background worker to run discover.
   if FWakeEvent <> nil then
     FWakeEvent.SetEvent;
 end;
