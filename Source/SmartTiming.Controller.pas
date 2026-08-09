@@ -332,6 +332,7 @@ begin
 
     MainDataModule.AddPassingToDatabase(APassing, lRaceId);
     APassing.RaceId := lRaceId;
+    TPassingStore.GetSingleton.UpdatePassingRaceId(APassing.PassingNumber, lRaceId);
     GFormMain.AddPassingForRaceId(lRaceId, APassing);
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['OnPassingReceived']);

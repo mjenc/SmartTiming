@@ -30,6 +30,7 @@ type
     procedure AddPassing(APassing: TPassing);
     function GetPassing(APassingId: Integer): TPassing;
     procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime);
+    procedure UpdatePassingRaceId(APassingNumber: Integer; ARaceId: Integer);
     procedure RemovePassing(APassingNumber: Integer);
     procedure FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TPassing>; AFilterOnTransponderIDs: TList<integer> = nil);
     procedure FillPassingListForRaceId(ARaceId: integer; AList: TDictionary<TDatetime, TPassing>; AOnlyActivePassings, ATimeFractionOnly: Boolean);
@@ -231,6 +232,23 @@ begin
     if not FPassingList.TryGetValue(APassingNumber, lPassing) then
       raise Exception.Create('Internal error Passing not found in Cache');
     lPassing.PassingTime := APassingTime;
+    FPassingList.AddOrSetValue(APassingNumber, lPassing);
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+procedure TPassingStore.UpdatePassingRaceId(APassingNumber: Integer; ARaceId: Integer);
+var
+  lPassing: TPassing;
+begin
+  Synchronizer.BeginWrite;
+  try
+    if not FPassingList.TryGetValue(APassingNumber, lPassing) then
+      Exit;
+    lPassing.RaceId := ARaceId;
+    FPassingList.AddOrSetValue(APassingNumber, lPassing);
   finally
     Synchronizer.EndWrite;
   end;

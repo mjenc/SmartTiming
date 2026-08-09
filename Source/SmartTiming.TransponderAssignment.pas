@@ -67,6 +67,10 @@ type
     class function ResolvePassing(const AChipId: string; APassingTime: TDateTime;
       out AResolution: TPassingAssignmentResolution): Boolean; static;
 
+    (* Competitor owning chip in a given race at APassingTime (assignment window). *)
+    class function TryGetCompetitorForRaceChipAtTime(ARaceId: Integer; const AChipId: string;
+      APassingTime: TDateTime; out ACompetitorId: Integer): Boolean; static;
+
     class function Assign(ARaceId, ACompetitorId: Integer; const AChipId: string;
       out AResult: TAssignmentOperationResult): Boolean; static;
 
@@ -179,6 +183,40 @@ begin
     end;
   finally
     FreeAndNil(lCandidates);
+    FreeAndNil(lMatches);
+  end;
+end;
+
+{==============================================================================}
+class function TTransponderAssignmentService.TryGetCompetitorForRaceChipAtTime(ARaceId: Integer;
+  const AChipId: string; APassingTime: TDateTime; out ACompetitorId: Integer): Boolean;
+var
+  lMatches: TList<TTransponderAssignment>;
+  lAssignment: TTransponderAssignment;
+  i: Integer;
+  lChipId: string;
+begin
+  ACompetitorId := -1;
+  Result := False;
+  lChipId := Trim(AChipId);
+  if (ARaceId < 0) or (lChipId = '') then
+    Exit;
+
+  lMatches := TList<TTransponderAssignment>.Create;
+  try
+    TTransponderAssignmentStore.GetSingleton.FindAssignmentsForChipAtTime(
+      lChipId, APassingTime, lMatches);
+    for i := 0 to lMatches.Count - 1 do
+    begin
+      lAssignment := lMatches[i];
+      if lAssignment.RaceId <> ARaceId then
+        Continue;
+      if not MainDataModule.IsCompetitorAssignedToRace(ARaceId, lAssignment.CompetitorId) then
+        Continue;
+      ACompetitorId := lAssignment.CompetitorId;
+      Exit(True);
+    end;
+  finally
     FreeAndNil(lMatches);
   end;
 end;

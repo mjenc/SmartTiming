@@ -67,7 +67,7 @@ type
     procedure RemoveCompetitorsFromRace(AEventId, ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
     procedure RemoveCompetitors(AEventId: Integer; const ACompetitorIDs: TArray<Integer>);
     function IsCompetitorAssignedToRace(ARaceId, ACompetitorId: Integer): Boolean;
-    function GetCompetitorID(ARaceId: integer; AChipId: string): integer;
+    function GetCompetitorID(ARaceId: integer; AChipId: string; APassingTime: TDateTime = 0): integer;
     function GetRaceIdForPassing(APassing: TPassing; var ACompetitorId: integer): integer;
     function GetAllPassingsForRaceId(ARaceId: Integer; AOnlyActive: boolean = false): TArray<TPassing>;
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
@@ -77,7 +77,8 @@ type
     procedure SetParticipantState(ARaceId: Integer; ACompetitorIDs: TArray<Integer>; AParticipantState: TParticipantState);
 
     procedure ResetRaceParticitipations(ARaceId: Integer);
-    function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer; var AStartTime: TDatetime): integer;
+    function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string;
+      APassingTime: TDateTime; var AParticipationId: integer; var AStartTime: TDatetime): integer;
     procedure UpdateParticipationValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
 
     function ImportTxMapping(const AFileName: string): integer;
@@ -638,23 +639,18 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.GetCompetitorID(ARaceId: integer; AChipId: string): integer;
+function TMainDataModule.GetCompetitorID(ARaceId: integer; AChipId: string;
+  APassingTime: TDateTime): integer;
 var
-  lResultSet: TDataSet;
+  lTime: TDateTime;
 begin
-  SQLConnection.Execute(
-    Format('SELECT C.COMPETITORID FROM PARTICIPATION P INNER JOIN COMPETITOR C ON P.COMPETITORID = C.COMPETITOR ID ' +
-           'WHERE P.RACEID = %d AND C.CHIPID = ''%s''', [ARaceId, AChipId]), nil, lResultSet);
-  try
-    if lResultSet.IsEmpty then
-      Exit(-1);
-    lResultSet.First;
-    if lResultSet.Eof then
-      Exit(-1);
-    result := lResultSet.FieldByName('COMPETITORID').AsInteger;
-  finally
-    FreeAndNil(lResultSet);
-  end;
+  if APassingTime = 0 then
+    lTime := Now
+  else
+    lTime := APassingTime;
+  if TTransponderAssignmentService.TryGetCompetitorForRaceChipAtTime(ARaceId, AChipId, lTime, Result) then
+    Exit;
+  Result := -1;
 end;
 
 {==============================================================================}
@@ -683,18 +679,37 @@ end;
 function TMainDataModule.GetActiveTransponderIdForBib(ABib: integer): string;
 var
   lResultSet: TDataSet;
+  lRaceId: Integer;
+  lCompetitorId: Integer;
+  lAssignment: TTransponderAssignment;
+  lStatusList: string;
+  lStatus: TRaceStatus;
 begin
-  result := '';
+  Result := '';
+  lStatusList := '';
+  for lStatus in cRaceStatusesAcceptingPassings do
+  begin
+    if lStatusList <> '' then
+      lStatusList := lStatusList + ',';
+    lStatusList := lStatusList + Ord(lStatus).ToString;
+  end;
+
   SQLConnection.Execute(Format(
-    'SELECT C.CHIPID, C.BIB, C.LASTNAME, C.FIRSTNAME, C.CLUB, C.TEAM, C.CLASS FROM ' +
-    'COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID INNER JOIN RACES R ON P.RACEID = R.RACEID ' +
-    'WHERE R.STATUS IN (2) AND C.BIB = %d',
-    [ABib]), nil, lResultSet);
+    'SELECT P.RACEID, P.COMPETITORID, C.CHIPID FROM ' +
+    'COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+    'INNER JOIN RACES R ON P.RACEID = R.RACEID ' +
+    'WHERE R.STATUS IN (%s) AND C.BIB = %d',
+    [lStatusList, ABib]), nil, lResultSet);
   try
-    if lResultSet.IsEmpty then
-      Exit('');
+    if (lResultSet = nil) or lResultSet.IsEmpty then
+      Exit;
     lResultSet.First;
-    Exit(lResultSet.FieldByName('CHIPID').AsString);
+    lRaceId := lResultSet.FieldByName('RACEID').AsInteger;
+    lCompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
+    if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
+         lRaceId, lCompetitorId, lAssignment) then
+      Exit(lAssignment.ChipId);
+    Result := Trim(lResultSet.FieldByName('CHIPID').AsString);
   finally
     FreeAndNil(lResultSet);
   end;
@@ -746,20 +761,24 @@ procedure TMainDataModule.GetCompetitorInfoForPassing(APassing: TPassing; var AB
 var
   lResultSet: TDataSet;
   lField: TField;
+  lCompetitorId: Integer;
 begin
   ABIB := 0;
   AName := '?';
   AClubTeam := '?';
 
+  if not TTransponderAssignmentService.TryGetCompetitorForRaceChipAtTime(
+       APassing.RaceId, APassing.ChipId, APassing.PassingTime, lCompetitorId) then
+    Exit;
+
   SQLConnection.Execute(
     Format(
-      'SELECT C.CLASS, C.BIB, C.LASTNAME, C.FIRSTNAME AS NAME, C.CLUB, C.TEAM FROM ' +
-      'COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
-      'WHERE P.RACEID = %d AND C.CHIPID = %s',
-      [APassing.RaceId, QuotedStr(APassing.ChipId)]),
+      'SELECT C.BIB, C.LASTNAME, C.FIRSTNAME, C.CLUB, C.TEAM FROM COMPETITORS C ' +
+      'WHERE C.COMPETITORID = %d',
+      [lCompetitorId]),
     nil, lResultSet);
   try
-    if lResultSet.IsEmpty then
+    if (lResultSet = nil) or lResultSet.IsEmpty then
       Exit;
     lResultSet.First;
     ABIB := lResultSet.FieldByName('BIB').AsInteger;
@@ -780,7 +799,7 @@ begin
         AClubTeam := lField.AsString;
     end
     else
-      AClubTeam := lField.AsString
+      AClubTeam := lField.AsString;
   finally
     FreeAndNil(lResultSet);
   end;
@@ -793,16 +812,25 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string; var AParticipationId: integer; var AStartTime: TDatetime): integer;
+function TMainDataModule.GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string;
+  APassingTime: TDateTime; var AParticipationId: integer; var AStartTime: TDatetime): integer;
 var
   lResultSet: TDataSet;
+  lCompetitorId: Integer;
 begin
-  result := 0;
+  Result := 0;
   AParticipationId := -1;
 
-  SQLConnection.Execute('SELECT LAPS, PARTICIPATIONID, P.STARTTIME FROM PARTICIPATION P INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID WHERE P.RACEID = ' + ARaceId.ToString + ' AND C.CHIPID = ' + QuotedStr(AChipId), nil, lResultSet);
+  if not TTransponderAssignmentService.TryGetCompetitorForRaceChipAtTime(
+       ARaceId, AChipId, APassingTime, lCompetitorId) then
+    Exit;
+
+  SQLConnection.Execute(Format(
+    'SELECT LAPS, PARTICIPATIONID, P.STARTTIME FROM PARTICIPATION P ' +
+    'WHERE P.RACEID = %d AND P.COMPETITORID = %d',
+    [ARaceId, lCompetitorId]), nil, lResultSet);
   try
-    if lResultSet.IsEmpty then
+    if (lResultSet = nil) or lResultSet.IsEmpty then
       Exit;
 
     lResultSet.First;
@@ -810,9 +838,9 @@ begin
       Exit;
 
     if lResultSet.Fields[0].IsNull then
-      result := 0
+      Result := 0
     else
-      result := lResultSet.Fields[0].AsInteger;
+      Result := lResultSet.Fields[0].AsInteger;
     if not lResultSet.Fields[1].IsNull then
       AParticipationId := lResultSet.Fields[1].AsInteger;
     AStartTime := SmartTimingTools.FieldAsDatetime(lResultSet.Fields[2]);

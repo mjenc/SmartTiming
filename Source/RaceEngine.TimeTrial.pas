@@ -208,7 +208,8 @@ begin
 
     for lPassing in lPassingList.Values do
     begin
-      lLaps := MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, lPassing.ChipId, lParticipationId, lStartTime);
+      lLaps := MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, lPassing.ChipId,
+        lPassing.PassingTime, lParticipationId, lStartTime);
       if lParticipationId < 0 then
         Continue;
 

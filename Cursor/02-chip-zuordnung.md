@@ -46,6 +46,7 @@ Typischer 0-Treffer-Fall: Fahrer eines späteren Rennens trainiert und quert die
 2. Service/Cache `TTransponderAssignmentStore` (Memory + DB), immer mit `RaceId`. — **erledigt**
 3. Assign / Unassign / Transfer-API mit Konfliktprüfung (rennübergreifend gegen aktive Status). — **erledigt**
 4. Passing-Pipeline (`GetRaceIdForPassing` / Controller) auf Assignment-Lookup umstellen. — **erledigt**
+   (inkl. Display/Laps/Manuell/`PassingStore.RaceId` über Assignment statt `COMPETITORS.CHIPID`)
 5. Bei 0 Treffern: Passage nicht dem Rennen zuordnen; in separater Liste **„Nicht zugeordnete Transponder“** mit Uhrzeiten der Passagen führen (und bei Bedarf anzeigen/löschen/später manuell zuordnen). Bei >1 Treffer: Alarm.
 6. UI: Zuweisen, Entziehen, Historie (rennbezogen); Stubs anbinden; Ansicht der nicht zugeordneten Passagen.
 7. Konflikt-Check beim **Statuswechsel zu Warm-Up**: Prüfung „Chip bereits in anderem aktiven Lauf zugeordnet“; gefundene Treffer in einem **Dialog** anzeigen (Operator entscheidet / behebt, bevor Warm-Up fortgesetzt wird).
