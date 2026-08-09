@@ -150,6 +150,12 @@ resourcestring
     'Bitte zuerst ein Rennen in der Zeitmessung auswählen.';
   cMessagesChipUnassignConfirm = 'Chip-Zuordnung für %d Teilnehmer wirklich beenden?';
   cMessagesAssignmentHistoryEmpty = 'Keine Chip-Zuordnungen für dieses Rennen.';
+  cMessagesWarmUpChipConflictsTitle = 'Chip-Konflikte vor Vorbereitung';
+  cMessagesWarmUpChipConflictsHint =
+    'Folgende Chips sind bereits in einem anderen aktiven Rennen zugeordnet.'#13#10 +
+    'Beheben Sie die Konflikte oder setzen Sie die Vorbereitung trotzdem fort.';
+  cMessagesWarmUpChipConflictsContinue = 'Trotzdem fortfahren';
+  cMessagesWarmUpChipConflictsCancel = 'Abbrechen';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);

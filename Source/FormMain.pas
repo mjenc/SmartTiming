@@ -18,7 +18,7 @@ uses
   SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
   VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
   VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider,
-  FormAddPassing, FormUnassignedPassings, Vcl.WinXPanels, ValueHistoryChart;
+  FormAddPassing, FormUnassignedPassings, FormWarmUpChipConflicts, Vcl.WinXPanels, ValueHistoryChart;
 
 type
   TFormMain = class(TForm)
@@ -1046,9 +1046,19 @@ end;
 
 {==============================================================================}
 procedure TFormMain.RaceButtonStatusChange(ARaceStatus: TRaceStatus);
+var
+  lRaceId: Integer;
 begin
+  if ListBoxRaces.ItemIndex < 0 then
+    Exit;
   MainDataModule.DataSourceRaces.DataSet.RecNo := ListBoxRaces.ItemIndex + 1;
-  GSmartTimingController.ChangeRaceStatus(MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').AsInteger, ARaceStatus);
+  lRaceId := MainDataModule.DataSourceRaces.DataSet.FieldByName('RACEID').AsInteger;
+
+  if ARaceStatus = rsWarmUp then
+    if not TFormWarmUpChipConflicts.ConfirmProceed(Self, lRaceId) then
+      Exit;
+
+  GSmartTimingController.ChangeRaceStatus(lRaceId, ARaceStatus);
   RefreshRacesListBox;
 end;
 

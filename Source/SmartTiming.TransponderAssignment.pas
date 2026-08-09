@@ -22,6 +22,9 @@ type
     RaceTitle: string;
     RaceStatus: TRaceStatus;
     CompetitorDisplayName: string;
+    (* Set by Warm-Up scan: competitor in the race being activated. *)
+    LocalCompetitorId: Integer;
+    LocalCompetitorDisplayName: string;
     function IsInActiveRace: Boolean;
     function FormatMessage: string;
   end;
@@ -62,6 +65,7 @@ type
 
     (* Chips of ARaceId that are open-assigned in another active race (Warm-Up check). *)
     class function FindConflictsAgainstOtherActiveRaces(ARaceId: Integer): TArray<TAssignmentConflict>; static;
+    class procedure EnsureAssignmentsFromCompetitorChips(ARaceId: Integer); static;
 
     (* Chip + time → scored (RaceId, CompetitorId); 0 or >1 matches → RaceId -1. *)
     class function ResolvePassing(const AChipId: string; APassingTime: TDateTime;
@@ -232,6 +236,8 @@ begin
   Result.RaceTitle := MainDataModule.GetRaceTitle(AAssignment.RaceId);
   Result.RaceStatus := MainDataModule.GetRaceStatus(AAssignment.RaceId);
   Result.CompetitorDisplayName := MainDataModule.GetCompetitorDisplayName(AAssignment.CompetitorId);
+  Result.LocalCompetitorId := 0;
+  Result.LocalCompetitorDisplayName := '';
 end;
 
 {==============================================================================}
@@ -313,6 +319,8 @@ var
   lChipId: string;
   lAssignment: TTransponderAssignment;
   lConflicts: TArray<TAssignmentConflict>;
+  lConflict: TAssignmentConflict;
+  lLocalName: string;
   i, j: Integer;
 begin
   lList := TList<TAssignmentConflict>.Create;
@@ -329,14 +337,32 @@ begin
       if lChipId = '' then
         Continue;
 
+      lLocalName := MainDataModule.GetCompetitorDisplayName(lCompetitorIds[i]);
       lConflicts := CollectOpenConflictsForChip(lChipId, ARaceId, lCompetitorIds[i], True);
       for j := 0 to High(lConflicts) do
-        lList.Add(lConflicts[j]);
+      begin
+        lConflict := lConflicts[j];
+        lConflict.LocalCompetitorId := lCompetitorIds[i];
+        lConflict.LocalCompetitorDisplayName := lLocalName;
+        lList.Add(lConflict);
+      end;
     end;
     Result := lList.ToArray;
   finally
     FreeAndNil(lList);
   end;
+end;
+
+{==============================================================================}
+class procedure TTransponderAssignmentService.EnsureAssignmentsFromCompetitorChips(
+  ARaceId: Integer);
+var
+  lCompetitorIds: TArray<Integer>;
+  i: Integer;
+begin
+  lCompetitorIds := MainDataModule.GetCompetitorIdsForRace(ARaceId);
+  for i := 0 to High(lCompetitorIds) do
+    AssignFromCompetitorChip(ARaceId, lCompetitorIds[i]);
 end;
 
 {==============================================================================}

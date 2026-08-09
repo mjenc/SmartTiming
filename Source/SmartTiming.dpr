@@ -40,6 +40,7 @@ uses
   Tools.DBGrid in 'Tools.DBGrid.pas',
   FormAssignCompetitorToTransponder in 'FormAssignCompetitorToTransponder.pas' {FormAssignCompetitor},
   FormUnassignedPassings in 'FormUnassignedPassings.pas' {FormUnassignedPassings},
+  FormWarmUpChipConflicts in 'FormWarmUpChipConflicts.pas' {FormWarmUpChipConflicts},
   Tools.Logger in 'Tools.Logger.pas';
 
 {$R *.res}
