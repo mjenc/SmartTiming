@@ -144,6 +144,8 @@ resourcestring
   cMessagesChipUnassignOk = 'Chip-Zuordnung wurde beendet.';
   cMessagesChipUnassignNone = 'Für diesen Teilnehmer gibt es keine offene Chip-Zuordnung.';
   cMessagesChipTransferOk = 'Chip %s wurde übertragen.';
+  cMessagesPassingAmbiguousAssignment =
+    'Mehrdeutige Chip-Zuordnung für %s um %s (%d Treffer) — Passage nicht gewertet.';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
@@ -154,6 +156,8 @@ type
 const
   (* Race statuses that block parallel chip reuse (Plan 2). *)
   cActiveRaceStatusesForChipConflict: TRaceStates = [rsWarmUp, rsStarted, rsNeutralized];
+  (* Race statuses that accept scored live passings (legacy: Started only). *)
+  cRaceStatusesAcceptingPassings: TRaceStates = [rsStarted];
 
 type
   TFinishStatus = (fsFinished, fsDNS, fsDNF, fsDSQ);

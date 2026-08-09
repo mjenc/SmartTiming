@@ -33,6 +33,14 @@ type
     Conflicts: TArray<TAssignmentConflict>;
   end;
 
+  TPassingAssignmentResolution = record
+    RaceId: Integer;
+    CompetitorId: Integer;
+    MatchCount: Integer;
+    function IsUnique: Boolean;
+    function IsAmbiguous: Boolean;
+  end;
+
   TTransponderAssignmentService = class
   private
     class function MakeEmptyResult: TAssignmentOperationResult; static;
@@ -45,6 +53,7 @@ type
     class procedure SyncCompetitorChipId(ACompetitorId: Integer; const AChipId: string); static;
   public
     class function IsRaceStatusActiveForChipConflict(AStatus: TRaceStatus): Boolean; static;
+    class function IsRaceStatusAcceptingPassings(AStatus: TRaceStatus): Boolean; static;
 
     (* All open assignments for chip (optional: only races in active status set). *)
     class function FindOpenConflictsForChip(const AChipId: string;
@@ -53,6 +62,10 @@ type
 
     (* Chips of ARaceId that are open-assigned in another active race (Warm-Up check). *)
     class function FindConflictsAgainstOtherActiveRaces(ARaceId: Integer): TArray<TAssignmentConflict>; static;
+
+    (* Chip + time → scored (RaceId, CompetitorId); 0 or >1 matches → RaceId -1. *)
+    class function ResolvePassing(const AChipId: string; APassingTime: TDateTime;
+      out AResolution: TPassingAssignmentResolution): Boolean; static;
 
     class function Assign(ARaceId, ACompetitorId: Integer; const AChipId: string;
       out AResult: TAssignmentOperationResult): Boolean; static;
@@ -101,6 +114,73 @@ class function TTransponderAssignmentService.IsRaceStatusActiveForChipConflict(
   AStatus: TRaceStatus): Boolean;
 begin
   Result := AStatus in cActiveRaceStatusesForChipConflict;
+end;
+
+{==============================================================================}
+class function TTransponderAssignmentService.IsRaceStatusAcceptingPassings(
+  AStatus: TRaceStatus): Boolean;
+begin
+  Result := AStatus in cRaceStatusesAcceptingPassings;
+end;
+
+{==============================================================================}
+function TPassingAssignmentResolution.IsUnique: Boolean;
+begin
+  Result := MatchCount = 1;
+end;
+
+{==============================================================================}
+function TPassingAssignmentResolution.IsAmbiguous: Boolean;
+begin
+  Result := MatchCount > 1;
+end;
+
+{==============================================================================}
+class function TTransponderAssignmentService.ResolvePassing(const AChipId: string;
+  APassingTime: TDateTime; out AResolution: TPassingAssignmentResolution): Boolean;
+var
+  lMatches: TList<TTransponderAssignment>;
+  lCandidates: TList<TTransponderAssignment>;
+  lAssignment: TTransponderAssignment;
+  i: Integer;
+  lChipId: string;
+begin
+  AResolution.RaceId := -1;
+  AResolution.CompetitorId := -1;
+  AResolution.MatchCount := 0;
+  Result := False;
+
+  lChipId := Trim(AChipId);
+  if lChipId = '' then
+    Exit;
+
+  lMatches := TList<TTransponderAssignment>.Create;
+  lCandidates := TList<TTransponderAssignment>.Create;
+  try
+    TTransponderAssignmentStore.GetSingleton.FindAssignmentsForChipAtTime(
+      lChipId, APassingTime, lMatches);
+
+    for i := 0 to lMatches.Count - 1 do
+    begin
+      lAssignment := lMatches[i];
+      if not MainDataModule.IsCompetitorAssignedToRace(lAssignment.RaceId, lAssignment.CompetitorId) then
+        Continue;
+      if not IsRaceStatusAcceptingPassings(MainDataModule.GetRaceStatus(lAssignment.RaceId)) then
+        Continue;
+      lCandidates.Add(lAssignment);
+    end;
+
+    AResolution.MatchCount := lCandidates.Count;
+    if lCandidates.Count = 1 then
+    begin
+      AResolution.RaceId := lCandidates[0].RaceId;
+      AResolution.CompetitorId := lCandidates[0].CompetitorId;
+      Result := True;
+    end;
+  finally
+    FreeAndNil(lCandidates);
+    FreeAndNil(lMatches);
+  end;
 end;
 
 {==============================================================================}

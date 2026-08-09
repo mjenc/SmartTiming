@@ -324,7 +324,6 @@ end;
 procedure TSmartTimingController.OnPassingReceived(APassing: TPassing);
 var
   lRaceId: integer;
-  lCompetitorId: integer;
 begin
   try
     LogOnDebug(cLogger, ['OnPassingReceived']);
@@ -332,8 +331,7 @@ begin
       PlaySound('PassingBeep', 0, SND_NOSTOP or SND_NOWAIT or SND_RESOURCE or SND_ASYNC or SND_NODEFAULT);
 
     MainDataModule.AddPassingToDatabase(APassing, lRaceId);
-
-    lRaceId := MainDataModule.GetRaceIdForPassing(APassing, lCompetitorId);
+    APassing.RaceId := lRaceId;
     GFormMain.AddPassingForRaceId(lRaceId, APassing);
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['OnPassingReceived']);

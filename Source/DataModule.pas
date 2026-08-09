@@ -105,7 +105,7 @@ implementation
 
 uses
   SmartTiming.Cache, Tools.SuperObject, SmartTiming.Controller, FormMain,
-  SmartTiming.TransponderAssignment;
+  SmartTiming.TransponderAssignment, Tools.Logger;
 
 {==============================================================================}
 procedure TMainDataModule.DataModuleCreate(Sender: TObject);
@@ -660,21 +660,23 @@ end;
 {==============================================================================}
 function TMainDataModule.GetRaceIdForPassing(APassing: TPassing; var ACompetitorId: integer): integer;
 var
-  lResultSet: TDataSet;
+  lResolution: TPassingAssignmentResolution;
 begin
   ACompetitorId := -1;
-  SQLConnection.Execute(Format(
-    'SELECT R.RACEID, P.COMPETITORID FROM PARTICIPATION P INNER JOIN RACES R ON P.RACEID = R.RACEID INNER JOIN COMPETITORS C ON P.COMPETITORID = C.COMPETITORID ' +
-    'WHERE STATUS IN (2) AND CHIPID = %s', [QuotedStr(APassing.ChipId)]), nil, lResultSet);
-  try
-    if lResultSet.IsEmpty then
-      Exit(-1);
-    lResultSet.First;
-    ACompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
-    Exit(lResultSet.FieldByName('RACEID').AsInteger);
-  finally
-    FreeAndNil(lResultSet);
+  Result := -1;
+
+  if not TTransponderAssignmentService.ResolvePassing(APassing.ChipId, APassing.PassingTime, lResolution) then
+  begin
+    if lResolution.IsAmbiguous then
+      LogOnWarn('SmartTiming.Passing', [
+        Format(cMessagesPassingAmbiguousAssignment,
+          [APassing.ChipId, FormatDateTime('hh:nn:ss.zzz', APassing.PassingTime),
+           lResolution.MatchCount])]);
+    Exit;
   end;
+
+  ACompetitorId := lResolution.CompetitorId;
+  Result := lResolution.RaceId;
 end;
 
 {==============================================================================}
