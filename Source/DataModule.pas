@@ -56,6 +56,7 @@ type
     function GetRaceIdsForCompetitor(ACompetitorId: Integer): TArray<Integer>;
     function GetRaceStatus(ARaceId: Integer): TRaceStatus;
     function GetRaceTitle(ARaceId: Integer): string;
+    function GetRaceMinLapDuration(ARaceId: Integer): Integer;
     function GetCompetitorChipId(ACompetitorId: Integer): string;
     procedure SetCompetitorChipId(ACompetitorId: Integer; const AChipId: string);
     function GetCompetitorDisplayName(ACompetitorId: Integer): string;
@@ -444,6 +445,24 @@ begin
   try
     if (lResultSet <> nil) and not lResultSet.Eof then
       Result := lResultSet.FieldByName('TITLE').AsString;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetRaceMinLapDuration(ARaceId: Integer): Integer;
+var
+  lResultSet: TCustomSQLDataSet;
+begin
+  Result := 0;
+  SQLConnection.Execute(
+    Format('SELECT MINLAPDURATION FROM RACES WHERE RACEID = %d', [ARaceId]),
+    nil, lResultSet);
+  try
+    if (lResultSet <> nil) and not lResultSet.Eof and
+       not lResultSet.FieldByName('MINLAPDURATION').IsNull then
+      Result := lResultSet.FieldByName('MINLAPDURATION').AsInteger;
   finally
     FreeAndNil(lResultSet);
   end;

@@ -44,7 +44,8 @@ Self-Tests: `TPassingValidator.RunCatalogSelfTests` — aufrufbar im Decoder-Sim
 
 1. Regelkatalog spezifizieren und mit Fake-Passings testen. — **erledigt**
 2. Einbindung nach Race-/Fahrer-Zuordnung, vor Participation-Update. — **erledigt**
-3. `MinLapDuration` aus `TRaceItem` lesen und anwenden.
+3. `MinLapDuration` aus `TRaceItem` lesen und anwenden. — **erledigt**
+   (`GetMinLapDurationForRace`: RaceList/`TRaceItem.MinLapDuration`, Fallback DB; Validator wendet Δt-Regel an)
 4. Dialog für kritische Fälle; optional „für diesen Chip immer annehmen“.
 5. Logging und UI-Hinweis (z. B. Zähler verworfener/markierter Passagen).
 

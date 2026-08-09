@@ -19,7 +19,7 @@ type
     Laps: integer;
     Distance: double;
     FirstPassingIsLap: boolean;
-    MinLapDuration: integer;
+    MinLapDuration: integer; (* seconds; from RACES.MINLAPDURATION via FillRaceItemFromDataSet *)
     Status: TRaceStatus;
     RaceEngine: TCustomRaceEngine;
   public

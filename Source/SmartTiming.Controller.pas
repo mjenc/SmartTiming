@@ -25,6 +25,7 @@ type
     procedure OnDecoderFound(ADecoder: TDecoder);
     procedure OnStatusReceived(AStatus: TDecoderStatus);
     procedure OnPassingReceived(APassing: TPassing);
+    function GetMinLapDurationForRace(ARaceId: Integer): Integer;
   public
     constructor Create;
     destructor Destroy; override;
@@ -294,11 +295,14 @@ end;
 procedure TSmartTimingController.ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
 var
   lPassing: TPassing;
+  lRaceItem: TRaceItem;
 begin
   try
     LogOnDebug(cLogger, ['ChangeRaceStatus']);
 
     MainDataModule.SetRaceStatus(ARaceId, ARaceStatus);
+    if FRaceList.TryGetValue(ARaceId, lRaceItem) then
+      lRaceItem.Status := ARaceStatus;
 
     (* Terminal statuses free chips for reuse in later races. *)
     if ARaceStatus in [rsFinished, rsAborted, rsStopped] then
@@ -313,6 +317,7 @@ begin
     lPassing.Sport := sSportsIdCycling;
     lPassing.DecoderId := 'SYSTEM';
     lPassing.RaceId := ARaceId;
+    lPassing.PassingStatus := Ord(psValid);
 
     MainDataModule.AddPassingToDatabase(lPassing, ARaceId);
 
@@ -327,6 +332,19 @@ end;
 procedure TSmartTimingController.OnDecoderFound(ADecoder: TDecoder);
 begin
   GFormMain.DecoderConnected(ADecoder);
+end;
+
+{==============================================================================}
+function TSmartTimingController.GetMinLapDurationForRace(ARaceId: Integer): Integer;
+var
+  lRaceItem: TRaceItem;
+begin
+  (* Prefer in-memory TRaceItem (kept in sync via LoadRaces / race details). *)
+  if (ARaceId >= 0) and FRaceList.TryGetValue(ARaceId, lRaceItem) then
+    Exit(lRaceItem.MinLapDuration);
+  if ARaceId >= 0 then
+    Exit(MainDataModule.GetRaceMinLapDuration(ARaceId));
+  Result := 0;
 end;
 
 {==============================================================================}
@@ -351,7 +369,6 @@ var
   lContext: TPassingValidationContext;
   lValidation: TPassingValidationResult;
   lMinLap: Integer;
-  lRaceItem: TRaceItem;
   lIsManual: Boolean;
 begin
   try
@@ -372,9 +389,10 @@ begin
 
     TTransponderAssignmentService.ResolvePassing(APassing.ChipId, APassing.PassingTime, lResolution);
 
-    lMinLap := 0;
-    if lResolution.IsUnique and FRaceList.TryGetValue(lResolution.RaceId, lRaceItem) then
-      lMinLap := lRaceItem.MinLapDuration;
+    if lResolution.IsUnique then
+      lMinLap := GetMinLapDurationForRace(lResolution.RaceId)
+    else
+      lMinLap := 0;
 
     lIsManual := SameText(APassing.DecoderId, 'MANUAL');
     lContext := TPassingValidator.BuildLiveContext(APassing, lResolution, lMinLap, lIsManual);
