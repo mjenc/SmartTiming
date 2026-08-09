@@ -106,6 +106,7 @@ type
     function GetShortIdFromTransponderId(const ATransponderId: string): integer;
     function GetTransponderIdFromShortId(AShortId: integer): string;
     function ConvertToValidChipId(var AID: string): boolean;
+    function Count: Integer;
     procedure Lock;
     procedure Unlock;
 
@@ -725,6 +726,17 @@ begin
       Exit(false);
     AID := lTemp;
     result := true;
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+function TTransponderMappingStore.Count: Integer;
+begin
+  Synchronizer.BeginRead;
+  try
+    Result := FShortIdToTxId.Count;
   finally
     Synchronizer.EndRead;
   end;

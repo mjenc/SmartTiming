@@ -848,7 +848,7 @@ object FormMain: TFormMain
         OnClick = MenuItemCheckBatteryStatusClick
       end
       object MenuItemSimulatePassings: TMenuItem
-        Caption = 'Simulator'
+        Caption = 'Decoder-Simulator (Test)'
         OnClick = MenuItemSimulatePassingsClick
       end
       object MenuItemUnassignedPassings: TMenuItem

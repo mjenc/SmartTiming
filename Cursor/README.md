@@ -21,6 +21,7 @@ Pläne zur Weiterentwicklung von SmartTiming (Mehrdisziplinen, parallele Läufe,
 | 6 | [06-korrektur-ui.md](06-korrektur-ui.md) | Korrektur-UI fertigstellen | Mittel |
 | 7 | [07-ranking-reporting.md](07-ranking-reporting.md) | Ranking & Reporting entkoppeln | Mittel |
 | 8 | [08-architektur-qualitaet.md](08-architektur-qualitaet.md) | Architektur- & Qualitätsthemen | Mittel |
+| 9 | [09-mylaps-decoder-simulator.md](09-mylaps-decoder-simulator.md) | MyLaps-Decoder-Simulator (Test) | Mittel |
 
 ## Empfohlene Gesamt-Reihenfolge
 
@@ -28,4 +29,5 @@ Pläne zur Weiterentwicklung von SmartTiming (Mehrdisziplinen, parallele Läufe,
 2. Plan 2 (Chip / Parallel-Invariant)  
 3. Plan 4 + Plan 3 (Plausibilität + Protokoll)  
 4. Plan 5 + Plan 6 (Manual + Korrektur-UI)  
-5. Plan 1 + Plan 7 (Engines + Ranking-API)
+5. Plan 1 + Plan 7 (Engines + Ranking-API)  
+6. Plan 9 (Decoder-Simulator für Tests; Phase A früh nach Plan 2 sinnvoll)

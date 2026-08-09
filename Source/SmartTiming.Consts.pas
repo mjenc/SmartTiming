@@ -156,6 +156,16 @@ resourcestring
     'Beheben Sie die Konflikte oder setzen Sie die Vorbereitung trotzdem fort.';
   cMessagesWarmUpChipConflictsContinue = 'Trotzdem fortfahren';
   cMessagesWarmUpChipConflictsCancel = 'Abbrechen';
+  cMessagesSimulatorMappingEmpty =
+    'Es ist kein Transponder-Mapping geladen.'#13#10 +
+    'Bitte zuerst eine Mapping-Datei importieren (z. B. Data\TxMapping.txt).';
+  cMessagesSimulatorShortIdInvalid = 'Bitte eine gültige Transponder-Kurznummer eingeben.';
+  cMessagesSimulatorShortIdUnknown = 'Kurznummer %d ist im Mapping nicht vorhanden.';
+  cMessagesSimulatorCaption = 'Decoder-Simulator (Test)';
+  cMessagesSimulatorImportMapping = 'Mapping importieren…';
+  cMessagesSimulatorSend = 'Senden';
+  cMessagesSimulatorMappingCount = 'Mapping: %d Einträge';
+  cMessagesSimulatorMappingNone = 'Mapping: leer';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
