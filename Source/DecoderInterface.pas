@@ -25,6 +25,8 @@ type
     Temperature: integer;
     DecoderId: string;
     RaceId: integer;
+    (* Ord(TPassingState): 0 = valid, 1 = invalid (Plan 4). *)
+    PassingStatus: integer;
     function ToString: string;
   end;
 

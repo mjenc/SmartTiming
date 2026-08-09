@@ -212,6 +212,8 @@ begin
         Continue;
       if lPassing.RaceId <> FRaceItem.Id then
         Continue;
+      if lPassing.PassingStatus <> Ord(psValid) then
+        Continue;
 
       lLaps := MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, lPassing.ChipId,
         lPassing.PassingTime, lParticipationId, lStartTime);

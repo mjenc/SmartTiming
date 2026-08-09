@@ -55,7 +55,7 @@ implementation
 
 uses
   FormMain, SmartTiming.Cache, SmartTiming.TransponderAssignment,
-  Tools.Logger;
+  SmartTiming.PassingValidator, Tools.Logger;
 
 const
   cLogger = 'SmartTiming.Controller';
@@ -348,15 +348,74 @@ var
   lChipId: string;
   lPassingTime: TDateTime;
   lMatchCount: Integer;
+  lContext: TPassingValidationContext;
+  lValidation: TPassingValidationResult;
+  lMinLap: Integer;
+  lRaceItem: TRaceItem;
+  lIsManual: Boolean;
 begin
   try
     LogOnDebug(cLogger, ['OnPassingReceived']);
     if FPlayPassingSound then
       PlaySound('PassingBeep', 0, SND_NOSTOP or SND_NOWAIT or SND_RESOURCE or SND_ASYNC or SND_NODEFAULT);
 
-    MainDataModule.AddPassingToDatabase(APassing, lRaceId);
+    (* System markers (race status) skip plausibility. *)
+    if (APassing.Flags and 2) = 2 then
+    begin
+      APassing.PassingStatus := Ord(psValid);
+      MainDataModule.AddPassingToDatabase(APassing, lRaceId, True);
+      APassing.RaceId := lRaceId;
+      TPassingStore.GetSingleton.UpdatePassingRaceId(APassing.PassingNumber, lRaceId);
+      GFormMain.AddPassingForRaceId(lRaceId, APassing);
+      Exit;
+    end;
+
+    TTransponderAssignmentService.ResolvePassing(APassing.ChipId, APassing.PassingTime, lResolution);
+
+    lMinLap := 0;
+    if lResolution.IsUnique and FRaceList.TryGetValue(lResolution.RaceId, lRaceItem) then
+      lMinLap := lRaceItem.MinLapDuration;
+
+    lIsManual := SameText(APassing.DecoderId, 'MANUAL');
+    lContext := TPassingValidator.BuildLiveContext(APassing, lResolution, lMinLap, lIsManual);
+    lValidation := TPassingValidator.Validate(lContext);
+
+    if lValidation.Disposition = pdAccept then
+    begin
+      APassing.PassingStatus := Ord(psValid);
+      if lResolution.IsUnique then
+        lRaceId := lResolution.RaceId
+      else
+        lRaceId := -1;
+    end
+    else if lValidation.Disposition = pdAcceptMarked then
+    begin
+      (* Marked accept: score for now; Plan 3 can surface the mark. *)
+      APassing.PassingStatus := Ord(psValid);
+      if lResolution.IsUnique then
+        lRaceId := lResolution.RaceId
+      else
+        lRaceId := -1;
+      LogOnWarn(cLogger, ['Passing accepted marked', APassing.ChipId, lValidation.PrimaryMessage]);
+    end
+    else
+    begin
+      (* Reject and AskOperator (no dialog yet, step 4): do not score. *)
+      APassing.PassingStatus := Ord(psInvalid);
+      if lResolution.IsUnique then
+        lRaceId := lResolution.RaceId
+      else
+        lRaceId := -1;
+      LogOnWarn(cLogger, [
+        Format('Passing not scored (%s): %s',
+          [lValidation.PrimaryMessage, APassing.ChipId])]);
+    end;
+
+    APassing.RaceId := lRaceId;
+    MainDataModule.AddPassingToDatabase(APassing, lRaceId, True);
     APassing.RaceId := lRaceId;
     TPassingStore.GetSingleton.UpdatePassingRaceId(APassing.PassingNumber, lRaceId);
+    TPassingStore.GetSingleton.UpdatePassingStatus(APassing.PassingNumber, APassing.PassingStatus);
 
     if (lRaceId < 0) and ((APassing.Flags and 2) <> 2) then
     begin
@@ -364,9 +423,7 @@ begin
       LogOnDebug(cLogger, ['Unassigned passing', APassing.ChipId,
         FormatDateTime('hh:nn:ss.zzz', APassing.PassingTime)]);
 
-      if (not TTransponderAssignmentService.ResolvePassing(APassing.ChipId,
-            APassing.PassingTime, lResolution)) and lResolution.IsAmbiguous and
-         Assigned(FOnAmbiguousChipAssignment) then
+      if lResolution.IsAmbiguous and Assigned(FOnAmbiguousChipAssignment) then
       begin
         lChipId := APassing.ChipId;
         lPassingTime := APassing.PassingTime;
@@ -384,6 +441,7 @@ begin
     else
       TUnassignedPassingStore.GetSingleton.RemovePassing(APassing.PassingNumber);
 
+    (* Display always; participation update only for accepted (engine checks status). *)
     GFormMain.AddPassingForRaceId(lRaceId, APassing);
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['OnPassingReceived']);
@@ -442,6 +500,7 @@ begin
     LogOnDebug(cLogger, ['UpdatePassing']);
     MainDataModule.UpdatePassingInDatabase(APassingNumber, APassingTime, APassingState);
     TPassingStore.GetSingleton.UpdatePassing(APassingNumber, APassingTime);
+    TPassingStore.GetSingleton.UpdatePassingStatus(APassingNumber, Ord(APassingState));
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['UpdatePassing']);
   end;

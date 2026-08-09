@@ -90,7 +90,8 @@ type
     procedure SaveTransponderMappingCache;
     function FillTransponderAssignmentCache: Integer;
 
-    procedure AddPassingToDatabase(APassing: TPassing; var ARaceId: integer);
+    procedure AddPassingToDatabase(APassing: TPassing; var ARaceId: integer;
+      ASkipResolve: Boolean = False);
     procedure UpdatePassingInDatabase(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
     procedure UpdatePassingRaceIdInDatabase(APassingNumber: Integer; ARaceId: Integer);
     procedure RemovePassingFromDatabase(APassingNumber: Integer);
@@ -814,6 +815,10 @@ begin
       result[i].DecoderId := lResultSet.FieldByName('DECODERID').AsString;
       result[i].TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(result[i].ChipId);
       result[i].RaceId := ARaceId;
+      if lResultSet.FindField('PASSINGSTATUS') <> nil then
+        result[i].PassingStatus := lResultSet.FieldByName('PASSINGSTATUS').AsInteger
+      else
+        result[i].PassingStatus := Ord(psValid);
       Inc(i);
       lResultSet.Next;
     end;
@@ -854,6 +859,10 @@ begin
       Result[i].DecoderId := lResultSet.FieldByName('DECODERID').AsString;
       Result[i].TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(Result[i].ChipId);
       Result[i].RaceId := lResultSet.FieldByName('RACEID').AsInteger;
+      if lResultSet.FindField('PASSINGSTATUS') <> nil then
+        Result[i].PassingStatus := lResultSet.FieldByName('PASSINGSTATUS').AsInteger
+      else
+        Result[i].PassingStatus := Ord(psValid);
       Inc(i);
       lResultSet.Next;
     end;
@@ -1130,25 +1139,33 @@ begin
 end;
 
 {==============================================================================}
-procedure TMainDataModule.AddPassingToDatabase(APassing: TPassing; var ARaceId: integer);
+procedure TMainDataModule.AddPassingToDatabase(APassing: TPassing; var ARaceId: integer;
+  ASkipResolve: Boolean);
 var
   lCmd: string;
   lTimeStr: string;
   lCompetitorId: integer;
+  lStatus: Integer;
 begin
-  if APassing.Flags <> 2 then
+  if APassing.Flags = 2 then
+    ARaceId := APassing.RaceId
+  else if ASkipResolve then
+    ARaceId := APassing.RaceId
+  else
   begin
     ARaceId := GetRaceIdForPassing(APassing, lCompetitorId);
     APassing.RaceId := ARaceId;
   end;
 
+  lStatus := APassing.PassingStatus;
   lTimeStr := FormatDatetime('yyyy-mm-dd hh:mm:ss.zzz', APassing.PassingTime).QuotedString;
   lCmd :=
     Format('INSERT INTO PASSINGS ' +
-           '(PASSINGNUMBER, CHIPID, PASSINGTIME, SIGNALSTRENGTH, HITS, FLAGS, SPORT, DECODERID, RACEID) VALUES ' +
-           '(%d, %s, %s, %d, %d, %d, %d, %s, %d)',
-           [APassing.PassingNumber, APassing.ChipId.QuotedString, lTimeStr, APassing.SignalStrength, APassing.Hits, APassing.Flags, APassing.Sport, APassing.DecoderId.QuotedString,
-            APassing.RaceId]);
+           '(PASSINGNUMBER, CHIPID, PASSINGTIME, SIGNALSTRENGTH, HITS, FLAGS, SPORT, DECODERID, RACEID, PASSINGSTATUS) VALUES ' +
+           '(%d, %s, %s, %d, %d, %d, %d, %s, %d, %d)',
+           [APassing.PassingNumber, APassing.ChipId.QuotedString, lTimeStr,
+            APassing.SignalStrength, APassing.Hits, APassing.Flags, APassing.Sport,
+            APassing.DecoderId.QuotedString, APassing.RaceId, lStatus]);
   SQLConnection.Execute(lCmd, nil);
 end;
 

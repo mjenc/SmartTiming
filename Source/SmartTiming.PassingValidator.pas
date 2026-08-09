@@ -3,8 +3,9 @@
 {==============================================================================
   Plan 4 — Plausibility rule catalog (step 1).
 
-  Pure evaluation against TPassingValidationContext (no UI, no DB).
-  Live pipeline wiring is step 2. Operator dialog is step 4.
+  Pure evaluation against TPassingValidationContext (no UI).
+  Live pipeline: BuildLiveContext + Validate in Controller after resolve,
+  before participation update (Plan 4 step 2). Operator dialog is step 4.
 
   Rule catalog (minimum):
     pvrUnknownChip          Chip not in Tx mapping
@@ -24,7 +25,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.DateUtils,
-  SmartTiming.Consts, DecoderInterface;
+  SmartTiming.Consts, DecoderInterface, SmartTiming.TransponderAssignment;
 
 type
   TPassingValidationRule = (
@@ -96,11 +97,19 @@ type
   public
     class function Validate(const AContext: TPassingValidationContext): TPassingValidationResult; static;
 
+    (* Build context after assignment resolve; AMinLapDurationSeconds from TRaceItem when known. *)
+    class function BuildLiveContext(const APassing: TPassing;
+      const AResolution: TPassingAssignmentResolution; AMinLapDurationSeconds: Integer;
+      AIsManual: Boolean = False): TPassingValidationContext; static;
+
     (* Fake-context scenarios; returns True if all expectations match. *)
     class function RunCatalogSelfTests(out AReport: string): Boolean; static;
   end;
 
 implementation
+
+uses
+  SmartTiming.Cache, DataModule, SmartTiming.Tools;
 
 {==============================================================================}
 function TPassingValidationResult.IsAccepted: Boolean;
@@ -282,6 +291,56 @@ begin
         Format('Rundenzeit %.1f s unter MinLapDuration %d s (Chip %s).',
           [lDeltaSec, AContext.MinLapDurationSeconds, AContext.ChipId]));
   end;
+end;
+
+{==============================================================================}
+class function TPassingValidator.BuildLiveContext(const APassing: TPassing;
+  const AResolution: TPassingAssignmentResolution; AMinLapDurationSeconds: Integer;
+  AIsManual: Boolean): TPassingValidationContext;
+var
+  lConflicts: TArray<TAssignmentConflict>;
+  lExcludeRaceId: Integer;
+  lExcludeCompetitorId: Integer;
+  lShortId: Integer;
+begin
+  Result.ChipId := APassing.ChipId;
+  Result.PassingTime := APassing.PassingTime;
+  Result.IsManual := AIsManual;
+  Result.AssignmentMatchCount := AResolution.MatchCount;
+  Result.ResolvedRaceId := AResolution.RaceId;
+  Result.ResolvedCompetitorId := AResolution.CompetitorId;
+  Result.MinLapDurationSeconds := AMinLapDurationSeconds;
+  Result.ParallelChipConflict := False;
+  Result.LastValidPassingTime := 0;
+  Result.RaceStatus := rsNotStarted;
+  Result.RaceAcceptsPassings := False;
+
+  lShortId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(APassing.ChipId);
+  Result.ChipKnownInMapping := (Trim(APassing.ChipId) <> '') and (lShortId >= 0) and
+    not SameText(APassing.ChipId, cNotFound);
+
+  if AResolution.MatchCount = 1 then
+  begin
+    Result.RaceStatus := MainDataModule.GetRaceStatus(AResolution.RaceId);
+    Result.RaceAcceptsPassings :=
+      TTransponderAssignmentService.IsRaceStatusAcceptingPassings(Result.RaceStatus);
+    Result.LastValidPassingTime := TPassingStore.GetSingleton.GetLastValidPassingTime(
+      AResolution.RaceId, APassing.ChipId, APassing.PassingTime);
+  end;
+
+  if AResolution.IsUnique then
+  begin
+    lExcludeRaceId := AResolution.RaceId;
+    lExcludeCompetitorId := AResolution.CompetitorId;
+  end
+  else
+  begin
+    lExcludeRaceId := -1;
+    lExcludeCompetitorId := -1;
+  end;
+  lConflicts := TTransponderAssignmentService.FindOpenConflictsForChip(
+    APassing.ChipId, lExcludeRaceId, lExcludeCompetitorId, True);
+  Result.ParallelChipConflict := Length(lConflicts) > 0;
 end;
 
 {==============================================================================}

@@ -34,9 +34,12 @@ type
     function GetPassing(APassingId: Integer): TPassing;
     procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime);
     procedure UpdatePassingRaceId(APassingNumber: Integer; ARaceId: Integer);
+    procedure UpdatePassingStatus(APassingNumber: Integer; APassingStatus: Integer);
     procedure RemovePassing(APassingNumber: Integer);
     procedure FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TPassing>; AFilterOnTransponderIDs: TList<integer> = nil);
     procedure FillPassingListForRaceId(ARaceId: integer; AList: TDictionary<TDatetime, TPassing>; AOnlyActivePassings, ATimeFractionOnly: Boolean);
+    function GetLastValidPassingTime(ARaceId: Integer; const AChipId: string;
+      ABeforeTime: TDateTime): TDateTime;
     property MaxPassingNumber: integer read FMaxPassingNumber;
   end;
 
@@ -284,6 +287,22 @@ begin
 end;
 
 {==============================================================================}
+procedure TPassingStore.UpdatePassingStatus(APassingNumber: Integer; APassingStatus: Integer);
+var
+  lPassing: TPassing;
+begin
+  Synchronizer.BeginWrite;
+  try
+    if not FPassingList.TryGetValue(APassingNumber, lPassing) then
+      Exit;
+    lPassing.PassingStatus := APassingStatus;
+    FPassingList.AddOrSetValue(APassingNumber, lPassing);
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
 procedure TPassingStore.RemovePassing(APassingNumber: Integer);
 begin
   Synchronizer.BeginWrite;
@@ -330,13 +349,46 @@ begin
   try
     for lPassing in FPassingList.Values do
     begin
-      if lPassing.RaceId = ARaceId then
-      begin
-        if ATimeFractionOnly then
-          AList.Add(Frac(lPassing.PassingTime), lPassing)
-        else
-          AList.Add(lPassing.PassingTime, lPassing);
-      end;
+      if lPassing.RaceId <> ARaceId then
+        Continue;
+      if AOnlyActivePassings and (lPassing.PassingStatus <> Ord(psValid)) then
+        Continue;
+      if ATimeFractionOnly then
+        AList.AddOrSetValue(Frac(lPassing.PassingTime), lPassing)
+      else
+        AList.AddOrSetValue(lPassing.PassingTime, lPassing);
+    end;
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+function TPassingStore.GetLastValidPassingTime(ARaceId: Integer; const AChipId: string;
+  ABeforeTime: TDateTime): TDateTime;
+var
+  lPassing: TPassing;
+  lChipKey: string;
+begin
+  Result := 0;
+  lChipKey := NormalizeChipId(AChipId);
+  if (ARaceId < 0) or (lChipKey = '') then
+    Exit;
+
+  Synchronizer.BeginRead;
+  try
+    for lPassing in FPassingList.Values do
+    begin
+      if lPassing.RaceId <> ARaceId then
+        Continue;
+      if lPassing.PassingStatus <> Ord(psValid) then
+        Continue;
+      if NormalizeChipId(lPassing.ChipId) <> lChipKey then
+        Continue;
+      if (lPassing.PassingTime >= ABeforeTime) then
+        Continue;
+      if lPassing.PassingTime > Result then
+        Result := lPassing.PassingTime;
     end;
   finally
     Synchronizer.EndRead;
