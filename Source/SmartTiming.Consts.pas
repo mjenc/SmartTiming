@@ -137,12 +137,25 @@ resourcestring
   cMessagesComptitorDeleteConfirm = '%d Teilnehmer wirklich löschen?';
   cMessagesPassingDeleteConfirm = 'Durchgang von %s wirklich löschen?';
   cMessagesOpenDirectory = 'Verzeichnis öffnen?';
+  cMessagesChipIdEmpty = 'Es wurde keine Chip-ID angegeben.';
+  cMessagesChipAssignConflict =
+    'Chip %s ist bereits zugeordnet (Rennen "%s", Fahrer %s, Status %s).';
+  cMessagesChipAssignOk = 'Chip %s wurde dem Teilnehmer zugeordnet.';
+  cMessagesChipUnassignOk = 'Chip-Zuordnung wurde beendet.';
+  cMessagesChipUnassignNone = 'Für diesen Teilnehmer gibt es keine offene Chip-Zuordnung.';
+  cMessagesChipTransferOk = 'Chip %s wurde übertragen.';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
   TRaceTypes = set of TRaceType;
   TRaceStatus = (rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped);
   TRaceStates = set of TRaceStatus;
+
+const
+  (* Race statuses that block parallel chip reuse (Plan 2). *)
+  cActiveRaceStatusesForChipConflict: TRaceStates = [rsWarmUp, rsStarted, rsNeutralized];
+
+type
   TFinishStatus = (fsFinished, fsDNS, fsDNF, fsDSQ);
   TNOnGetColumnText = procedure (ASender: TField; var AText: string; ADisplayText: Boolean) of object;
 

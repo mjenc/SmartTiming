@@ -156,6 +156,7 @@
         <DCCReference Include="RaceEngine.Custom.pas"/>
         <DCCReference Include="RaceEngine.TimeTrial.pas"/>
         <DCCReference Include="SmartTiming.Cache.pas"/>
+        <DCCReference Include="SmartTiming.TransponderAssignment.pas"/>
         <DCCReference Include="Report.ExcelTemplateFiller.pas"/>
         <DCCReference Include="SmartTiming.Event.pas"/>
         <DCCReference Include="SmartTiming.WebService.pas"/>

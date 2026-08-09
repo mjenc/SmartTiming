@@ -3,7 +3,7 @@
 interface
 
 uses
-  System.SysUtils, System.Classes, Data.DbxSqlite, Data.FMTBcd, DBGrids,
+  System.SysUtils, System.Classes, System.Generics.Collections, Data.DbxSqlite, Data.FMTBcd, DBGrids,
   Datasnap.DBClient, Datasnap.Provider, Data.DB, Data.SqlExpr, DBCtrls,
   Graphics, Dialogs, Registry, Windows, JclFileUtils, Variants,
   SmartTiming.Consts, SmartTiming.Tools, DecoderInterface, DateUtils,
@@ -48,8 +48,16 @@ type
     function GetMaxCompetitorId: integer;
     function GetMaxParticipationId: integer;
     function GetMaxTransponderAssignmentId: integer;
+    function InsertOpenTransponderAssignment(ARaceId, ACompetitorId: Integer;
+      const AChipId: string; AValidFrom: TDateTime): Integer;
     procedure CreateTransponderAssignmentFromCompetitorChip(ARaceId, ACompetitorId: Integer);
     procedure CloseTransponderAssignmentsForCompetitors(ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
+    function GetRaceStatus(ARaceId: Integer): TRaceStatus;
+    function GetRaceTitle(ARaceId: Integer): string;
+    function GetCompetitorChipId(ACompetitorId: Integer): string;
+    procedure SetCompetitorChipId(ACompetitorId: Integer; const AChipId: string);
+    function GetCompetitorDisplayName(ACompetitorId: Integer): string;
+    function GetCompetitorIdsForRace(ARaceId: Integer): TArray<Integer>;
     function GetMaxPassingNumber: integer;
     function GetMinPassingNumber: integer;
 
@@ -96,7 +104,8 @@ implementation
 {$R *.dfm}
 
 uses
-  SmartTiming.Cache, Tools.SuperObject, SmartTiming.Controller, FormMain;
+  SmartTiming.Cache, Tools.SuperObject, SmartTiming.Controller, FormMain,
+  SmartTiming.TransponderAssignment;
 
 {==============================================================================}
 procedure TMainDataModule.DataModuleCreate(Sender: TObject);
@@ -377,73 +386,150 @@ begin
 end;
 
 {==============================================================================}
-procedure TMainDataModule.CreateTransponderAssignmentFromCompetitorChip(ARaceId, ACompetitorId: Integer);
+{==============================================================================}
+function TMainDataModule.InsertOpenTransponderAssignment(ARaceId, ACompetitorId: Integer;
+  const AChipId: string; AValidFrom: TDateTime): Integer;
 var
-  lResultSet: TCustomSQLDataSet;
-  lChipId: string;
-  lAssignmentId: Integer;
-  lValidFromDt: TDateTime;
   lValidFrom: string;
   lCmd: string;
-  lAssignment: TTransponderAssignment;
 begin
-  SQLConnection.Execute(
-    Format('SELECT CHIPID FROM COMPETITORS WHERE COMPETITORID = %d', [ACompetitorId]),
-    nil, lResultSet);
-  try
-    if (lResultSet = nil) or lResultSet.Eof then
-      Exit;
-    lChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
-  finally
-    FreeAndNil(lResultSet);
-  end;
-
-  if lChipId = '' then
-    Exit;
-
-  // Skip if this race already has an active assignment for the competitor.
-  SQLConnection.Execute(
-    Format(
-      'SELECT 1 FROM TRANSPONDERASSIGNMENTS WHERE RACEID = %d AND COMPETITORID = %d AND VALIDTO IS NULL',
-      [ARaceId, ACompetitorId]),
-    nil, lResultSet);
-  try
-    if (lResultSet <> nil) and not lResultSet.Eof then
-      Exit;
-  finally
-    FreeAndNil(lResultSet);
-  end;
-
-  // Skip if chip is already actively assigned (parallel races / unique index).
-  SQLConnection.Execute(
-    Format(
-      'SELECT 1 FROM TRANSPONDERASSIGNMENTS WHERE CHIPID = %s AND VALIDTO IS NULL',
-      [QuotedStr(lChipId)]),
-    nil, lResultSet);
-  try
-    if (lResultSet <> nil) and not lResultSet.Eof then
-      Exit;
-  finally
-    FreeAndNil(lResultSet);
-  end;
-
-  lAssignmentId := GetMaxTransponderAssignmentId + 1;
-  lValidFromDt := Now;
-  lValidFrom := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', lValidFromDt).QuotedString;
+  Result := GetMaxTransponderAssignmentId + 1;
+  lValidFrom := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AValidFrom).QuotedString;
   lCmd := Format(
     'INSERT INTO TRANSPONDERASSIGNMENTS ' +
     '(ASSIGNMENTID, CHIPID, COMPETITORID, VALIDFROM, VALIDTO, RACEID) VALUES ' +
     '(%d, %s, %d, %s, NULL, %d)',
-    [lAssignmentId, QuotedStr(lChipId), ACompetitorId, lValidFrom, ARaceId]);
+    [Result, QuotedStr(AChipId), ACompetitorId, lValidFrom, ARaceId]);
   SQLConnection.Execute(lCmd, nil);
+end;
 
-  lAssignment.AssignmentId := lAssignmentId;
-  lAssignment.ChipId := lChipId;
-  lAssignment.CompetitorId := ACompetitorId;
-  lAssignment.RaceId := ARaceId;
-  lAssignment.ValidFrom := lValidFromDt;
-  lAssignment.ValidTo := 0;
-  TTransponderAssignmentStore.GetSingleton.Upsert(lAssignment);
+{==============================================================================}
+procedure TMainDataModule.CreateTransponderAssignmentFromCompetitorChip(ARaceId, ACompetitorId: Integer);
+begin
+  TTransponderAssignmentService.AssignFromCompetitorChip(ARaceId, ACompetitorId);
+end;
+
+{==============================================================================}
+function TMainDataModule.GetRaceStatus(ARaceId: Integer): TRaceStatus;
+var
+  lResultSet: TCustomSQLDataSet;
+begin
+  Result := rsNotStarted;
+  SQLConnection.Execute(
+    Format('SELECT STATUS FROM RACES WHERE RACEID = %d', [ARaceId]),
+    nil, lResultSet);
+  try
+    if (lResultSet <> nil) and not lResultSet.Eof then
+      Result := TRaceStatus(lResultSet.FieldByName('STATUS').AsInteger);
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetRaceTitle(ARaceId: Integer): string;
+var
+  lResultSet: TCustomSQLDataSet;
+begin
+  Result := ARaceId.ToString;
+  SQLConnection.Execute(
+    Format('SELECT TITLE FROM RACES WHERE RACEID = %d', [ARaceId]),
+    nil, lResultSet);
+  try
+    if (lResultSet <> nil) and not lResultSet.Eof then
+      Result := lResultSet.FieldByName('TITLE').AsString;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetCompetitorChipId(ACompetitorId: Integer): string;
+var
+  lResultSet: TCustomSQLDataSet;
+begin
+  Result := '';
+  SQLConnection.Execute(
+    Format('SELECT CHIPID FROM COMPETITORS WHERE COMPETITORID = %d', [ACompetitorId]),
+    nil, lResultSet);
+  try
+    if (lResultSet <> nil) and not lResultSet.Eof then
+      Result := Trim(lResultSet.FieldByName('CHIPID').AsString);
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+procedure TMainDataModule.SetCompetitorChipId(ACompetitorId: Integer; const AChipId: string);
+var
+  lCmd: string;
+begin
+  if AChipId = '' then
+    lCmd := Format('UPDATE COMPETITORS SET CHIPID = NULL WHERE COMPETITORID = %d', [ACompetitorId])
+  else
+    lCmd := Format('UPDATE COMPETITORS SET CHIPID = %s WHERE COMPETITORID = %d',
+      [QuotedStr(AChipId), ACompetitorId]);
+  SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+function TMainDataModule.GetCompetitorDisplayName(ACompetitorId: Integer): string;
+var
+  lResultSet: TCustomSQLDataSet;
+  lBib: Integer;
+  lName: string;
+begin
+  Result := ACompetitorId.ToString;
+  SQLConnection.Execute(
+    Format('SELECT BIB, LASTNAME, FIRSTNAME FROM COMPETITORS WHERE COMPETITORID = %d',
+      [ACompetitorId]),
+    nil, lResultSet);
+  try
+    if (lResultSet = nil) or lResultSet.Eof then
+      Exit;
+    lBib := lResultSet.FieldByName('BIB').AsInteger;
+    lName := Trim(lResultSet.FieldByName('LASTNAME').AsString + ', ' +
+      lResultSet.FieldByName('FIRSTNAME').AsString);
+    if lName = ',' then
+      lName := '';
+    if lName <> '' then
+      Result := Format('#%d %s', [lBib, lName])
+    else
+      Result := Format('#%d', [lBib]);
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetCompetitorIdsForRace(ARaceId: Integer): TArray<Integer>;
+var
+  lResultSet: TCustomSQLDataSet;
+  lList: TList<Integer>;
+begin
+  SetLength(Result, 0);
+  lList := TList<Integer>.Create;
+  try
+    SQLConnection.Execute(
+      Format('SELECT COMPETITORID FROM PARTICIPATION WHERE RACEID = %d ORDER BY COMPETITORID',
+        [ARaceId]),
+      nil, lResultSet);
+    try
+      if lResultSet = nil then
+        Exit;
+      while not lResultSet.Eof do
+      begin
+        lList.Add(lResultSet.FieldByName('COMPETITORID').AsInteger);
+        lResultSet.Next;
+      end;
+    finally
+      FreeAndNil(lResultSet);
+    end;
+    Result := lList.ToArray;
+  finally
+    FreeAndNil(lList);
+  end;
 end;
 
 {==============================================================================}
