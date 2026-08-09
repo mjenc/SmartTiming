@@ -37,6 +37,23 @@ type
     property MaxPassingNumber: integer read FMaxPassingNumber;
   end;
 
+  (* Passings that did not resolve to exactly one race (training / unknown chips). *)
+  TUnassignedPassingStore = class(TSynchronizedObject)
+  private
+    FPassingList: TDictionary<Integer, TPassing>;
+  protected
+    constructor Create; override;
+  public
+    class function GetSingleton: TUnassignedPassingStore;
+    destructor Destroy; override;
+    procedure Clear;
+    procedure AddPassing(APassing: TPassing);
+    procedure RemovePassing(APassingNumber: Integer);
+    function Contains(APassingNumber: Integer): Boolean;
+    function Count: Integer;
+    procedure FillList(AList: TList<TPassing>);
+  end;
+
   TStatusStore = class(TSynchronizedObject)
   private
     FStatusList: TList<TDecoderStatus>;
@@ -139,6 +156,7 @@ implementation
 
 var
   gPassingStore: TPassingStore;
+  gUnassignedPassingStore: TUnassignedPassingStore;
   gStatusStore: TStatusStore;
   gDecoderStore: TDecoderStore;
   gMappingStore: TTransponderMappingStore;
@@ -309,6 +327,114 @@ begin
           AList.Add(lPassing.PassingTime, lPassing);
       end;
     end;
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+constructor TUnassignedPassingStore.Create;
+begin
+  inherited Create;
+  FPassingList := TDictionary<Integer, TPassing>.Create;
+end;
+
+{==============================================================================}
+class function TUnassignedPassingStore.GetSingleton: TUnassignedPassingStore;
+begin
+  gCriticalSection.Enter;
+  try
+    if gUnassignedPassingStore = nil then
+      gUnassignedPassingStore := TUnassignedPassingStore.Create;
+  finally
+    gCriticalSection.Leave;
+  end;
+  Result := gUnassignedPassingStore;
+end;
+
+{==============================================================================}
+destructor TUnassignedPassingStore.Destroy;
+begin
+  try
+    FreeAndNil(FPassingList);
+  finally
+    inherited Destroy;
+  end;
+end;
+
+{==============================================================================}
+procedure TUnassignedPassingStore.Clear;
+begin
+  Synchronizer.BeginWrite;
+  try
+    FPassingList.Clear;
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+procedure TUnassignedPassingStore.AddPassing(APassing: TPassing);
+begin
+  if APassing.RaceId >= 0 then
+    Exit;
+  if (APassing.Flags and 2) = 2 then
+    Exit;
+  if Trim(APassing.ChipId) = '' then
+    Exit;
+
+  Synchronizer.BeginWrite;
+  try
+    FPassingList.AddOrSetValue(APassing.PassingNumber, APassing);
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+procedure TUnassignedPassingStore.RemovePassing(APassingNumber: Integer);
+begin
+  Synchronizer.BeginWrite;
+  try
+    FPassingList.Remove(APassingNumber);
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+function TUnassignedPassingStore.Contains(APassingNumber: Integer): Boolean;
+begin
+  Synchronizer.BeginRead;
+  try
+    Result := FPassingList.ContainsKey(APassingNumber);
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+function TUnassignedPassingStore.Count: Integer;
+begin
+  Synchronizer.BeginRead;
+  try
+    Result := FPassingList.Count;
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+procedure TUnassignedPassingStore.FillList(AList: TList<TPassing>);
+var
+  lPassing: TPassing;
+begin
+  if AList = nil then
+    Exit;
+  Synchronizer.BeginRead;
+  try
+    for lPassing in FPassingList.Values do
+      AList.Add(lPassing);
   finally
     Synchronizer.EndRead;
   end;
@@ -838,6 +964,7 @@ end;
 initialization
   gCriticalSection := TCriticalSection.Create;
   gPassingStore := nil;
+  gUnassignedPassingStore := nil;
   gStatusStore := nil;
   gDecoderStore := nil;
   gMappingStore := nil;
@@ -847,6 +974,7 @@ finalization
   try
     FreeAndNil(gDecoderStore);
     FreeAndNil(gPassingStore);
+    FreeAndNil(gUnassignedPassingStore);
     FreeAndNil(gStatusStore);
     FreeAndNil(gMappingStore);
     FreeAndNil(gAssignmentStore);

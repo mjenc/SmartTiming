@@ -254,6 +254,7 @@ var
 begin
   try
     LogOnDebug(cLogger, ['RestorePassings']);
+    TUnassignedPassingStore.GetSingleton.Clear;
     lRaceIds := GFormMain.GetAllRaceIds;
     for lRaceId in lRaceIds do
     begin
@@ -263,6 +264,13 @@ begin
         GFormMain.AddPassingForRaceId(lRaceId, lPassings[i]);
         TPassingStore.GetSingleton.AddPassing(lPassings[i]);
       end;
+    end;
+
+    lPassings := MainDataModule.GetUnassignedPassings;
+    for i := 0 to High(lPassings) do
+    begin
+      TPassingStore.GetSingleton.AddPassing(lPassings[i]);
+      TUnassignedPassingStore.GetSingleton.AddPassing(lPassings[i]);
     end;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['RestorePassings']);
@@ -333,6 +341,16 @@ begin
     MainDataModule.AddPassingToDatabase(APassing, lRaceId);
     APassing.RaceId := lRaceId;
     TPassingStore.GetSingleton.UpdatePassingRaceId(APassing.PassingNumber, lRaceId);
+
+    if (lRaceId < 0) and ((APassing.Flags and 2) <> 2) then
+    begin
+      TUnassignedPassingStore.GetSingleton.AddPassing(APassing);
+      LogOnDebug(cLogger, ['Unassigned passing', APassing.ChipId,
+        FormatDateTime('hh:nn:ss.zzz', APassing.PassingTime)]);
+    end
+    else
+      TUnassignedPassingStore.GetSingleton.RemovePassing(APassing.PassingNumber);
+
     GFormMain.AddPassingForRaceId(lRaceId, APassing);
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['OnPassingReceived']);
@@ -403,6 +421,7 @@ begin
     LogOnDebug(cLogger, ['RemovePassing']);
     MainDataModule.RemovePassingFromDatabase(APassingNumber);
     TPassingStore.GetSingleton.RemovePassing(APassingNumber);
+    TUnassignedPassingStore.GetSingleton.RemovePassing(APassingNumber);
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['RemovePassing']);
   end;

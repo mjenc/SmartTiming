@@ -70,6 +70,7 @@ type
     function GetCompetitorID(ARaceId: integer; AChipId: string; APassingTime: TDateTime = 0): integer;
     function GetRaceIdForPassing(APassing: TPassing; var ACompetitorId: integer): integer;
     function GetAllPassingsForRaceId(ARaceId: Integer; AOnlyActive: boolean = false): TArray<TPassing>;
+    function GetUnassignedPassings: TArray<TPassing>;
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
     procedure GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
     function GetActiveTransponderIdForBib(ABib: integer): string;
@@ -748,6 +749,46 @@ begin
       result[i].DecoderId := lResultSet.FieldByName('DECODERID').AsString;
       result[i].TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(result[i].ChipId);
       result[i].RaceId := ARaceId;
+      Inc(i);
+      lResultSet.Next;
+    end;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetUnassignedPassings: TArray<TPassing>;
+var
+  lResultSet: TDataSet;
+  i: Integer;
+begin
+  SetLength(Result, 0);
+  SQLConnection.Execute(
+    'SELECT * FROM PASSINGS WHERE RACEID < 0 AND IFNULL(FLAGS, 0) <> 2 ' +
+    'ORDER BY PASSINGTIME, PASSINGNUMBER',
+    nil, lResultSet);
+  try
+    if (lResultSet = nil) or lResultSet.IsEmpty then
+      Exit;
+
+    SetLength(Result, lResultSet.RecordCount);
+    i := 0;
+    lResultSet.First;
+    while not lResultSet.Eof do
+    begin
+      Result[i].PassingNumber := lResultSet.FieldByName('PASSINGNUMBER').AsInteger;
+      Result[i].ChipId := lResultSet.FieldByName('CHIPID').AsString;
+      Result[i].PassingTime := SmartTimingTools.GetFieldAsDatetime(lResultSet.FieldByName('PASSINGTIME'), 0.0);
+      Result[i].SignalStrength := lResultSet.FieldByName('SIGNALSTRENGTH').AsInteger;
+      Result[i].Hits := lResultSet.FieldByName('HITS').AsInteger;
+      Result[i].Flags := lResultSet.FieldByName('FLAGS').AsInteger;
+      Result[i].Sport := lResultSet.FieldByName('SPORT').AsInteger;
+      Result[i].Voltage := 0;
+      Result[i].Temperature := 0;
+      Result[i].DecoderId := lResultSet.FieldByName('DECODERID').AsString;
+      Result[i].TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(Result[i].ChipId);
+      Result[i].RaceId := lResultSet.FieldByName('RACEID').AsInteger;
       Inc(i);
       lResultSet.Next;
     end;
