@@ -39,6 +39,7 @@ uses
   FormAddPassing in 'FormAddPassing.pas' {FormManuallyAddPassing},
   Tools.DBGrid in 'Tools.DBGrid.pas',
   FormAssignCompetitorToTransponder in 'FormAssignCompetitorToTransponder.pas' {FormAssignCompetitor},
+  FormUnassignedPassings in 'FormUnassignedPassings.pas' {FormUnassignedPassings},
   Tools.Logger in 'Tools.Logger.pas';
 
 {$R *.res}

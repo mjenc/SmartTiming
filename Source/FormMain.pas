@@ -18,7 +18,7 @@ uses
   SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
   VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
   VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider,
-  FormAddPassing, Vcl.WinXPanels, ValueHistoryChart;
+  FormAddPassing, FormUnassignedPassings, Vcl.WinXPanels, ValueHistoryChart;
 
 type
   TFormMain = class(TForm)
@@ -76,6 +76,7 @@ type
     MenuItemTxMappingGenerate: TMenuItem;
     MenuItemTxMappingEdit: TMenuItem;
     MenuItemSimulatePassings: TMenuItem;
+    MenuItemUnassignedPassings: TMenuItem;
     MenuItemLoadEvent: TMenuItem;
     MenuItemSettings: TMenuItem;
     MenuItemCompetitors: TMenuItem;
@@ -149,6 +150,7 @@ type
     procedure ButtonFinishClick(Sender: TObject);
     procedure ButtonStopClick(Sender: TObject);
     procedure MenuItemSimulatePassingsClick(Sender: TObject);
+    procedure MenuItemUnassignedPassingsClick(Sender: TObject);
     procedure ListBoxRacesDrawItem(Control: TWinControl; Index: Integer; Rect: TRect; State: TOwnerDrawState);
     procedure ListBoxRacesTimingClick(Sender: TObject);
     procedure ListBoxRacesResultClick(Sender: TObject);
@@ -209,6 +211,7 @@ type
     procedure AddPassingForRaceId(ARaceId: integer; APassing: TPassing);
     procedure DecoderConnected(ADecoder: TDecoder);
     function GetAllRaceIds: TArray<integer>;
+    function GetSelectedRaceId: Integer;
     procedure RefreshControlsFromEventDataObject(AEvent: TEventDataObject);
     function GetNewPanelForPassings(ARaceId: Integer): TWinControl;
     procedure RefreshFlagButtonsActive(ARaceStatus: TRaceStatus);
@@ -917,6 +920,19 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.MenuItemUnassignedPassingsClick(Sender: TObject);
+var
+  lForm: TFormUnassignedPassings;
+begin
+  lForm := TFormUnassignedPassings.Create(Self);
+  try
+    lForm.ShowModal;
+  finally
+    FreeAndNil(lForm);
+  end;
+end;
+
+{==============================================================================}
 procedure TFormMain.MenuItemTxMappingExportClick(Sender: TObject);
 begin
   FileOpenDialog.DefaultExtension := 'txt';
@@ -1275,6 +1291,20 @@ begin
       Continue;
     result[i] := lRaceItem.Id;
   end;
+end;
+
+{==============================================================================}
+function TFormMain.GetSelectedRaceId: Integer;
+var
+  lRaceItem: TRaceItem;
+begin
+  Result := -1;
+  if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
+    Exit;
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  if lRaceItem = nil then
+    Exit;
+  Result := lRaceItem.Id;
 end;
 
 {==============================================================================}

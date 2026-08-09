@@ -146,6 +146,10 @@ resourcestring
   cMessagesChipTransferOk = 'Chip %s wurde übertragen.';
   cMessagesPassingAmbiguousAssignment =
     'Mehrdeutige Chip-Zuordnung für %s um %s (%d Treffer) — Passage nicht gewertet.';
+  cMessagesNoRaceSelectedForAssign =
+    'Bitte zuerst ein Rennen in der Zeitmessung auswählen.';
+  cMessagesChipUnassignConfirm = 'Chip-Zuordnung für %d Teilnehmer wirklich beenden?';
+  cMessagesAssignmentHistoryEmpty = 'Keine Chip-Zuordnungen für dieses Rennen.';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);

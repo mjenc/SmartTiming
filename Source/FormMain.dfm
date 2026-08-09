@@ -851,6 +851,10 @@ object FormMain: TFormMain
         Caption = 'Simulator'
         OnClick = MenuItemSimulatePassingsClick
       end
+      object MenuItemUnassignedPassings: TMenuItem
+        Caption = 'Nicht zugeordnete Transponder'
+        OnClick = MenuItemUnassignedPassingsClick
+      end
       object MenuItemSettings: TMenuItem
         Caption = 'Einstellungen'
         OnClick = MenuItemSettingsClick

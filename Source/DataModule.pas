@@ -90,6 +90,7 @@ type
 
     procedure AddPassingToDatabase(APassing: TPassing; var ARaceId: integer);
     procedure UpdatePassingInDatabase(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
+    procedure UpdatePassingRaceIdInDatabase(APassingNumber: Integer; ARaceId: Integer);
     procedure RemovePassingFromDatabase(APassingNumber: Integer);
 
     class function GetJSONFromDataSet(ADataSet: TDataSet; const AFieldTitles: string): string;
@@ -1098,6 +1099,14 @@ begin
     Format('UPDATE PASSINGS SET PASSINGTIME = %s, PASSINGSTATUS = %d WHERE PASSINGNUMBER = %d',
            [lTimeStr, Ord(APassingState), APassingNumber]);
   SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+procedure TMainDataModule.UpdatePassingRaceIdInDatabase(APassingNumber: Integer; ARaceId: Integer);
+begin
+  SQLConnection.Execute(
+    Format('UPDATE PASSINGS SET RACEID = %d WHERE PASSINGNUMBER = %d',
+      [ARaceId, APassingNumber]), nil);
 end;
 
 {==============================================================================}

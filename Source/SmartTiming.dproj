@@ -178,6 +178,10 @@
             <Form>FormAssignCompetitor</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="FormUnassignedPassings.pas">
+            <Form>FormUnassignedPassings</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <DCCReference Include="Tools.Logger.pas"/>
         <None Include="..\Resources\PassingBeep.wav"/>
         <BuildConfiguration Include="Base">

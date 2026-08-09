@@ -94,6 +94,8 @@ type
     procedure OnChangeCompetitorOfTransponder(ASender: TObject); virtual;
     procedure OnChangePassingTime(ASender: TObject); virtual;
     procedure OnRemovePassing(ASender: TObject); virtual;
+    procedure OnUnassignChip(ASender: TObject); virtual;
+    procedure OnShowAssignmentHistory(ASender: TObject); virtual;
 
     procedure OnPassingItemDragDrop(ASender, ASource: TObject; AX, AY: Integer);
     procedure OnPassingItemDragOver(ASender, ASource: TObject; AX, AY: Integer; AState: TDragState; var AAccept: Boolean);
@@ -133,7 +135,7 @@ uses
   SmartTiming.Tools, Math, SmartTiming.Controller, SmartTiming.GridFormatProvider,
   DataModule, FormMain, FormCompetitorDetails, FormPenalty, FormTime,
   SmartTiming.Cache, DateUtils, FormAssignCompetitorToTransponder,
-  Data.DBXCommon;
+  SmartTiming.TransponderAssignment, Data.DBXCommon;
 
 {==============================================================================}
 destructor TRaceItem.Destroy;
@@ -237,6 +239,8 @@ begin
   AddMenuItem(FPopupMenuRanking, 'Reaktivieren', OnActivateParticipant);
   AddMenuItem(FPopupMenuRanking, 'Strafen', OnPenalties);
   AddMenuItem(FPopupMenuRanking, 'Zielzeit ändern', OnEditTime);
+  AddMenuItem(FPopupMenuRanking, 'Chip entziehen', OnUnassignChip);
+  AddMenuItem(FPopupMenuRanking, 'Chip-Historie', OnShowAssignmentHistory);
 
   FPopupMenuPassings := TPopupMenu.Create(nil);
   AddMenuItem(FPopupMenuPassings, 'Ungültig', OnInvalidatePassing);
@@ -776,6 +780,12 @@ var
   lCurrentItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
+  lPassing: TPassing;
+  lCompetitorId: Integer;
+  lResult: TAssignmentOperationResult;
+  lBIB: Integer;
+  lName: string;
+  lTeamClub: string;
 begin
   lListView := TListView(FPassingDisplay);
   lCurrentItem := lListView.Selected;
@@ -783,8 +793,23 @@ begin
     Exit;
 
   lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+  if Trim(lPassing.ChipId) = '' then
+    Exit;
 
-  // TODO
+  if not TFormAssignCompetitor.Execute(nil, FRaceItem.Id, lCompetitorId) then
+    Exit;
+
+  if not TTransponderAssignmentService.Assign(FRaceItem.Id, lCompetitorId, lPassing.ChipId, lResult) then
+  begin
+    SmartTimingTools.ShowDialog(lResult.Message, '', [tcbOk], tcbOk);
+    Exit;
+  end;
+
+  MainDataModule.GetCompetitorInfoForPassing(lPassing, lBIB, lName, lTeamClub);
+  lCurrentItem.Caption := lBIB.ToString;
+  lCurrentItem.SubItems[cPassingItemSubItemIdxName] := lName;
+  RefreshRankingDisplay;
 end;
 
 {==============================================================================}
@@ -793,8 +818,9 @@ var
   lCurrentItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
-  lChipId: string;
-  lFormAssignCompetitor: TFormAssignCompetitor;
+  lPassing: TPassing;
+  lForm: TFormEditTime;
+  lNewTime: TDateTime;
 begin
   lListView := TListView(FPassingDisplay);
   lCurrentItem := lListView.Selected;
@@ -802,13 +828,91 @@ begin
     Exit;
 
   lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
-  lChipId := TPassingStore.GetSingleton.GetPassing(lPassingNumber).ChipId;
+  lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
 
-  lFormAssignCompetitor := TFormAssignCompetitor.Create(nil);
+  lForm := TFormEditTime.Create(nil);
   try
-    ShowMessage('Not implemented yet.');
+    lForm.Time := Frac(lPassing.PassingTime);
+    if lForm.ShowModal <> mrOK then
+      Exit;
+    lNewTime := Trunc(lPassing.PassingTime) + Frac(lForm.Time);
   finally
-    FreeAndNil(lFormAssignCompetitor);
+    FreeAndNil(lForm);
+  end;
+
+  GSmartTimingController.UpdatePassing(lPassingNumber, lNewTime, psValid);
+  lCurrentItem.SubItems[cPassingItemSubItemIdxTime] := FormatDateTime('hh:nn:ss.zzz', lNewTime);
+  RefreshRankingDisplay;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnUnassignChip(ASender: TObject);
+var
+  lCompetitorIDs: TArray<Integer>;
+  i: Integer;
+  lResult: TAssignmentOperationResult;
+  lFailed: string;
+begin
+  lCompetitorIDs := GetSelectedCompetitorIds;
+  if Length(lCompetitorIDs) = 0 then
+    Exit;
+
+  if SmartTimingTools.ShowDialog(
+       Format(cMessagesChipUnassignConfirm, [Length(lCompetitorIDs)]), '',
+       [tcbYes, tcbNo], tcbNo) <> mrYes then
+    Exit;
+
+  lFailed := '';
+  for i := 0 to High(lCompetitorIDs) do
+  begin
+    if not TTransponderAssignmentService.Unassign(FRaceItem.Id, lCompetitorIDs[i], lResult) then
+    begin
+      if lFailed <> '' then
+        lFailed := lFailed + sLineBreak;
+      lFailed := lFailed + lResult.Message;
+    end;
+  end;
+
+  if lFailed <> '' then
+    SmartTimingTools.ShowDialog(lFailed, '', [tcbOk], tcbOk);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnShowAssignmentHistory(ASender: TObject);
+var
+  lList: TList<TTransponderAssignment>;
+  lAssignment: TTransponderAssignment;
+  lLines: TStringList;
+  i: Integer;
+  lValidTo: string;
+begin
+  lList := TList<TTransponderAssignment>.Create;
+  lLines := TStringList.Create;
+  try
+    TTransponderAssignmentStore.GetSingleton.FillAssignmentsForRace(FRaceItem.Id, lList, False);
+    if lList.Count = 0 then
+    begin
+      SmartTimingTools.ShowDialog(cMessagesAssignmentHistoryEmpty, '', [tcbOk], tcbOk);
+      Exit;
+    end;
+
+    for i := 0 to lList.Count - 1 do
+    begin
+      lAssignment := lList[i];
+      if lAssignment.IsOpen then
+        lValidTo := 'offen'
+      else
+        lValidTo := FormatDateTime('hh:nn:ss', lAssignment.ValidTo);
+      lLines.Add(Format('%s  |  Chip %s  |  %s → %s',
+        [MainDataModule.GetCompetitorDisplayName(lAssignment.CompetitorId),
+         lAssignment.ChipId,
+         FormatDateTime('hh:nn:ss', lAssignment.ValidFrom),
+         lValidTo]));
+    end;
+    SmartTimingTools.ShowDialog(lLines.Text, FRaceItem.Title, [tcbOk], tcbOk);
+  finally
+    FreeAndNil(lLines);
+    FreeAndNil(lList);
   end;
 end;
 

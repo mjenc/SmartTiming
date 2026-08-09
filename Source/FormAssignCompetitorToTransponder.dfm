@@ -11,6 +11,8 @@ object FormAssignCompetitor: TFormAssignCompetitor
   Font.Name = 'Segoe UI'
   Font.Style = []
   TextHeight = 15
+  OnActivate = FormActivate
+  OnShow = FormShow
   object PanelControls: TPanel
     Left = 0
     Top = 0
@@ -36,6 +38,7 @@ object FormAssignCompetitor: TFormAssignCompetitor
       Height = 23
       NumbersOnly = True
       TabOrder = 0
+      OnChange = EditBIBChange
     end
     object ButtonOK: TButton
       Left = 240
@@ -45,8 +48,9 @@ object FormAssignCompetitor: TFormAssignCompetitor
       Anchors = [akTop, akRight]
       Caption = 'Zuweisen'
       Default = True
-      ModalResult = 1
+      ModalResult = 0
       TabOrder = 1
+      OnClick = ButtonOKClick
     end
     object ButtonCancel: TButton
       Left = 329
@@ -98,6 +102,7 @@ object FormAssignCompetitor: TFormAssignCompetitor
       RowSelect = True
       TabOrder = 0
       ViewStyle = vsReport
+      OnDblClick = ListViewCompetitorsDblClick
       ExplicitWidth = 416
       ExplicitHeight = 316
     end
