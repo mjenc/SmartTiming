@@ -123,6 +123,14 @@ resourcestring
   cFieldTitlePassingTime = 'Durchgangszeit';
   cFieldTitleGap = 'Abstand';
   cFieldTitleChipID = 'ChipID';
+  cFieldTitlePassingStatus = 'Status';
+  cFieldTitleLapTime = 'Rundenzeit';
+  cFieldTitleSource = 'Quelle';
+
+  cPassingImageValid = 0;
+  cPassingImageInvalid = 1;
+  cPassingImageManual = 2;
+  cPassingImageFlagged = 3;
 
 
   cButtonCaptionBackup = 'Sichern';
@@ -146,6 +154,15 @@ resourcestring
   cMessagesChipTransferOk = 'Chip %s wurde übertragen.';
   cMessagesPassingAmbiguousAssignment =
     'Mehrdeutige Chip-Zuordnung für %s um %s (%d Treffer) — Passage nicht gewertet.';
+  cMessagesCompetitorPassingsTitle = 'Rundenprotokoll — %s';
+  cMessagesCompetitorPassingsNone = 'Keine Passagen für diesen Teilnehmer.';
+  cMessagesCompetitorPassingsSelectOne = 'Bitte genau einen Teilnehmer auswählen.';
+  cMessagesPassingStatusValid = 'Gültig';
+  cMessagesPassingStatusInvalid = 'Ungültig';
+  cMessagesPassingSourceManual = 'Manuell';
+  cMessagesPassingSourceDecoder = 'Decoder';
+  cMessagesPassingLapStart = 'Start';
+  cMessagesMenuCompetitorPassings = 'Rundenprotokoll…';
   cMessagesPlausibilityTitle = 'Plausibilitätsprüfung';
   cMessagesPlausibilityHeader =
     'Chip %s um %s'#13#10#13#10'%s';

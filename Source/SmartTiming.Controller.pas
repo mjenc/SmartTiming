@@ -285,6 +285,7 @@ var
   lRaceId: integer;
   lPassings: TArray<TPassing>;
   i: integer;
+  lRaceItem: TRaceItem;
 begin
   try
     LogOnDebug(cLogger, ['RestorePassings']);
@@ -295,8 +296,8 @@ begin
       lPassings := MainDataModule.GetAllPassingsForRaceId(lRaceId);
       for i := 0 to Length(lPassings) - 1 do
       begin
-        GFormMain.AddPassingForRaceId(lRaceId, lPassings[i]);
         TPassingStore.GetSingleton.AddPassing(lPassings[i]);
+        GFormMain.AddPassingForRaceId(lRaceId, lPassings[i]);
       end;
     end;
 
@@ -305,6 +306,12 @@ begin
     begin
       TPassingStore.GetSingleton.AddPassing(lPassings[i]);
       TUnassignedPassingStore.GetSingleton.AddPassing(lPassings[i]);
+    end;
+
+    for lRaceId in lRaceIds do
+    begin
+      if FRaceList.TryGetValue(lRaceId, lRaceItem) and (lRaceItem.RaceEngine <> nil) then
+        lRaceItem.RaceEngine.ReassignLapsForRace;
     end;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['RestorePassings']);
@@ -344,6 +351,8 @@ begin
     lPassing.DecoderId := 'SYSTEM';
     lPassing.RaceId := ARaceId;
     lPassing.PassingStatus := Ord(psValid);
+    lPassing.LapIndex := -1;
+    lPassing.CompetitorId := -1;
 
     MainDataModule.AddPassingToDatabase(lPassing, ARaceId);
     (* RecalcCountingLaps reads markers from PassingStore — keep in sync with DB. *)
@@ -739,6 +748,7 @@ begin
     if FRaceList.TryGetValue(ARaceId, lRaceItem) and (lRaceItem.RaceEngine <> nil) then
     begin
       lRaceItem.RaceEngine.RecalcCountingLaps;
+      lRaceItem.RaceEngine.ReassignLapsForRace;
       lRaceItem.RaceEngine.RefreshPassingListStatus;
     end;
 

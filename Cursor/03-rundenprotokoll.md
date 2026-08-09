@@ -22,10 +22,12 @@ Die `TListView` der RaceEngine ist de facto das Rundenprotokoll, aber ohne Domä
 
 ## Schritte
 
-1. `PASSINGSTATUS` durchgängig machen (Record, Cache, UI-Icons).
-2. Engine-Hook `AssignLap(APassing)`; für ITT: Lap = Zählung gültiger Passagen (`FirstPassingIsLap` beachten).
-3. Dialog `FormCompetitorPassings` (öffenbar aus Ranking oder Protokoll).
-4. Invalidate/Validate → DB + Cache + `RecalculateParticipation`.
+1. `PASSINGSTATUS` durchgängig machen (Record, Cache, UI-Icons). — **erledigt**
+   (`LapIndex`/`CompetitorId` im Memory; Icons via `SmallImages` + CustomDraw; Manual erkennbar)
+2. Engine-Hook `AssignLap(APassing)`; für ITT: Lap = Zählung gültiger Passagen (`FirstPassingIsLap` beachten). — **erledigt**
+3. Dialog `FormCompetitorPassings` (öffenbar aus Ranking oder Protokoll). — **erledigt**
+4. Invalidate/Validate → DB + Cache + `RecalculateParticipation`. — **erledigt**
+   (`SetPassingStatusAndRecalc` → UpdatePassing + RecalcCountingLaps + ReassignLaps)
 5. Drag&Drop-Zeitkorrektur ersetzen oder stark einschränken (explizite Zeitkorrektur bevorzugen).
 6. Filter im Protokoll: nur gültig / alle / nur manuell.
 

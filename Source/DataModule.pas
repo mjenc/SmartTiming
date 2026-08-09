@@ -838,6 +838,8 @@ begin
         result[i].PassingStatus := lResultSet.FieldByName('PASSINGSTATUS').AsInteger
       else
         result[i].PassingStatus := Ord(psValid);
+      result[i].LapIndex := -1;
+      result[i].CompetitorId := -1;
       Inc(i);
       lResultSet.Next;
     end;
@@ -882,6 +884,8 @@ begin
         Result[i].PassingStatus := lResultSet.FieldByName('PASSINGSTATUS').AsInteger
       else
         Result[i].PassingStatus := Ord(psValid);
+      Result[i].LapIndex := -1;
+      Result[i].CompetitorId := -1;
       Inc(i);
       lResultSet.Next;
     end;

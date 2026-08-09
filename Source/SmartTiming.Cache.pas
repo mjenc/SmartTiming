@@ -35,9 +35,11 @@ type
     procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime);
     procedure UpdatePassingRaceId(APassingNumber: Integer; ARaceId: Integer);
     procedure UpdatePassingStatus(APassingNumber: Integer; APassingStatus: Integer);
+    procedure UpdatePassingDomainFields(APassingNumber: Integer; ALapIndex, ACompetitorId: Integer);
     procedure RemovePassing(APassingNumber: Integer);
     procedure FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TPassing>; AFilterOnTransponderIDs: TList<integer> = nil);
     procedure FillPassingListForRaceId(ARaceId: integer; AList: TDictionary<TDatetime, TPassing>; AOnlyActivePassings, ATimeFractionOnly: Boolean);
+    procedure FillPassingsForRace(ARaceId: Integer; AList: TList<TPassing>);
     function GetLastValidPassingTime(ARaceId: Integer; const AChipId: string;
       ABeforeTime: TDateTime): TDateTime;
     (* Last hit for MinLap/DoubleHit — includes invalid/pending so AskOperator blocks the timeline. *)
@@ -306,6 +308,24 @@ begin
 end;
 
 {==============================================================================}
+procedure TPassingStore.UpdatePassingDomainFields(APassingNumber: Integer;
+  ALapIndex, ACompetitorId: Integer);
+var
+  lPassing: TPassing;
+begin
+  Synchronizer.BeginWrite;
+  try
+    if not FPassingList.TryGetValue(APassingNumber, lPassing) then
+      Exit;
+    lPassing.LapIndex := ALapIndex;
+    lPassing.CompetitorId := ACompetitorId;
+    FPassingList.AddOrSetValue(APassingNumber, lPassing);
+  finally
+    Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
 procedure TPassingStore.RemovePassing(APassingNumber: Integer);
 begin
   Synchronizer.BeginWrite;
@@ -360,6 +380,24 @@ begin
         AList.AddOrSetValue(Frac(lPassing.PassingTime), lPassing)
       else
         AList.AddOrSetValue(lPassing.PassingTime, lPassing);
+    end;
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+procedure TPassingStore.FillPassingsForRace(ARaceId: Integer; AList: TList<TPassing>);
+var
+  lPassing: TPassing;
+begin
+  Synchronizer.BeginRead;
+  try
+    for lPassing in FPassingList.Values do
+    begin
+      if lPassing.RaceId <> ARaceId then
+        Continue;
+      AList.Add(lPassing);
     end;
   finally
     Synchronizer.EndRead;

@@ -27,7 +27,12 @@ type
     RaceId: integer;
     (* Ord(TPassingState): 0 = valid, 1 = invalid (Plan 4). *)
     PassingStatus: integer;
+    (* Plan 3: in-memory domain fields (not persisted). -1 = unset / none. *)
+    LapIndex: integer;
+    CompetitorId: integer;
     function ToString: string;
+    function IsManual: Boolean;
+    function IsSystemMarker: Boolean;
   end;
 
   TDecoderStatus = record
@@ -98,6 +103,18 @@ function TPassing.ToString: string;
 begin
   result := Format('Passing# %d, TxId: %s, TxShortId: %d, Timestamp: %s, Signal: %d, Hits: %d, Flags: %d, Sport: %d, DecoderId: %s',
     [PassingNumber, ChipId,TxId, DatetimeToStr(PassingTime), SignalStrength,Hits,Flags,Sport,DecoderId]);
+end;
+
+{==============================================================================}
+function TPassing.IsManual: Boolean;
+begin
+  Result := SameText(DecoderId, 'MANUAL');
+end;
+
+{==============================================================================}
+function TPassing.IsSystemMarker: Boolean;
+begin
+  Result := ((Flags and 2) = 2) or SameText(DecoderId, 'SYSTEM');
 end;
 
 {==============================================================================}

@@ -176,6 +176,8 @@ begin
     LogOnDebug(cLoggerPassing, ['OnPassingReceived']);
     APassing.TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(APassing.ChipId);
     APassing.PassingTime.AddSecond(FTimingBias);
+    APassing.LapIndex := -1;
+    APassing.CompetitorId := -1;
     TPassingStore.GetSingleton.AddPassing(APassing);
     if Assigned(FNewPassingReceived) then
       FNewPassingReceived(APassing);

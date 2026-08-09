@@ -43,6 +43,7 @@ uses
   FormUnassignedPassings in 'FormUnassignedPassings.pas' {FormUnassignedPassings},
   FormWarmUpChipConflicts in 'FormWarmUpChipConflicts.pas' {FormWarmUpChipConflicts},
   FormPlausibilityDecision in 'FormPlausibilityDecision.pas' {FormPlausibilityDecision},
+  FormCompetitorPassings in 'FormCompetitorPassings.pas' {FormCompetitorPassings},
   Tools.Logger in 'Tools.Logger.pas';
 
 {$R *.res}

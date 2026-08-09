@@ -22,6 +22,7 @@ type
     procedure OnGetResultFieldValue(ACol: Integer; ADataSet: TDataSet; var AValue: string);
     procedure OnPassingItemCompare(ASender: TObject; AItem1, AItem2: TListItem; AData: Integer; var ACompare: Integer); override;
     function GetPassingDisplay: TWinControl; override;
+    procedure AssignLap(var APassing: TPassing); override;
 
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem); override;
@@ -29,6 +30,7 @@ type
 
     procedure AddPassingToDisplay(APassing: TPassing; AAutoScroll: boolean); override;
     procedure ClearAllPassings; override;
+    procedure ReassignLapsForRace; override;
 
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); override;
     procedure ExportResultsToExcelTemplate(const AOutputFile: string; AGroupByClass: boolean); override;
@@ -41,7 +43,8 @@ type
 implementation
 
 uses
-  Report.ExcelTemplateFiller, SmartTiming.GridFormatProvider;
+  Report.ExcelTemplateFiller, SmartTiming.GridFormatProvider,
+  System.Generics.Defaults, SmartTiming.TransponderAssignment;
 
 {==============================================================================}
 constructor TTimeTrialRaceEngine.Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem);
@@ -142,7 +145,7 @@ var
   lTeamClub: string;
 begin
   lListItem := TListItem.Create(TListView(PassingDisplay).Items);
-  if (APassing.Flags and 2) = 2 then
+  if APassing.IsSystemMarker then
   begin
     lListItem.Caption := '';
     lListItem.SubItems.Add(SmartTimingTools.GetFlagNameFromRaceStatus(TRaceStatus(-APassing.Hits)));
@@ -156,6 +159,10 @@ begin
     Exit;
   end;
 
+  AssignLap(APassing);
+  TPassingStore.GetSingleton.UpdatePassingDomainFields(
+    APassing.PassingNumber, APassing.LapIndex, APassing.CompetitorId);
+
   MainDataModule.GetCompetitorInfoForPassing(APassing, lBIB, lName, lTeamClub);
   lListItem.Caption := lBIB.ToString;
   lListItem.SubItems.Add(lName);
@@ -164,21 +171,104 @@ begin
   lListItem.SubItems.Add(APassing.ChipId);
   lListItem.SubItems.Add(APassing.PassingNumber.ToString);
   TListView(FPassingDisplay).Items.AddItem(lListItem);
-  if APassing.Flags = 1 then
-    lListItem.ImageIndex := 3
-  else if APassing.PassingStatus <> Ord(psValid) then
-    lListItem.ImageIndex := 1
-  else
-    lListItem.ImageIndex := 0;
+  lListItem.ImageIndex := PassingImageIndex(APassing);
   TListView(FPassingDisplay).Refresh;
 
   if AAutoScroll then
     lListItem.MakeVisible(false);
 
   UpdateParticipationTable(APassing.PassingNumber);
-//  if MilliSecondsBetween(Now, FLastChangeTimestamp) > cRecalcRankingMilliSeconds then
+  FLastChangeTimestamp := Now;
+end;
+
+{==============================================================================}
+procedure TTimeTrialRaceEngine.AssignLap(var APassing: TPassing);
+var
+  lList: TList<TPassing>;
+  lOther: TPassing;
+  lPriorValid: Integer;
+  lChipKey: string;
+  lCompetitorId: Integer;
+  lOrdinal: Integer;
+  i: Integer;
+begin
+  APassing.LapIndex := -1;
+  if APassing.IsSystemMarker then
+    Exit;
+
+  lCompetitorId := APassing.CompetitorId;
+  if lCompetitorId < 0 then
   begin
-    FLastChangeTimestamp := Now;
+    if TTransponderAssignmentService.TryGetCompetitorForRaceChipAtTime(
+         FRaceItem.Id, APassing.ChipId, APassing.PassingTime, lCompetitorId) then
+      APassing.CompetitorId := lCompetitorId;
+  end;
+
+  if APassing.PassingStatus <> Ord(psValid) then
+    Exit;
+
+  lChipKey := NormalizeChipId(APassing.ChipId);
+  if lChipKey = '' then
+    Exit;
+
+  lPriorValid := 0;
+  lList := TList<TPassing>.Create;
+  try
+    TPassingStore.GetSingleton.FillPassingsForRace(FRaceItem.Id, lList);
+    for i := 0 to lList.Count - 1 do
+    begin
+      lOther := lList[i];
+      if lOther.IsSystemMarker then
+        Continue;
+      if lOther.PassingStatus <> Ord(psValid) then
+        Continue;
+      if NormalizeChipId(lOther.ChipId) <> lChipKey then
+        Continue;
+      if lOther.PassingTime > APassing.PassingTime then
+        Continue;
+      if (lOther.PassingTime = APassing.PassingTime) and
+         (lOther.PassingNumber >= APassing.PassingNumber) then
+        Continue;
+      Inc(lPriorValid);
+    end;
+  finally
+    FreeAndNil(lList);
+  end;
+
+  lOrdinal := lPriorValid + 1;
+  if FRaceItem.FirstPassingIsLap then
+    APassing.LapIndex := lOrdinal
+  else
+    APassing.LapIndex := lOrdinal - 1;
+end;
+
+{==============================================================================}
+procedure TTimeTrialRaceEngine.ReassignLapsForRace;
+var
+  lList: TList<TPassing>;
+  lPassing: TPassing;
+  i: Integer;
+begin
+  lList := TList<TPassing>.Create;
+  try
+    TPassingStore.GetSingleton.FillPassingsForRace(FRaceItem.Id, lList);
+    lList.Sort(
+      TComparer<TPassing>.Construct(
+        function(const Left, Right: TPassing): Integer
+        begin
+          Result := CompareDateTime(Left.PassingTime, Right.PassingTime);
+          if Result = 0 then
+            Result := Left.PassingNumber - Right.PassingNumber;
+        end));
+    for i := 0 to lList.Count - 1 do
+    begin
+      lPassing := lList[i];
+      AssignLap(lPassing);
+      TPassingStore.GetSingleton.UpdatePassingDomainFields(
+        lPassing.PassingNumber, lPassing.LapIndex, lPassing.CompetitorId);
+    end;
+  finally
+    FreeAndNil(lList);
   end;
 end;
 
