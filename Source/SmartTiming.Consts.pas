@@ -154,6 +154,9 @@ resourcestring
   cMessagesPlausibilityAccept = 'Annehmen';
   cMessagesPlausibilityReject = 'Verwerfen';
   cMessagesPlausibilityAcknowledge = 'OK';
+  cMessagesPlausibilityStatsHint =
+    'Plausibilität: %d verworfen · %d Dialog · %d markiert · %d angenommen · %d Auto';
+  cMessagesPlausibilityStatsNone = 'Plausibilität: —';
   cMessagesNoRaceSelectedForAssign =
     'Bitte zuerst ein Rennen in der Zeitmessung auswählen.';
   cMessagesChipUnassignConfirm = 'Chip-Zuordnung für %d Teilnehmer wirklich beenden?';

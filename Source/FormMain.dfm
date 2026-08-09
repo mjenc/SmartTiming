@@ -785,10 +785,37 @@ object FormMain: TFormMain
       BevelOuter = bvNone
       TabOrder = 1
     end
+    object PanelPlausibility: TPanel
+      Left = 1163
+      Top = 0
+      Width = 320
+      Height = 45
+      Align = alRight
+      BevelOuter = bvNone
+      Padding.Left = 8
+      Padding.Top = 4
+      Padding.Right = 8
+      Padding.Bottom = 4
+      ShowCaption = False
+      TabOrder = 3
+      object LabelPlausibilityStats: TLabel
+        Left = 8
+        Top = 4
+        Width = 304
+        Height = 37
+        Align = alClient
+        Alignment = taRightJustify
+        Caption = 'Plausibilit'#228't: -'
+        Layout = tlCenter
+        WordWrap = True
+        ExplicitWidth = 56
+        ExplicitHeight = 15
+      end
+    end
     object PanelTemperatureChart: TPanel
       Left = 785
       Top = 0
-      Width = 694
+      Width = 378
       Height = 45
       Align = alClient
       TabOrder = 2

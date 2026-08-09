@@ -91,11 +91,11 @@ type
     class function DispositionForRule(ARule: TPassingValidationRule): TPassingDisposition; static;
     class function SeverityForDisposition(ADisposition: TPassingDisposition): TPassingValidationSeverity; static;
     class function WorseDisposition(A, B: TPassingDisposition): TPassingDisposition; static;
-    class function RuleDisplayName(ARule: TPassingValidationRule): string; static;
     class procedure AddFinding(var AResult: TPassingValidationResult; ARule: TPassingValidationRule;
       const AMessage: string); static;
     class function SecondsBetweenPassings(AEarlier, ALater: TDateTime): Double; static;
   public
+    class function RuleDisplayName(ARule: TPassingValidationRule): string; static;
     class function Validate(const AContext: TPassingValidationContext): TPassingValidationResult; static;
 
     (* Build context after assignment resolve; AMinLapDurationSeconds from TRaceItem when known. *)
@@ -119,10 +119,88 @@ type
 
   TPlausibilityDecisionEvent = procedure(const ARequest: TPlausibilityDecisionRequest) of object;
 
+  (* Plan 4 step 5: session counters for operator feedback. *)
+  TPlausibilitySessionStats = record
+    Rejected: Integer;
+    AskOperator: Integer;
+    AcceptedMarked: Integer;
+    OperatorAccepted: Integer;
+    AlwaysAccepted: Integer;
+    procedure Clear;
+    function HasActivity: Boolean;
+    function FormatStatusHint: string;
+  end;
+
+  TPlausibilityStatsEvent = procedure(const AStats: TPlausibilitySessionStats) of object;
+
+  function DispositionDisplayName(ADisposition: TPassingDisposition): string;
+  function FormatTriggeredRules(ARules: TPassingValidationRules): string;
+
 implementation
 
 uses
   SmartTiming.Cache, DataModule, SmartTiming.Tools;
+
+{==============================================================================}
+procedure TPlausibilitySessionStats.Clear;
+begin
+  Rejected := 0;
+  AskOperator := 0;
+  AcceptedMarked := 0;
+  OperatorAccepted := 0;
+  AlwaysAccepted := 0;
+end;
+
+{==============================================================================}
+function TPlausibilitySessionStats.HasActivity: Boolean;
+begin
+  Result := (Rejected > 0) or (AskOperator > 0) or (AcceptedMarked > 0) or
+    (OperatorAccepted > 0) or (AlwaysAccepted > 0);
+end;
+
+{==============================================================================}
+function TPlausibilitySessionStats.FormatStatusHint: string;
+begin
+  if not HasActivity then
+    Exit(cMessagesPlausibilityStatsNone);
+  Result := Format(cMessagesPlausibilityStatsHint,
+    [Rejected, AskOperator, AcceptedMarked, OperatorAccepted, AlwaysAccepted]);
+end;
+
+{==============================================================================}
+function DispositionDisplayName(ADisposition: TPassingDisposition): string;
+begin
+  case ADisposition of
+    pdAccept:
+      Result := 'Accept';
+    pdAcceptMarked:
+      Result := 'AcceptMarked';
+    pdAskOperator:
+      Result := 'AskOperator';
+    pdReject:
+      Result := 'Reject';
+  else
+    Result := 'Unknown';
+  end;
+end;
+
+{==============================================================================}
+function FormatTriggeredRules(ARules: TPassingValidationRules): string;
+var
+  lRule: TPassingValidationRule;
+begin
+  Result := '';
+  for lRule := Low(TPassingValidationRule) to High(TPassingValidationRule) do
+  begin
+    if not (lRule in ARules) then
+      Continue;
+    if Result <> '' then
+      Result := Result + ',';
+    Result := Result + TPassingValidator.RuleDisplayName(lRule);
+  end;
+  if Result = '' then
+    Result := '-';
+end;
 
 {==============================================================================}
 function TPassingValidationResult.IsAccepted: Boolean;

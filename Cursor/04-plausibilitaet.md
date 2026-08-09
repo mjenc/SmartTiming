@@ -49,7 +49,8 @@ Self-Tests: `TPassingValidator.RunCatalogSelfTests` — aufrufbar im Decoder-Sim
 4. Dialog für kritische Fälle; optional „für diesen Chip immer annehmen“. — **erledigt**
    (`FormPlausibilityDecision` via `TThread.Queue`; Accept → `psValid` + `RecalcCountingLaps`;
    Sitzungs-Override `AlwaysAcceptChips` auf dem Controller)
-5. Logging und UI-Hinweis (z. B. Zähler verworfener/markierter Passagen).
+5. Logging und UI-Hinweis (z. B. Zähler verworfener/markierter Passagen). — **erledigt**
+   (`TPlausibilitySessionStats` + Statusleisten-Label; strukturiertes Plausibility-Log)
 
 ## Abhängigkeiten
 

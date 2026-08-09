@@ -33,6 +33,8 @@ type
     PanelDecoder: TPanel;
     LabelDecoderIpAddress: TLabel;
     LabelDecoderManufacturer: TLabel;
+    PanelPlausibility: TPanel;
+    LabelPlausibilityStats: TLabel;
     MainMenu: TMainMenu;
     PageControlMain: TPageControl;
     TabSheetEvent: TTabSheet;
@@ -206,6 +208,8 @@ type
     procedure HandleAmbiguousChipAssignment(const AChipId: string; APassingTime: TDateTime;
       AMatchCount: Integer);
     procedure HandlePlausibilityDecision(const ARequest: TPlausibilityDecisionRequest);
+    procedure HandlePlausibilityStatsChanged(const AStats: TPlausibilitySessionStats);
+    procedure RefreshPlausibilityStatsHint(const AStats: TPlausibilitySessionStats);
 
   protected
     procedure OnGetRaceType(ASender: TField; var AText: string; ADisplayText: Boolean);
@@ -516,6 +520,8 @@ begin
 
   GSmartTimingController.OnAmbiguousChipAssignment := HandleAmbiguousChipAssignment;
   GSmartTimingController.OnPlausibilityDecision := HandlePlausibilityDecision;
+  GSmartTimingController.OnPlausibilityStatsChanged := HandlePlausibilityStatsChanged;
+  RefreshPlausibilityStatsHint(GSmartTimingController.PlausibilityStats);
 end;
 
 {==============================================================================}
@@ -546,12 +552,33 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.HandlePlausibilityStatsChanged(
+  const AStats: TPlausibilitySessionStats);
+begin
+  RefreshPlausibilityStatsHint(AStats);
+end;
+
+{==============================================================================}
+procedure TFormMain.RefreshPlausibilityStatsHint(
+  const AStats: TPlausibilitySessionStats);
+begin
+  if LabelPlausibilityStats = nil then
+    Exit;
+  LabelPlausibilityStats.Caption := AStats.FormatStatusHint;
+  if AStats.HasActivity then
+    LabelPlausibilityStats.Font.Color := clMaroon
+  else
+    LabelPlausibilityStats.Font.Color := clWindowText;
+end;
+
+{==============================================================================}
 procedure TFormMain.FormDestroy(Sender: TObject);
 begin
   if GSmartTimingController <> nil then
   begin
     GSmartTimingController.OnAmbiguousChipAssignment := nil;
     GSmartTimingController.OnPlausibilityDecision := nil;
+    GSmartTimingController.OnPlausibilityStatsChanged := nil;
   end;
   FreeAndNil(FFormManuallyAddPassing);
   FreeAndNil(FDBCheckBoxRacesFirstPassing);

@@ -22,13 +22,18 @@ type
     FServlet: TSmartTimingServlet;
     FOnAmbiguousChipAssignment: TAmbiguousChipAssignmentEvent;
     FOnPlausibilityDecision: TPlausibilityDecisionEvent;
+    FOnPlausibilityStatsChanged: TPlausibilityStatsEvent;
     FAlwaysAcceptChips: TDictionary<string, Boolean>;
+    FPlausibilityStats: TPlausibilitySessionStats;
 
     procedure OnDecoderFound(ADecoder: TDecoder);
     procedure OnStatusReceived(AStatus: TDecoderStatus);
     procedure OnPassingReceived(APassing: TPassing);
     function GetMinLapDurationForRace(ARaceId: Integer): Integer;
     function IsAlwaysAcceptChip(const AChipId: string): Boolean;
+    procedure NotifyPlausibilityStatsChanged;
+    procedure RecordPlausibilityOutcome(const APassing: TPassing; ARaceId: Integer;
+      const AValidation: TPassingValidationResult; AAlwaysAccepted: Boolean);
   public
     constructor Create;
     destructor Destroy; override;
@@ -48,13 +53,17 @@ type
     procedure ImportTRIATimes(const AFileName: string);
     procedure RememberAlwaysAcceptChip(const AChipId: string);
     procedure ClearAlwaysAcceptChips;
+    procedure ResetPlausibilityStats;
     procedure ApplyPlausibilityAccept(APassingNumber, ARaceId: Integer);
     property Event: TEventDataObject read FEventDataObject;
     property RaceList: TDictionary<integer, TRaceItem> read FRaceList;
+    property PlausibilityStats: TPlausibilitySessionStats read FPlausibilityStats;
     property OnAmbiguousChipAssignment: TAmbiguousChipAssignmentEvent
       read FOnAmbiguousChipAssignment write FOnAmbiguousChipAssignment;
     property OnPlausibilityDecision: TPlausibilityDecisionEvent
       read FOnPlausibilityDecision write FOnPlausibilityDecision;
+    property OnPlausibilityStatsChanged: TPlausibilityStatsEvent
+      read FOnPlausibilityStatsChanged write FOnPlausibilityStatsChanged;
   end;
 
 var
@@ -76,6 +85,7 @@ begin
 
   FEventDataObject := TEventDataObject.Create;
   FAlwaysAcceptChips := TDictionary<string, Boolean>.Create;
+  FPlausibilityStats.Clear;
 
   FDecoderEngine := TDecoderEngine.GetSingleton;
   FDecoderEngine.OnDecoderFound := OnDecoderFound;
@@ -141,6 +151,7 @@ begin
   try
     LogOnDebug(cLogger, ['LoadEventData']);
     ClearAlwaysAcceptChips;
+    ResetPlausibilityStats;
     FDatabasePath := AEventPath;
     MainDataModule.OpenDatabase(FDatabasePath);
     FEventDataObject.RefreshFromDatabase;
@@ -378,6 +389,7 @@ var
   lMinLap: Integer;
   lIsManual: Boolean;
   lAskOperator: Boolean;
+  lAlwaysAccepted: Boolean;
   lRequest: TPlausibilityDecisionRequest;
 begin
   try
@@ -407,6 +419,7 @@ begin
     lContext := TPassingValidator.BuildLiveContext(APassing, lResolution, lMinLap, lIsManual);
     lValidation := TPassingValidator.Validate(lContext);
     lAskOperator := False;
+    lAlwaysAccepted := False;
 
     if (lValidation.Disposition = pdAskOperator) and lResolution.IsUnique and
        IsAlwaysAcceptChip(APassing.ChipId) then
@@ -414,7 +427,7 @@ begin
       (* Session override: treat AskOperator as Accept when race is known. *)
       APassing.PassingStatus := Ord(psValid);
       lRaceId := lResolution.RaceId;
-      LogOnDebug(cLogger, ['Passing auto-accepted (always-accept chip)', APassing.ChipId]);
+      lAlwaysAccepted := True;
     end
     else if lValidation.Disposition = pdAccept then
     begin
@@ -432,7 +445,6 @@ begin
         lRaceId := lResolution.RaceId
       else
         lRaceId := -1;
-      LogOnWarn(cLogger, ['Passing accepted marked', APassing.ChipId, lValidation.PrimaryMessage]);
     end
     else if lValidation.Disposition = pdAskOperator then
     begin
@@ -443,9 +455,6 @@ begin
       else
         lRaceId := -1;
       lAskOperator := True;
-      LogOnWarn(cLogger, [
-        Format('Passing needs operator (%s): %s',
-          [lValidation.PrimaryMessage, APassing.ChipId])]);
     end
     else
     begin
@@ -455,9 +464,6 @@ begin
         lRaceId := lResolution.RaceId
       else
         lRaceId := -1;
-      LogOnWarn(cLogger, [
-        Format('Passing not scored (%s): %s',
-          [lValidation.PrimaryMessage, APassing.ChipId])]);
     end;
 
     APassing.RaceId := lRaceId;
@@ -477,6 +483,8 @@ begin
 
     (* Display always; participation update only for accepted (engine checks status). *)
     GFormMain.AddPassingForRaceId(lRaceId, APassing);
+
+    RecordPlausibilityOutcome(APassing, lRaceId, lValidation, lAlwaysAccepted);
 
     if lAskOperator and Assigned(FOnPlausibilityDecision) then
     begin
@@ -599,6 +607,66 @@ begin
 end;
 
 {==============================================================================}
+procedure TSmartTimingController.ResetPlausibilityStats;
+begin
+  FPlausibilityStats.Clear;
+  NotifyPlausibilityStatsChanged;
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.NotifyPlausibilityStatsChanged;
+var
+  lStats: TPlausibilitySessionStats;
+begin
+  if not Assigned(FOnPlausibilityStatsChanged) then
+    Exit;
+  lStats := FPlausibilityStats;
+  TThread.Queue(nil,
+    procedure
+    begin
+      if Assigned(GSmartTimingController) and
+         Assigned(GSmartTimingController.OnPlausibilityStatsChanged) then
+        GSmartTimingController.OnPlausibilityStatsChanged(lStats);
+    end);
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.RecordPlausibilityOutcome(const APassing: TPassing;
+  ARaceId: Integer; const AValidation: TPassingValidationResult; AAlwaysAccepted: Boolean);
+var
+  lLine: string;
+begin
+  (* Clean accepts are silent in the status counters. *)
+  if (AValidation.Disposition = pdAccept) and not AAlwaysAccepted then
+    Exit;
+
+  if AAlwaysAccepted then
+    Inc(FPlausibilityStats.AlwaysAccepted)
+  else
+    case AValidation.Disposition of
+      pdAcceptMarked:
+        Inc(FPlausibilityStats.AcceptedMarked);
+      pdAskOperator:
+        Inc(FPlausibilityStats.AskOperator);
+      pdReject:
+        Inc(FPlausibilityStats.Rejected);
+    end;
+
+  lLine := Format('Plausibility %s chip=%s race=%d rules=[%s] msg=%s',
+    [DispositionDisplayName(AValidation.Disposition), APassing.ChipId, ARaceId,
+     FormatTriggeredRules(AValidation.TriggeredRules), AValidation.PrimaryMessage]);
+  if AAlwaysAccepted then
+    lLine := lLine + ' (always-accept)';
+
+  if AValidation.Disposition = pdReject then
+    LogOnWarn(cLogger, [lLine])
+  else
+    LogOnInfo(cLogger, [lLine]);
+
+  NotifyPlausibilityStatsChanged;
+end;
+
+{==============================================================================}
 procedure TSmartTimingController.ApplyPlausibilityAccept(APassingNumber, ARaceId: Integer);
 var
   lPassing: TPassing;
@@ -614,6 +682,12 @@ begin
 
     if FRaceList.TryGetValue(ARaceId, lRaceItem) and (lRaceItem.RaceEngine <> nil) then
       lRaceItem.RaceEngine.RecalcCountingLaps;
+
+    Inc(FPlausibilityStats.OperatorAccepted);
+    LogOnInfo(cLogger, [
+      Format('Plausibility OperatorAccepted chip=%s race=%d passing=%d',
+        [lPassing.ChipId, ARaceId, APassingNumber])]);
+    NotifyPlausibilityStatsChanged;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['ApplyPlausibilityAccept']);
   end;
