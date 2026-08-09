@@ -33,6 +33,7 @@ type
     PanelMapping: TPanel;
     LabelMappingStatus: TLabel;
     ButtonImportMapping: TButton;
+    ButtonRunRuleTests: TButton;
     ListViewLog: TListView;
     PanelButtons: TPanel;
     ButtonClose: TButton;
@@ -43,6 +44,7 @@ type
     procedure ButtonSendClick(Sender: TObject);
     procedure ButtonUseNowClick(Sender: TObject);
     procedure ButtonImportMappingClick(Sender: TObject);
+    procedure ButtonRunRuleTestsClick(Sender: TObject);
     procedure EditShortIdChange(Sender: TObject);
   private
     FNextPassingNumber: Integer;
@@ -62,7 +64,7 @@ implementation
 {$R *.dfm}
 
 uses
-  DataModule, SmartTiming.Tools;
+  DataModule, SmartTiming.Tools, SmartTiming.PassingValidator;
 
 {==============================================================================}
 procedure TFormPassingSimulator.FormCreate(Sender: TObject);
@@ -179,6 +181,15 @@ begin
   lCount := MainDataModule.ImportTxMapping(OpenDialogMapping.FileName);
   RefreshMappingStatus;
   SmartTimingTools.ShowDialog(Format(cMessagesTxMappingLoaded, [lCount]), '', [tcbOk], tcbOk);
+end;
+
+{==============================================================================}
+procedure TFormPassingSimulator.ButtonRunRuleTestsClick(Sender: TObject);
+var
+  lReport: string;
+begin
+  TPassingValidator.RunCatalogSelfTests(lReport);
+  SmartTimingTools.ShowDialog(lReport, cMessagesSimulatorCaption, [tcbOk], tcbOk);
 end;
 
 {==============================================================================}

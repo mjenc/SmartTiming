@@ -25,9 +25,24 @@
   - Chip-Konflikt über parallele aktive Rennen
 - Ergebnis schreibt `PASSINGSTATUS` und steuert, ob `UpdateParticipationTable` läuft
 
+### Regelkatalog (Schritt 1)
+
+| Regel | Enum | Default-Disposition |
+|-------|------|---------------------|
+| Unbekannter Chip (nicht im Tx-Mapping) | `pvrUnknownChip` | `pdReject` |
+| Keine eindeutige Zuordnung | `pvrNotAssigned` | `pdReject` |
+| Rennen nimmt keine Wertung an | `pvrRaceNotAccepting` | `pdReject` |
+| Δt &lt; MinLapDuration | `pvrMinLapDuration` | `pdAskOperator` |
+| Doppelhit (Δt ≤ 0) | `pvrDoubleHit` | `pdReject` |
+| Mehrdeutige Assignment-Treffer | `pvrAmbiguousAssignment` | `pdAskOperator` |
+| Chip parallel in anderem aktiven Rennen | `pvrParallelChipConflict` | `pdAskOperator` |
+
+Implementierung: `Source/SmartTiming.PassingValidator.pas` (reine Kontext-Evaluation).  
+Self-Tests: `TPassingValidator.RunCatalogSelfTests` — aufrufbar im Decoder-Simulator („Regelkatalog testen“).
+
 ## Schritte
 
-1. Regelkatalog spezifizieren und mit Fake-Passings testen.
+1. Regelkatalog spezifizieren und mit Fake-Passings testen. — **erledigt**
 2. Einbindung nach Race-/Fahrer-Zuordnung, vor Participation-Update.
 3. `MinLapDuration` aus `TRaceItem` lesen und anwenden.
 4. Dialog für kritische Fälle; optional „für diesen Chip immer annehmen“.

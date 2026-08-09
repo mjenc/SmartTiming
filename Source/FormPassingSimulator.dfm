@@ -166,7 +166,7 @@ object FormPassingSimulator: TFormPassingSimulator
       Caption = 'Mapping: -'
     end
     object ButtonImportMapping: TButton
-      Left = 480
+      Left = 320
       Top = 8
       Width = 148
       Height = 25
@@ -174,6 +174,16 @@ object FormPassingSimulator: TFormPassingSimulator
       Caption = 'Mapping importieren'#8230
       TabOrder = 0
       OnClick = ButtonImportMappingClick
+    end
+    object ButtonRunRuleTests: TButton
+      Left = 474
+      Top = 8
+      Width = 154
+      Height = 25
+      Anchors = [akTop, akRight]
+      Caption = 'Regelkatalog testen'
+      TabOrder = 1
+      OnClick = ButtonRunRuleTestsClick
     end
   end
   object ListViewLog: TListView

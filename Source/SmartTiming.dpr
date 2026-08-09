@@ -30,6 +30,7 @@ uses
   RaceEngine.TimeTrial in 'RaceEngine.TimeTrial.pas',
   SmartTiming.Cache in 'SmartTiming.Cache.pas',
   SmartTiming.TransponderAssignment in 'SmartTiming.TransponderAssignment.pas',
+  SmartTiming.PassingValidator in 'SmartTiming.PassingValidator.pas',
   Report.ExcelTemplateFiller in 'Report.ExcelTemplateFiller.pas',
   SmartTiming.Event in 'SmartTiming.Event.pas',
   SmartTiming.WebService in 'SmartTiming.WebService.pas',
