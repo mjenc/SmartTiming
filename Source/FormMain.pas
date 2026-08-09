@@ -18,7 +18,9 @@ uses
   SmartTiming.Cache, FormBatteryCheck, RaceEngine.Custom, Vcl.Mask,
   VclTee.TeeGDIPlus, VCLTee.TeEngine, VCLTee.Series, VCLTee.TeeProcs,
   VCLTee.Chart, SmartTiming.Event, SmartTiming.GridFormatProvider,
-  FormAddPassing, FormUnassignedPassings, FormWarmUpChipConflicts, Vcl.WinXPanels, ValueHistoryChart;
+  SmartTiming.PassingValidator,
+  FormAddPassing, FormUnassignedPassings, FormWarmUpChipConflicts,
+  FormPlausibilityDecision, Vcl.WinXPanels, ValueHistoryChart;
 
 type
   TFormMain = class(TForm)
@@ -203,6 +205,7 @@ type
     procedure EnableResultPanelControls(AEnable: boolean);
     procedure HandleAmbiguousChipAssignment(const AChipId: string; APassingTime: TDateTime;
       AMatchCount: Integer);
+    procedure HandlePlausibilityDecision(const ARequest: TPlausibilityDecisionRequest);
 
   protected
     procedure OnGetRaceType(ASender: TField; var AText: string; ADisplayText: Boolean);
@@ -512,12 +515,14 @@ begin
   FAutoScrollPassingList := true;
 
   GSmartTimingController.OnAmbiguousChipAssignment := HandleAmbiguousChipAssignment;
+  GSmartTimingController.OnPlausibilityDecision := HandlePlausibilityDecision;
 end;
 
 {==============================================================================}
 procedure TFormMain.HandleAmbiguousChipAssignment(const AChipId: string;
   APassingTime: TDateTime; AMatchCount: Integer);
 begin
+  (* Covered by HandlePlausibilityDecision for AskOperator; kept as fallback. *)
   SmartTimingTools.ShowDialog(
     Format(cMessagesPassingAmbiguousAssignment,
       [AChipId, FormatDateTime('hh:nn:ss.zzz', APassingTime), AMatchCount]),
@@ -525,10 +530,29 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.HandlePlausibilityDecision(
+  const ARequest: TPlausibilityDecisionRequest);
+var
+  lAlwaysAccept: Boolean;
+  lAccepted: Boolean;
+begin
+  lAccepted := TFormPlausibilityDecision.Execute(Self, ARequest.ChipId,
+    ARequest.Message, ARequest.CanScore, lAlwaysAccept);
+  if lAlwaysAccept then
+    GSmartTimingController.RememberAlwaysAcceptChip(ARequest.ChipId);
+  if lAccepted then
+    GSmartTimingController.ApplyPlausibilityAccept(
+      ARequest.PassingNumber, ARequest.RaceId);
+end;
+
+{==============================================================================}
 procedure TFormMain.FormDestroy(Sender: TObject);
 begin
   if GSmartTimingController <> nil then
+  begin
     GSmartTimingController.OnAmbiguousChipAssignment := nil;
+    GSmartTimingController.OnPlausibilityDecision := nil;
+  end;
   FreeAndNil(FFormManuallyAddPassing);
   FreeAndNil(FDBCheckBoxRacesFirstPassing);
   FreeAndNil(FFormPassingSimulator);

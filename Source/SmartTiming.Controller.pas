@@ -6,7 +6,7 @@ uses
   Windows, MMSystem, SysUtils, Generics.Collections, Classes,
   SmartTiming.Consts, SmartTiming.DecoderEngine, DecoderInterface, SmartTiming.Tools,
   DataModule, SmartTiming.Event, SmartTiming.WebService,
-  RaceEngine.Custom;
+  RaceEngine.Custom, SmartTiming.PassingValidator;
 
 type
   TAmbiguousChipAssignmentEvent = procedure(const AChipId: string; APassingTime: TDateTime;
@@ -21,11 +21,14 @@ type
     FRaceList: TDictionary<integer, TRaceItem>;
     FServlet: TSmartTimingServlet;
     FOnAmbiguousChipAssignment: TAmbiguousChipAssignmentEvent;
+    FOnPlausibilityDecision: TPlausibilityDecisionEvent;
+    FAlwaysAcceptChips: TDictionary<string, Boolean>;
 
     procedure OnDecoderFound(ADecoder: TDecoder);
     procedure OnStatusReceived(AStatus: TDecoderStatus);
     procedure OnPassingReceived(APassing: TPassing);
     function GetMinLapDurationForRace(ARaceId: Integer): Integer;
+    function IsAlwaysAcceptChip(const AChipId: string): Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -43,10 +46,15 @@ type
     procedure ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
     procedure RetryDecoderSearch;
     procedure ImportTRIATimes(const AFileName: string);
+    procedure RememberAlwaysAcceptChip(const AChipId: string);
+    procedure ClearAlwaysAcceptChips;
+    procedure ApplyPlausibilityAccept(APassingNumber, ARaceId: Integer);
     property Event: TEventDataObject read FEventDataObject;
     property RaceList: TDictionary<integer, TRaceItem> read FRaceList;
     property OnAmbiguousChipAssignment: TAmbiguousChipAssignmentEvent
       read FOnAmbiguousChipAssignment write FOnAmbiguousChipAssignment;
+    property OnPlausibilityDecision: TPlausibilityDecisionEvent
+      read FOnPlausibilityDecision write FOnPlausibilityDecision;
   end;
 
 var
@@ -55,8 +63,7 @@ var
 implementation
 
 uses
-  FormMain, SmartTiming.Cache, SmartTiming.TransponderAssignment,
-  SmartTiming.PassingValidator, Tools.Logger;
+  FormMain, SmartTiming.Cache, SmartTiming.TransponderAssignment, Tools.Logger;
 
 const
   cLogger = 'SmartTiming.Controller';
@@ -68,6 +75,7 @@ begin
   LoadSettings;
 
   FEventDataObject := TEventDataObject.Create;
+  FAlwaysAcceptChips := TDictionary<string, Boolean>.Create;
 
   FDecoderEngine := TDecoderEngine.GetSingleton;
   FDecoderEngine.OnDecoderFound := OnDecoderFound;
@@ -96,6 +104,7 @@ begin
       FreeAndNil(FRaceList);
     end;
     FreeAndNil(FEventDataObject);
+    FreeAndNil(FAlwaysAcceptChips);
   finally
     inherited Destroy;
   end;
@@ -131,6 +140,7 @@ procedure TSmartTimingController.LoadEventData(const AEventPath: string);
 begin
   try
     LogOnDebug(cLogger, ['LoadEventData']);
+    ClearAlwaysAcceptChips;
     FDatabasePath := AEventPath;
     MainDataModule.OpenDatabase(FDatabasePath);
     FEventDataObject.RefreshFromDatabase;
@@ -363,13 +373,12 @@ procedure TSmartTimingController.OnPassingReceived(APassing: TPassing);
 var
   lRaceId: integer;
   lResolution: TPassingAssignmentResolution;
-  lChipId: string;
-  lPassingTime: TDateTime;
-  lMatchCount: Integer;
   lContext: TPassingValidationContext;
   lValidation: TPassingValidationResult;
   lMinLap: Integer;
   lIsManual: Boolean;
+  lAskOperator: Boolean;
+  lRequest: TPlausibilityDecisionRequest;
 begin
   try
     LogOnDebug(cLogger, ['OnPassingReceived']);
@@ -397,8 +406,17 @@ begin
     lIsManual := SameText(APassing.DecoderId, 'MANUAL');
     lContext := TPassingValidator.BuildLiveContext(APassing, lResolution, lMinLap, lIsManual);
     lValidation := TPassingValidator.Validate(lContext);
+    lAskOperator := False;
 
-    if lValidation.Disposition = pdAccept then
+    if (lValidation.Disposition = pdAskOperator) and lResolution.IsUnique and
+       IsAlwaysAcceptChip(APassing.ChipId) then
+    begin
+      (* Session override: treat AskOperator as Accept when race is known. *)
+      APassing.PassingStatus := Ord(psValid);
+      lRaceId := lResolution.RaceId;
+      LogOnDebug(cLogger, ['Passing auto-accepted (always-accept chip)', APassing.ChipId]);
+    end
+    else if lValidation.Disposition = pdAccept then
     begin
       APassing.PassingStatus := Ord(psValid);
       if lResolution.IsUnique then
@@ -416,9 +434,22 @@ begin
         lRaceId := -1;
       LogOnWarn(cLogger, ['Passing accepted marked', APassing.ChipId, lValidation.PrimaryMessage]);
     end
+    else if lValidation.Disposition = pdAskOperator then
+    begin
+      (* Persist invalid first; operator dialog is queued (no decoder-thread block). *)
+      APassing.PassingStatus := Ord(psInvalid);
+      if lResolution.IsUnique then
+        lRaceId := lResolution.RaceId
+      else
+        lRaceId := -1;
+      lAskOperator := True;
+      LogOnWarn(cLogger, [
+        Format('Passing needs operator (%s): %s',
+          [lValidation.PrimaryMessage, APassing.ChipId])]);
+    end
     else
     begin
-      (* Reject and AskOperator (no dialog yet, step 4): do not score. *)
+      (* pdReject: do not score. *)
       APassing.PassingStatus := Ord(psInvalid);
       if lResolution.IsUnique then
         lRaceId := lResolution.RaceId
@@ -440,27 +471,31 @@ begin
       TUnassignedPassingStore.GetSingleton.AddPassing(APassing);
       LogOnDebug(cLogger, ['Unassigned passing', APassing.ChipId,
         FormatDateTime('hh:nn:ss.zzz', APassing.PassingTime)]);
-
-      if lResolution.IsAmbiguous and Assigned(FOnAmbiguousChipAssignment) then
-      begin
-        lChipId := APassing.ChipId;
-        lPassingTime := APassing.PassingTime;
-        lMatchCount := lResolution.MatchCount;
-        TThread.Queue(nil,
-          procedure
-          begin
-            if Assigned(GSmartTimingController) and
-               Assigned(GSmartTimingController.OnAmbiguousChipAssignment) then
-              GSmartTimingController.OnAmbiguousChipAssignment(
-                lChipId, lPassingTime, lMatchCount);
-          end);
-      end;
     end
     else
       TUnassignedPassingStore.GetSingleton.RemovePassing(APassing.PassingNumber);
 
     (* Display always; participation update only for accepted (engine checks status). *)
     GFormMain.AddPassingForRaceId(lRaceId, APassing);
+
+    if lAskOperator and Assigned(FOnPlausibilityDecision) then
+    begin
+      lRequest.PassingNumber := APassing.PassingNumber;
+      lRequest.ChipId := APassing.ChipId;
+      lRequest.RaceId := lRaceId;
+      lRequest.PassingTime := APassing.PassingTime;
+      lRequest.CanScore := lRaceId >= 0;
+      lRequest.Message := Format(cMessagesPlausibilityHeader,
+        [APassing.ChipId, FormatDateTime('hh:nn:ss.zzz', APassing.PassingTime),
+         lValidation.FormatFindings]);
+      TThread.Queue(nil,
+        procedure
+        begin
+          if Assigned(GSmartTimingController) and
+             Assigned(GSmartTimingController.OnPlausibilityDecision) then
+            GSmartTimingController.OnPlausibilityDecision(lRequest);
+        end);
+    end;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['OnPassingReceived']);
   end;
@@ -534,6 +569,53 @@ begin
     TUnassignedPassingStore.GetSingleton.RemovePassing(APassingNumber);
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['RemovePassing']);
+  end;
+end;
+
+{==============================================================================}
+function TSmartTimingController.IsAlwaysAcceptChip(const AChipId: string): Boolean;
+begin
+  Result := (FAlwaysAcceptChips <> nil) and
+    FAlwaysAcceptChips.ContainsKey(NormalizeChipId(AChipId));
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.RememberAlwaysAcceptChip(const AChipId: string);
+var
+  lKey: string;
+begin
+  lKey := NormalizeChipId(AChipId);
+  if (FAlwaysAcceptChips = nil) or (lKey = '') then
+    Exit;
+  FAlwaysAcceptChips.AddOrSetValue(lKey, True);
+  LogOnInfo(cLogger, ['Always-accept chip remembered for session', lKey]);
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.ClearAlwaysAcceptChips;
+begin
+  if FAlwaysAcceptChips <> nil then
+    FAlwaysAcceptChips.Clear;
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.ApplyPlausibilityAccept(APassingNumber, ARaceId: Integer);
+var
+  lPassing: TPassing;
+  lRaceItem: TRaceItem;
+begin
+  try
+    LogOnDebug(cLogger, ['ApplyPlausibilityAccept', APassingNumber.ToString, ARaceId.ToString]);
+    if ARaceId < 0 then
+      Exit;
+
+    lPassing := TPassingStore.GetSingleton.GetPassing(APassingNumber);
+    UpdatePassing(APassingNumber, lPassing.PassingTime, psValid);
+
+    if FRaceList.TryGetValue(ARaceId, lRaceItem) and (lRaceItem.RaceEngine <> nil) then
+      lRaceItem.RaceEngine.RecalcCountingLaps;
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['ApplyPlausibilityAccept']);
   end;
 end;
 

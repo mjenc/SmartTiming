@@ -42,6 +42,7 @@ uses
   FormAssignCompetitorToTransponder in 'FormAssignCompetitorToTransponder.pas' {FormAssignCompetitor},
   FormUnassignedPassings in 'FormUnassignedPassings.pas' {FormUnassignedPassings},
   FormWarmUpChipConflicts in 'FormWarmUpChipConflicts.pas' {FormWarmUpChipConflicts},
+  FormPlausibilityDecision in 'FormPlausibilityDecision.pas' {FormPlausibilityDecision},
   Tools.Logger in 'Tools.Logger.pas';
 
 {$R *.res}

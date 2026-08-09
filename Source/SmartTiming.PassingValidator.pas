@@ -64,6 +64,7 @@ type
     function IsAccepted: Boolean;
     function NeedsOperator: Boolean;
     function PrimaryMessage: string;
+    function FormatFindings: string;
   end;
 
   (* All inputs for rules — filled by caller (tests or future pipeline adapter). *)
@@ -106,6 +107,18 @@ type
     class function RunCatalogSelfTests(out AReport: string): Boolean; static;
   end;
 
+  (* Plan 4 step 4: queued to UI for pdAskOperator. *)
+  TPlausibilityDecisionRequest = record
+    PassingNumber: Integer;
+    ChipId: string;
+    RaceId: Integer;
+    PassingTime: TDateTime;
+    Message: string;
+    CanScore: Boolean;
+  end;
+
+  TPlausibilityDecisionEvent = procedure(const ARequest: TPlausibilityDecisionRequest) of object;
+
 implementation
 
 uses
@@ -129,6 +142,20 @@ begin
   if Length(Findings) = 0 then
     Exit('');
   Result := Findings[0].Message;
+end;
+
+{==============================================================================}
+function TPassingValidationResult.FormatFindings: string;
+var
+  i: Integer;
+begin
+  Result := '';
+  for i := 0 to High(Findings) do
+  begin
+    if Result <> '' then
+      Result := Result + sLineBreak;
+    Result := Result + Findings[i].Message;
+  end;
 end;
 
 {==============================================================================}

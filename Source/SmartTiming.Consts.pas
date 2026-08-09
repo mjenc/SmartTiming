@@ -146,6 +146,14 @@ resourcestring
   cMessagesChipTransferOk = 'Chip %s wurde übertragen.';
   cMessagesPassingAmbiguousAssignment =
     'Mehrdeutige Chip-Zuordnung für %s um %s (%d Treffer) — Passage nicht gewertet.';
+  cMessagesPlausibilityTitle = 'Plausibilitätsprüfung';
+  cMessagesPlausibilityHeader =
+    'Chip %s um %s'#13#10#13#10'%s';
+  cMessagesPlausibilityAlwaysAccept =
+    'Für Chip %s immer annehmen (diese Sitzung)';
+  cMessagesPlausibilityAccept = 'Annehmen';
+  cMessagesPlausibilityReject = 'Verwerfen';
+  cMessagesPlausibilityAcknowledge = 'OK';
   cMessagesNoRaceSelectedForAssign =
     'Bitte zuerst ein Rennen in der Zeitmessung auswählen.';
   cMessagesChipUnassignConfirm = 'Chip-Zuordnung für %d Teilnehmer wirklich beenden?';
