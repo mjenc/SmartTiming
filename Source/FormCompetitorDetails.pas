@@ -51,7 +51,7 @@ type
     FDataSource: TDataSource;
     FEventId: Integer;
     FIsInsert: Boolean;
-
+    function SyncChipAssignments(ACompetitorId: Integer; const AChipId: string): Boolean;
   public
     constructor Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean); reintroduce;
   end;
@@ -60,6 +60,9 @@ type
 implementation
 
 {$R *.dfm}
+
+uses
+  SmartTiming.Consts, SmartTiming.Tools, SmartTiming.TransponderAssignment;
 
 {==============================================================================}
 constructor TFormCompetitorDetails.Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean);
@@ -122,23 +125,84 @@ begin
 end;
 
 {==============================================================================}
+function TFormCompetitorDetails.SyncChipAssignments(ACompetitorId: Integer;
+  const AChipId: string): Boolean;
+var
+  lRaceIds: TArray<Integer>;
+  lRaceId: Integer;
+  lResult: TAssignmentOperationResult;
+  lAssignment: TTransponderAssignment;
+  lHasOpen: Boolean;
+  lStatus: TRaceStatus;
+  i: Integer;
+begin
+  Result := True;
+  lRaceIds := MainDataModule.GetRaceIdsForCompetitor(ACompetitorId);
+  for i := 0 to High(lRaceIds) do
+  begin
+    lRaceId := lRaceIds[i];
+    lHasOpen := TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
+      lRaceId, ACompetitorId, lAssignment);
+    lStatus := MainDataModule.GetRaceStatus(lRaceId);
+
+    if AChipId = '' then
+    begin
+      if lHasOpen then
+      begin
+        if not TTransponderAssignmentService.Unassign(lRaceId, ACompetitorId, lResult) then
+        begin
+          SmartTimingTools.ShowDialog(lResult.Message, '', [tcbOk], tcbOk);
+          Exit(False);
+        end;
+      end;
+      Continue;
+    end;
+
+    (* Only touch open assignments or races that already block chip reuse. *)
+    if (not lHasOpen) and
+       (not TTransponderAssignmentService.IsRaceStatusActiveForChipConflict(lStatus)) then
+      Continue;
+
+    if not TTransponderAssignmentService.Assign(lRaceId, ACompetitorId, AChipId, lResult) then
+    begin
+      SmartTimingTools.ShowDialog(lResult.Message, '', [tcbOk], tcbOk);
+      Exit(False);
+    end;
+  end;
+end;
+
+{==============================================================================}
 procedure TFormCompetitorDetails.ButtonOKClick(Sender: TObject);
 var
   lTxId: string;
+  lCompetitorId: Integer;
 begin
+  ModalResult := mrNone;
+
   if FIsInsert then
     FDataSource.DataSet.FieldByName('COMPETITORID').Value := MainDataModule.GetMaxCompetitorId + 1;
 
-  lTxId := DBEditTxId.EditText;
-
-  if not TTransponderMappingStore.GetSingleton.ConvertToValidChipId(lTxId) then
-    ShowMessage('Keine gültige Transponder ID.');
-
+  lTxId := Trim(DBEditTxId.EditText);
+  if lTxId <> '' then
+  begin
+    if not TTransponderMappingStore.GetSingleton.ConvertToValidChipId(lTxId) then
+    begin
+      ShowMessage('Keine gültige Transponder ID.');
+      Exit;
+    end;
+    lTxId := NormalizeChipId(lTxId);
+  end;
   DBEditTxId.EditText := lTxId;
+  FDataSource.DataSet.FieldByName('CHIPID').AsString := lTxId;
 
   FDataSource.DataSet.Post;
   TClientDataSet(FDataSource.DataSet).ApplyUpdates(0);
-end;
 
+  lCompetitorId := FDataSource.DataSet.FieldByName('COMPETITORID').AsInteger;
+  if not SyncChipAssignments(lCompetitorId, lTxId) then
+    Exit;
+
+  ModalResult := mrOk;
+end;
 
 end.

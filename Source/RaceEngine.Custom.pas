@@ -512,6 +512,7 @@ begin
     lTransaction := MainDataModule.SQLConnection.BeginTransaction;
     try
       MainDataModule.ResetRaceParticitipations(FRaceItem.Id);
+      FLastConsideredPassingId := MainDataModule.GetMinPassingNumber - 1;
 
       TPassingStore.GetSingleton.FillPassingListForRaceId(FRaceItem.Id, lPassingList, true, true);
       lTimeArray := lPassingList.Keys.ToArray;
@@ -800,7 +801,8 @@ begin
   if not TFormAssignCompetitor.Execute(nil, FRaceItem.Id, lCompetitorId) then
     Exit;
 
-  if not TTransponderAssignmentService.Assign(FRaceItem.Id, lCompetitorId, lPassing.ChipId, lResult) then
+  if not TTransponderAssignmentService.Assign(FRaceItem.Id, lCompetitorId, lPassing.ChipId,
+       lResult, lPassing.PassingTime) then
   begin
     SmartTimingTools.ShowDialog(lResult.Message, '', [tcbOk], tcbOk);
     Exit;
@@ -809,7 +811,7 @@ begin
   MainDataModule.GetCompetitorInfoForPassing(lPassing, lBIB, lName, lTeamClub);
   lCurrentItem.Caption := lBIB.ToString;
   lCurrentItem.SubItems[cPassingItemSubItemIdxName] := lName;
-  RefreshRankingDisplay;
+  RecalcCountingLaps;
 end;
 
 {==============================================================================}

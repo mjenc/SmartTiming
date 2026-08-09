@@ -9,6 +9,9 @@ uses
   RaceEngine.Custom;
 
 type
+  TAmbiguousChipAssignmentEvent = procedure(const AChipId: string; APassingTime: TDateTime;
+    AMatchCount: Integer) of object;
+
   TSmartTimingController = class
   private
     FDecoderEngine: TDecoderEngine;
@@ -17,6 +20,7 @@ type
     FEventDataObject: TEventDataObject;
     FRaceList: TDictionary<integer, TRaceItem>;
     FServlet: TSmartTimingServlet;
+    FOnAmbiguousChipAssignment: TAmbiguousChipAssignmentEvent;
 
     procedure OnDecoderFound(ADecoder: TDecoder);
     procedure OnStatusReceived(AStatus: TDecoderStatus);
@@ -40,6 +44,8 @@ type
     procedure ImportTRIATimes(const AFileName: string);
     property Event: TEventDataObject read FEventDataObject;
     property RaceList: TDictionary<integer, TRaceItem> read FRaceList;
+    property OnAmbiguousChipAssignment: TAmbiguousChipAssignmentEvent
+      read FOnAmbiguousChipAssignment write FOnAmbiguousChipAssignment;
   end;
 
 var
@@ -48,7 +54,8 @@ var
 implementation
 
 uses
-  FormMain, SmartTiming.Cache, Tools.Logger;
+  FormMain, SmartTiming.Cache, SmartTiming.TransponderAssignment,
+  Tools.Logger;
 
 const
   cLogger = 'SmartTiming.Controller';
@@ -292,6 +299,11 @@ begin
     LogOnDebug(cLogger, ['ChangeRaceStatus']);
 
     MainDataModule.SetRaceStatus(ARaceId, ARaceStatus);
+
+    (* Terminal statuses free chips for reuse in later races. *)
+    if ARaceStatus in [rsFinished, rsAborted, rsStopped] then
+      MainDataModule.CloseAllOpenTransponderAssignmentsForRace(ARaceId);
+
     lPassing.PassingNumber := MainDataModule.GetMinPassingNumber - 1;
     lPassing.ChipId := '';
     lPassing.PassingTime := Now;
@@ -332,6 +344,10 @@ end;
 procedure TSmartTimingController.OnPassingReceived(APassing: TPassing);
 var
   lRaceId: integer;
+  lResolution: TPassingAssignmentResolution;
+  lChipId: string;
+  lPassingTime: TDateTime;
+  lMatchCount: Integer;
 begin
   try
     LogOnDebug(cLogger, ['OnPassingReceived']);
@@ -347,6 +363,23 @@ begin
       TUnassignedPassingStore.GetSingleton.AddPassing(APassing);
       LogOnDebug(cLogger, ['Unassigned passing', APassing.ChipId,
         FormatDateTime('hh:nn:ss.zzz', APassing.PassingTime)]);
+
+      if (not TTransponderAssignmentService.ResolvePassing(APassing.ChipId,
+            APassing.PassingTime, lResolution)) and lResolution.IsAmbiguous and
+         Assigned(FOnAmbiguousChipAssignment) then
+      begin
+        lChipId := APassing.ChipId;
+        lPassingTime := APassing.PassingTime;
+        lMatchCount := lResolution.MatchCount;
+        TThread.Queue(nil,
+          procedure
+          begin
+            if Assigned(GSmartTimingController) and
+               Assigned(GSmartTimingController.OnAmbiguousChipAssignment) then
+              GSmartTimingController.OnAmbiguousChipAssignment(
+                lChipId, lPassingTime, lMatchCount);
+          end);
+      end;
     end
     else
       TUnassignedPassingStore.GetSingleton.RemovePassing(APassing.PassingNumber);

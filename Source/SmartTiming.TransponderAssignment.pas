@@ -76,7 +76,7 @@ type
       APassingTime: TDateTime; out ACompetitorId: Integer): Boolean; static;
 
     class function Assign(ARaceId, ACompetitorId: Integer; const AChipId: string;
-      out AResult: TAssignmentOperationResult): Boolean; static;
+      out AResult: TAssignmentOperationResult; AValidFrom: TDateTime = 0): Boolean; static;
 
     (* Participation helper: use COMPETITORS.CHIPID; skip quietly on empty/conflict. *)
     class function AssignFromCompetitorChip(ARaceId, ACompetitorId: Integer): Boolean; static;
@@ -86,7 +86,7 @@ type
 
     (* Close current open assignment for race+competitor (if any), then Assign new chip. *)
     class function Transfer(ARaceId, ACompetitorId: Integer; const ANewChipId: string;
-      out AResult: TAssignmentOperationResult): Boolean; static;
+      out AResult: TAssignmentOperationResult; AValidFrom: TDateTime = 0): Boolean; static;
   end;
 
 implementation
@@ -158,7 +158,7 @@ begin
   AResolution.MatchCount := 0;
   Result := False;
 
-  lChipId := Trim(AChipId);
+  lChipId := NormalizeChipId(AChipId);
   if lChipId = '' then
     Exit;
 
@@ -202,7 +202,7 @@ var
 begin
   ACompetitorId := -1;
   Result := False;
-  lChipId := Trim(AChipId);
+  lChipId := NormalizeChipId(AChipId);
   if (ARaceId < 0) or (lChipId = '') then
     Exit;
 
@@ -301,12 +301,12 @@ class function TTransponderAssignmentService.FindOpenConflictsForChip(
   const AChipId: string; AExcludeRaceId, AExcludeCompetitorId: Integer;
   AActiveRacesOnly: Boolean): TArray<TAssignmentConflict>;
 begin
-  if Trim(AChipId) = '' then
+  if NormalizeChipId(AChipId) = '' then
   begin
     SetLength(Result, 0);
     Exit;
   end;
-  Result := CollectOpenConflictsForChip(Trim(AChipId), AExcludeRaceId,
+  Result := CollectOpenConflictsForChip(NormalizeChipId(AChipId), AExcludeRaceId,
     AExcludeCompetitorId, AActiveRacesOnly);
 end;
 
@@ -330,9 +330,9 @@ begin
     begin
       if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
            ARaceId, lCompetitorIds[i], lAssignment) then
-        lChipId := lAssignment.ChipId
+        lChipId := NormalizeChipId(lAssignment.ChipId)
       else
-        lChipId := Trim(MainDataModule.GetCompetitorChipId(lCompetitorIds[i]));
+        lChipId := NormalizeChipId(MainDataModule.GetCompetitorChipId(lCompetitorIds[i]));
 
       if lChipId = '' then
         Continue;
@@ -390,14 +390,15 @@ end;
 
 {==============================================================================}
 class function TTransponderAssignmentService.Assign(ARaceId, ACompetitorId: Integer;
-  const AChipId: string; out AResult: TAssignmentOperationResult): Boolean;
+  const AChipId: string; out AResult: TAssignmentOperationResult;
+  AValidFrom: TDateTime): Boolean;
 var
   lChipId: string;
   lExisting: TTransponderAssignment;
   lValidFrom: TDateTime;
 begin
   AResult := MakeEmptyResult;
-  lChipId := Trim(AChipId);
+  lChipId := NormalizeChipId(AChipId);
   if lChipId = '' then
   begin
     AResult.Message := cMessagesChipIdEmpty;
@@ -407,7 +408,7 @@ begin
   if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
        ARaceId, ACompetitorId, lExisting) then
   begin
-    if SameText(lExisting.ChipId, lChipId) then
+    if NormalizeChipId(lExisting.ChipId) = lChipId then
     begin
       AResult.Success := True;
       AResult.AssignmentId := lExisting.AssignmentId;
@@ -415,7 +416,7 @@ begin
       Exit(True);
     end;
     (* Different chip for same race+competitor → transfer. *)
-    Exit(Transfer(ARaceId, ACompetitorId, lChipId, AResult));
+    Exit(Transfer(ARaceId, ACompetitorId, lChipId, AResult, AValidFrom));
   end;
 
   AResult.Conflicts := CollectOpenConflictsForChip(lChipId, ARaceId, ACompetitorId, False);
@@ -425,7 +426,10 @@ begin
     Exit(False);
   end;
 
-  lValidFrom := Now;
+  if AValidFrom > 0 then
+    lValidFrom := AValidFrom
+  else
+    lValidFrom := Now;
   AResult.AssignmentId := PersistOpenAssignment(ARaceId, ACompetitorId, lChipId, lValidFrom);
   SyncCompetitorChipId(ACompetitorId, lChipId);
   AResult.Success := True;
@@ -440,7 +444,7 @@ var
   lChipId: string;
   lResult: TAssignmentOperationResult;
 begin
-  lChipId := Trim(MainDataModule.GetCompetitorChipId(ACompetitorId));
+  lChipId := NormalizeChipId(MainDataModule.GetCompetitorChipId(ACompetitorId));
   if lChipId = '' then
     Exit(False);
   Result := Assign(ARaceId, ACompetitorId, lChipId, lResult);
@@ -464,10 +468,8 @@ begin
   SetLength(lIds, 1);
   lIds[0] := ACompetitorId;
   MainDataModule.CloseTransponderAssignmentsForCompetitors(ARaceId, lIds);
-  (* CloseTransponderAssignmentsForCompetitors already syncs the store. *)
-
-  if SameText(Trim(MainDataModule.GetCompetitorChipId(ACompetitorId)), lExisting.ChipId) then
-    SyncCompetitorChipId(ACompetitorId, '');
+  (* CloseTransponderAssignmentsForCompetitors already syncs the store.
+     COMPETITORS.CHIPID stays as seed for later races / Ensure. *)
 
   AResult.Success := True;
   AResult.AssignmentId := lExisting.AssignmentId;
@@ -477,7 +479,8 @@ end;
 
 {==============================================================================}
 class function TTransponderAssignmentService.Transfer(ARaceId, ACompetitorId: Integer;
-  const ANewChipId: string; out AResult: TAssignmentOperationResult): Boolean;
+  const ANewChipId: string; out AResult: TAssignmentOperationResult;
+  AValidFrom: TDateTime): Boolean;
 var
   lChipId: string;
   lExisting: TTransponderAssignment;
@@ -485,7 +488,7 @@ var
   lValidFrom: TDateTime;
 begin
   AResult := MakeEmptyResult;
-  lChipId := Trim(ANewChipId);
+  lChipId := NormalizeChipId(ANewChipId);
   if lChipId = '' then
   begin
     AResult.Message := cMessagesChipIdEmpty;
@@ -493,7 +496,8 @@ begin
   end;
 
   if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
-       ARaceId, ACompetitorId, lExisting) and SameText(lExisting.ChipId, lChipId) then
+       ARaceId, ACompetitorId, lExisting) and
+     (NormalizeChipId(lExisting.ChipId) = lChipId) then
   begin
     AResult.Success := True;
     AResult.AssignmentId := lExisting.AssignmentId;
@@ -516,7 +520,10 @@ begin
     MainDataModule.CloseTransponderAssignmentsForCompetitors(ARaceId, lIds);
   end;
 
-  lValidFrom := Now;
+  if AValidFrom > 0 then
+    lValidFrom := AValidFrom
+  else
+    lValidFrom := Now;
   AResult.AssignmentId := PersistOpenAssignment(ARaceId, ACompetitorId, lChipId, lValidFrom);
   SyncCompetitorChipId(ACompetitorId, lChipId);
   AResult.Success := True;

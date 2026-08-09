@@ -164,6 +164,7 @@ type
   TRaceStates = set of TRaceStatus;
 
 const
+  cUnassignedPassingsDisplayLimit = 500;
   (* Race statuses that block parallel chip reuse (Plan 2). *)
   cActiveRaceStatusesForChipConflict: TRaceStates = [rsWarmUp, rsStarted, rsNeutralized];
   (* Race statuses that accept scored live passings (legacy: Started only). *)

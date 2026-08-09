@@ -37,7 +37,7 @@ implementation
 uses
   SmartTiming.Cache, SmartTiming.Consts, SmartTiming.Tools, SmartTiming.Controller,
   SmartTiming.TransponderAssignment, FormAssignCompetitorToTransponder, FormMain,
-  DataModule;
+  DataModule, RaceEngine.Custom;
 
 {==============================================================================}
 procedure TFormUnassignedPassings.FormShow(Sender: TObject);
@@ -51,7 +51,8 @@ var
   lList: TList<TPassing>;
   lPassing: TPassing;
   lItem: TListItem;
-  i: Integer;
+  i, lStart: Integer;
+  lTotal: Integer;
 begin
   ListViewPassings.Items.BeginUpdate;
   try
@@ -67,7 +68,11 @@ begin
             if Result = 0 then
               Result := Left.PassingNumber - Right.PassingNumber;
           end));
-      for i := 0 to lList.Count - 1 do
+      lTotal := lList.Count;
+      lStart := 0;
+      if lTotal > cUnassignedPassingsDisplayLimit then
+        lStart := lTotal - cUnassignedPassingsDisplayLimit;
+      for i := lStart to lTotal - 1 do
       begin
         lPassing := lList[i];
         lItem := ListViewPassings.Items.Add;
@@ -83,8 +88,12 @@ begin
   finally
     ListViewPassings.Items.EndUpdate;
   end;
-  Caption := Format('Nicht zugeordnete Transponder (%d)',
-    [TUnassignedPassingStore.GetSingleton.Count]);
+  lTotal := TUnassignedPassingStore.GetSingleton.Count;
+  if lTotal > cUnassignedPassingsDisplayLimit then
+    Caption := Format('Nicht zugeordnete Transponder (%d, neueste %d)',
+      [lTotal, cUnassignedPassingsDisplayLimit])
+  else
+    Caption := Format('Nicht zugeordnete Transponder (%d)', [lTotal]);
 end;
 
 {==============================================================================}
@@ -139,6 +148,7 @@ var
   lRaceId: Integer;
   lCompetitorId: Integer;
   lResult: TAssignmentOperationResult;
+  lRaceItem: TRaceItem;
 begin
   if not HasSelection then
     Exit;
@@ -154,7 +164,9 @@ begin
   if not TFormAssignCompetitor.Execute(Self, lRaceId, lCompetitorId) then
     Exit;
 
-  if not TTransponderAssignmentService.Assign(lRaceId, lCompetitorId, lPassing.ChipId, lResult) then
+  (* ValidFrom must cover the historical passing time for Resolve/name/laps. *)
+  if not TTransponderAssignmentService.Assign(lRaceId, lCompetitorId, lPassing.ChipId,
+       lResult, lPassing.PassingTime) then
   begin
     SmartTimingTools.ShowDialog(lResult.Message, '', [tcbOk], tcbOk);
     Exit;
@@ -165,6 +177,11 @@ begin
   TUnassignedPassingStore.GetSingleton.RemovePassing(lPassing.PassingNumber);
   lPassing.RaceId := lRaceId;
   GFormMain.AddPassingForRaceId(lRaceId, lPassing);
+
+  if GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) and
+     (lRaceItem.RaceEngine <> nil) then
+    lRaceItem.RaceEngine.RecalcCountingLaps;
+
   ReloadList;
 end;
 

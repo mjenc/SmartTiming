@@ -7,6 +7,9 @@ uses
   Windows, System.Character,
   DecoderInterface, SmartTiming.Consts;
 
+(* Canonical chip key for indexes and conflict checks. *)
+function NormalizeChipId(const AChipId: string): string;
+
 type
   TSynchronizedObject = class
   protected
@@ -141,6 +144,7 @@ type
     procedure CloseAssignment(AAssignmentId: Integer; AValidTo: TDateTime);
     procedure CloseAssignmentsForCompetitors(ARaceId: Integer;
       const ACompetitorIDs: TArray<Integer>; AValidTo: TDateTime);
+    procedure CloseAllOpenForRace(ARaceId: Integer; AValidTo: TDateTime);
 
     function TryGetById(AAssignmentId: Integer; out AAssignment: TTransponderAssignment): Boolean;
     function TryGetActiveByChip(const AChipId: string; out AAssignment: TTransponderAssignment): Boolean;
@@ -164,6 +168,12 @@ var
 
   gCriticalSection: TCriticalSection;
 
+
+{==============================================================================}
+function NormalizeChipId(const AChipId: string): string;
+begin
+  Result := AnsiUpperCase(Trim(AChipId));
+end;
 
 {==============================================================================}
 constructor TSynchronizedObject.Create;
@@ -777,7 +787,7 @@ procedure TTransponderAssignmentStore.IndexOpenAssignment(const AAssignment: TTr
 begin
   if not AAssignment.IsOpen then
     Exit;
-  FActiveByChip.AddOrSetValue(AAssignment.ChipId, AAssignment.AssignmentId);
+  FActiveByChip.AddOrSetValue(NormalizeChipId(AAssignment.ChipId), AAssignment.AssignmentId);
   FActiveByRaceCompetitor.AddOrSetValue(
     RaceCompetitorKey(AAssignment.RaceId, AAssignment.CompetitorId),
     AAssignment.AssignmentId);
@@ -787,9 +797,11 @@ end;
 procedure TTransponderAssignmentStore.UnindexOpenAssignment(const AAssignment: TTransponderAssignment);
 var
   lId: Integer;
+  lChipKey: string;
 begin
-  if FActiveByChip.TryGetValue(AAssignment.ChipId, lId) and (lId = AAssignment.AssignmentId) then
-    FActiveByChip.Remove(AAssignment.ChipId);
+  lChipKey := NormalizeChipId(AAssignment.ChipId);
+  if FActiveByChip.TryGetValue(lChipKey, lId) and (lId = AAssignment.AssignmentId) then
+    FActiveByChip.Remove(lChipKey);
   if FActiveByRaceCompetitor.TryGetValue(
        RaceCompetitorKey(AAssignment.RaceId, AAssignment.CompetitorId), lId) and
      (lId = AAssignment.AssignmentId) then
@@ -813,13 +825,16 @@ end;
 procedure TTransponderAssignmentStore.Upsert(const AAssignment: TTransponderAssignment);
 var
   lExisting: TTransponderAssignment;
+  lNormalized: TTransponderAssignment;
 begin
+  lNormalized := AAssignment;
+  lNormalized.ChipId := NormalizeChipId(AAssignment.ChipId);
   Synchronizer.BeginWrite;
   try
-    if FById.TryGetValue(AAssignment.AssignmentId, lExisting) then
+    if FById.TryGetValue(lNormalized.AssignmentId, lExisting) then
       UnindexOpenAssignment(lExisting);
-    FById.AddOrSetValue(AAssignment.AssignmentId, AAssignment);
-    IndexOpenAssignment(AAssignment);
+    FById.AddOrSetValue(lNormalized.AssignmentId, lNormalized);
+    IndexOpenAssignment(lNormalized);
   finally
     Synchronizer.EndWrite;
   end;
@@ -871,6 +886,37 @@ begin
 end;
 
 {==============================================================================}
+procedure TTransponderAssignmentStore.CloseAllOpenForRace(ARaceId: Integer; AValidTo: TDateTime);
+var
+  lPair: TPair<Integer, TTransponderAssignment>;
+  lAssignment: TTransponderAssignment;
+  lToClose: TList<Integer>;
+  i: Integer;
+begin
+  lToClose := TList<Integer>.Create;
+  try
+    Synchronizer.BeginWrite;
+    try
+      for lPair in FById do
+        if (lPair.Value.RaceId = ARaceId) and lPair.Value.IsOpen then
+          lToClose.Add(lPair.Key);
+      for i := 0 to lToClose.Count - 1 do
+      begin
+        if not FById.TryGetValue(lToClose[i], lAssignment) then
+          Continue;
+        UnindexOpenAssignment(lAssignment);
+        lAssignment.ValidTo := AValidTo;
+        FById.AddOrSetValue(lToClose[i], lAssignment);
+      end;
+    finally
+      Synchronizer.EndWrite;
+    end;
+  finally
+    FreeAndNil(lToClose);
+  end;
+end;
+
+{==============================================================================}
 function TTransponderAssignmentStore.TryGetById(AAssignmentId: Integer;
   out AAssignment: TTransponderAssignment): Boolean;
 begin
@@ -890,7 +936,8 @@ var
 begin
   Synchronizer.BeginRead;
   try
-    Result := FActiveByChip.TryGetValue(AChipId, lId) and FById.TryGetValue(lId, AAssignment);
+    Result := FActiveByChip.TryGetValue(NormalizeChipId(AChipId), lId) and
+              FById.TryGetValue(lId, AAssignment);
   finally
     Synchronizer.EndRead;
   end;
@@ -916,16 +963,20 @@ function TTransponderAssignmentStore.FindAssignmentsForChipAtTime(const AChipId:
   APassingTime: TDateTime; AList: TList<TTransponderAssignment>): Integer;
 var
   lPair: TPair<Integer, TTransponderAssignment>;
+  lChipKey: string;
 begin
   Result := 0;
   if AList = nil then
+    Exit;
+  lChipKey := NormalizeChipId(AChipId);
+  if lChipKey = '' then
     Exit;
 
   Synchronizer.BeginRead;
   try
     for lPair in FById do
     begin
-      if not SameText(lPair.Value.ChipId, AChipId) then
+      if NormalizeChipId(lPair.Value.ChipId) <> lChipKey then
         Continue;
       if not lPair.Value.CoversTime(APassingTime) then
         Continue;

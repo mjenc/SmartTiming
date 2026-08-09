@@ -45,7 +45,7 @@ implementation
 {$R *.dfm}
 
 uses
-  SmartTiming.Controller;
+  SmartTiming.Controller, FormMain;
 
 {==============================================================================}
 procedure TFormManuallyAddPassing.FormActivate(Sender: TObject);
@@ -126,7 +126,8 @@ var
   lPassing: TPassing;
 begin
   lPassing.PassingNumber := 0;
-  lPassing.ChipId := MainDataModule.GetActiveTransponderIdForBib(ABib);
+  lPassing.ChipId := MainDataModule.GetActiveTransponderIdForBib(ABib,
+    GFormMain.GetSelectedRaceId);
   lPassing.PassingTime := GetTime + Trunc(Now);
   lPassing.SignalStrength := 100;
   lPassing.Hits := 90;

@@ -201,6 +201,8 @@ type
     procedure RefreshFlagButtonsVisibility(ARaceItem: TRaceItem);
     procedure RefreshAddCompetitorToRaceMenu;
     procedure EnableResultPanelControls(AEnable: boolean);
+    procedure HandleAmbiguousChipAssignment(const AChipId: string; APassingTime: TDateTime;
+      AMatchCount: Integer);
 
   protected
     procedure OnGetRaceType(ASender: TField; var AText: string; ADisplayText: Boolean);
@@ -508,11 +510,25 @@ begin
   EditDateTo.Text := DateToStr(Now);
 
   FAutoScrollPassingList := true;
+
+  GSmartTimingController.OnAmbiguousChipAssignment := HandleAmbiguousChipAssignment;
+end;
+
+{==============================================================================}
+procedure TFormMain.HandleAmbiguousChipAssignment(const AChipId: string;
+  APassingTime: TDateTime; AMatchCount: Integer);
+begin
+  SmartTimingTools.ShowDialog(
+    Format(cMessagesPassingAmbiguousAssignment,
+      [AChipId, FormatDateTime('hh:nn:ss.zzz', APassingTime), AMatchCount]),
+    '', [tcbOk], tcbOk);
 end;
 
 {==============================================================================}
 procedure TFormMain.FormDestroy(Sender: TObject);
 begin
+  if GSmartTimingController <> nil then
+    GSmartTimingController.OnAmbiguousChipAssignment := nil;
   FreeAndNil(FFormManuallyAddPassing);
   FreeAndNil(FDBCheckBoxRacesFirstPassing);
   FreeAndNil(FFormPassingSimulator);

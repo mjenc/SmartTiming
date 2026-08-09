@@ -52,6 +52,8 @@ type
       const AChipId: string; AValidFrom: TDateTime): Integer;
     procedure CreateTransponderAssignmentFromCompetitorChip(ARaceId, ACompetitorId: Integer);
     procedure CloseTransponderAssignmentsForCompetitors(ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
+    procedure CloseAllOpenTransponderAssignmentsForRace(ARaceId: Integer);
+    function GetRaceIdsForCompetitor(ACompetitorId: Integer): TArray<Integer>;
     function GetRaceStatus(ARaceId: Integer): TRaceStatus;
     function GetRaceTitle(ARaceId: Integer): string;
     function GetCompetitorChipId(ACompetitorId: Integer): string;
@@ -73,7 +75,7 @@ type
     function GetUnassignedPassings: TArray<TPassing>;
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
     procedure GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
-    function GetActiveTransponderIdForBib(ABib: integer): string;
+    function GetActiveTransponderIdForBib(ABib: integer; APreferredRaceId: Integer = -1): string;
 
     procedure SetParticipantState(ARaceId: Integer; ACompetitorIDs: TArray<Integer>; AParticipantState: TParticipantState);
 
@@ -567,6 +569,50 @@ begin
 end;
 
 {==============================================================================}
+procedure TMainDataModule.CloseAllOpenTransponderAssignmentsForRace(ARaceId: Integer);
+var
+  lValidToDt: TDateTime;
+  lValidTo: string;
+begin
+  lValidToDt := Now;
+  lValidTo := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', lValidToDt).QuotedString;
+  SQLConnection.Execute(Format(
+    'UPDATE TRANSPONDERASSIGNMENTS SET VALIDTO = %s ' +
+    'WHERE RACEID = %d AND VALIDTO IS NULL',
+    [lValidTo, ARaceId]), nil);
+  TTransponderAssignmentStore.GetSingleton.CloseAllOpenForRace(ARaceId, lValidToDt);
+end;
+
+{==============================================================================}
+function TMainDataModule.GetRaceIdsForCompetitor(ACompetitorId: Integer): TArray<Integer>;
+var
+  lResultSet: TDataSet;
+  lList: TList<Integer>;
+begin
+  lList := TList<Integer>.Create;
+  try
+    SQLConnection.Execute(
+      Format('SELECT RACEID FROM PARTICIPATION WHERE COMPETITORID = %d ORDER BY RACEID',
+        [ACompetitorId]),
+      nil, lResultSet);
+    try
+      if lResultSet = nil then
+        Exit(nil);
+      while not lResultSet.Eof do
+      begin
+        lList.Add(lResultSet.FieldByName('RACEID').AsInteger);
+        lResultSet.Next;
+      end;
+    finally
+      FreeAndNil(lResultSet);
+    end;
+    Result := lList.ToArray;
+  finally
+    FreeAndNil(lList);
+  end;
+end;
+
+{==============================================================================}
 function TMainDataModule.GetMinPassingNumber: integer;
 begin
   result := GetMinIdOf('PASSINGS', 'PASSINGNUMBER');
@@ -678,7 +724,8 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.GetActiveTransponderIdForBib(ABib: integer): string;
+function TMainDataModule.GetActiveTransponderIdForBib(ABib: integer;
+  APreferredRaceId: Integer): string;
 var
   lResultSet: TDataSet;
   lRaceId: Integer;
@@ -686,8 +733,11 @@ var
   lAssignment: TTransponderAssignment;
   lStatusList: string;
   lStatus: TRaceStatus;
+  lChipId: string;
+  lFallback: string;
 begin
   Result := '';
+  lFallback := '';
   lStatusList := '';
   for lStatus in cRaceStatusesAcceptingPassings do
   begin
@@ -706,12 +756,26 @@ begin
     if (lResultSet = nil) or lResultSet.IsEmpty then
       Exit;
     lResultSet.First;
-    lRaceId := lResultSet.FieldByName('RACEID').AsInteger;
-    lCompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
-    if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
-         lRaceId, lCompetitorId, lAssignment) then
-      Exit(lAssignment.ChipId);
-    Result := Trim(lResultSet.FieldByName('CHIPID').AsString);
+    while not lResultSet.Eof do
+    begin
+      lRaceId := lResultSet.FieldByName('RACEID').AsInteger;
+      lCompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
+      if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
+           lRaceId, lCompetitorId, lAssignment) then
+        lChipId := lAssignment.ChipId
+      else
+        lChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
+
+      if lChipId <> '' then
+      begin
+        if (APreferredRaceId >= 0) and (lRaceId = APreferredRaceId) then
+          Exit(lChipId);
+        if lFallback = '' then
+          lFallback := lChipId;
+      end;
+      lResultSet.Next;
+    end;
+    Result := lFallback;
   finally
     FreeAndNil(lResultSet);
   end;
@@ -1230,7 +1294,7 @@ begin
     while not lResultSet.Eof do
     begin
       lAssignment.AssignmentId := lResultSet.FieldByName('ASSIGNMENTID').AsInteger;
-      lAssignment.ChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
+      lAssignment.ChipId := NormalizeChipId(lResultSet.FieldByName('CHIPID').AsString);
       lAssignment.CompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
       lAssignment.RaceId := lResultSet.FieldByName('RACEID').AsInteger;
       lAssignment.ValidFrom := lResultSet.FieldByName('VALIDFROM').AsDateTime;
