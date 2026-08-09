@@ -40,6 +40,9 @@ type
     procedure FillPassingListForRaceId(ARaceId: integer; AList: TDictionary<TDatetime, TPassing>; AOnlyActivePassings, ATimeFractionOnly: Boolean);
     function GetLastValidPassingTime(ARaceId: Integer; const AChipId: string;
       ABeforeTime: TDateTime): TDateTime;
+    (* Last hit for MinLap/DoubleHit — includes invalid/pending so AskOperator blocks the timeline. *)
+    function GetLastPassingTimeForChip(ARaceId: Integer; const AChipId: string;
+      ABeforeTime: TDateTime): TDateTime;
     property MaxPassingNumber: integer read FMaxPassingNumber;
   end;
 
@@ -382,6 +385,42 @@ begin
       if lPassing.RaceId <> ARaceId then
         Continue;
       if lPassing.PassingStatus <> Ord(psValid) then
+        Continue;
+      if (lPassing.Flags and 2) = 2 then
+        Continue;
+      if NormalizeChipId(lPassing.ChipId) <> lChipKey then
+        Continue;
+      if (lPassing.PassingTime >= ABeforeTime) then
+        Continue;
+      if lPassing.PassingTime > Result then
+        Result := lPassing.PassingTime;
+    end;
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+function TPassingStore.GetLastPassingTimeForChip(ARaceId: Integer; const AChipId: string;
+  ABeforeTime: TDateTime): TDateTime;
+var
+  lPassing: TPassing;
+  lChipKey: string;
+begin
+  Result := 0;
+  lChipKey := NormalizeChipId(AChipId);
+  if (ARaceId < 0) or (lChipKey = '') then
+    Exit;
+
+  Synchronizer.BeginRead;
+  try
+    for lPassing in FPassingList.Values do
+    begin
+      if lPassing.RaceId <> ARaceId then
+        Continue;
+      if (lPassing.Flags and 2) = 2 then
+        Continue;
+      if NormalizeChipId(lPassing.ChipId) = '' then
         Continue;
       if NormalizeChipId(lPassing.ChipId) <> lChipKey then
         Continue;

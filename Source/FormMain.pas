@@ -193,6 +193,8 @@ type
     FNoiseChart: TValueHistoryChart;
 
     FAutoScrollPassingList: boolean;
+    FPlausibilityQueue: TQueue<TPlausibilityDecisionRequest>;
+    FPlausibilityDialogBusy: Boolean;
 
     procedure ReadSettings;
     procedure SetupRacesGrid;
@@ -205,9 +207,8 @@ type
     procedure RefreshFlagButtonsVisibility(ARaceItem: TRaceItem);
     procedure RefreshAddCompetitorToRaceMenu;
     procedure EnableResultPanelControls(AEnable: boolean);
-    procedure HandleAmbiguousChipAssignment(const AChipId: string; APassingTime: TDateTime;
-      AMatchCount: Integer);
     procedure HandlePlausibilityDecision(const ARequest: TPlausibilityDecisionRequest);
+    procedure ProcessPlausibilityQueue;
     procedure HandlePlausibilityStatsChanged(const AStats: TPlausibilitySessionStats);
     procedure RefreshPlausibilityStatsHint(const AStats: TPlausibilitySessionStats);
 
@@ -517,38 +518,52 @@ begin
   EditDateTo.Text := DateToStr(Now);
 
   FAutoScrollPassingList := true;
+  FPlausibilityQueue := TQueue<TPlausibilityDecisionRequest>.Create;
+  FPlausibilityDialogBusy := False;
 
-  GSmartTimingController.OnAmbiguousChipAssignment := HandleAmbiguousChipAssignment;
   GSmartTimingController.OnPlausibilityDecision := HandlePlausibilityDecision;
   GSmartTimingController.OnPlausibilityStatsChanged := HandlePlausibilityStatsChanged;
   RefreshPlausibilityStatsHint(GSmartTimingController.PlausibilityStats);
 end;
 
 {==============================================================================}
-procedure TFormMain.HandleAmbiguousChipAssignment(const AChipId: string;
-  APassingTime: TDateTime; AMatchCount: Integer);
+procedure TFormMain.HandlePlausibilityDecision(
+  const ARequest: TPlausibilityDecisionRequest);
 begin
-  (* Covered by HandlePlausibilityDecision for AskOperator; kept as fallback. *)
-  SmartTimingTools.ShowDialog(
-    Format(cMessagesPassingAmbiguousAssignment,
-      [AChipId, FormatDateTime('hh:nn:ss.zzz', APassingTime), AMatchCount]),
-    '', [tcbOk], tcbOk);
+  if FPlausibilityQueue = nil then
+    Exit;
+  FPlausibilityQueue.Enqueue(ARequest);
+  ProcessPlausibilityQueue;
 end;
 
 {==============================================================================}
-procedure TFormMain.HandlePlausibilityDecision(
-  const ARequest: TPlausibilityDecisionRequest);
+procedure TFormMain.ProcessPlausibilityQueue;
 var
+  lRequest: TPlausibilityDecisionRequest;
   lAlwaysAccept: Boolean;
   lAccepted: Boolean;
 begin
-  lAccepted := TFormPlausibilityDecision.Execute(Self, ARequest.ChipId,
-    ARequest.Message, ARequest.CanScore, lAlwaysAccept);
-  if lAlwaysAccept then
-    GSmartTimingController.RememberAlwaysAcceptChip(ARequest.ChipId);
-  if lAccepted then
-    GSmartTimingController.ApplyPlausibilityAccept(
-      ARequest.PassingNumber, ARequest.RaceId);
+  if FPlausibilityDialogBusy or (FPlausibilityQueue = nil) then
+    Exit;
+  if FPlausibilityQueue.Count = 0 then
+    Exit;
+
+  FPlausibilityDialogBusy := True;
+  try
+    while FPlausibilityQueue.Count > 0 do
+    begin
+      lRequest := FPlausibilityQueue.Dequeue;
+      lAccepted := TFormPlausibilityDecision.Execute(Self, lRequest.ChipId,
+        lRequest.Message, lRequest.CanScore, lRequest.AllowAlwaysAccept, lAlwaysAccept);
+      if lAlwaysAccept then
+        GSmartTimingController.RememberAlwaysAcceptChip(lRequest.ChipId);
+      if lAccepted then
+        GSmartTimingController.ApplyPlausibilityAccept(
+          lRequest.PassingNumber, lRequest.RaceId);
+    end;
+  finally
+    FPlausibilityDialogBusy := False;
+  end;
 end;
 
 {==============================================================================}
@@ -580,6 +595,7 @@ begin
     GSmartTimingController.OnPlausibilityDecision := nil;
     GSmartTimingController.OnPlausibilityStatsChanged := nil;
   end;
+  FreeAndNil(FPlausibilityQueue);
   FreeAndNil(FFormManuallyAddPassing);
   FreeAndNil(FDBCheckBoxRacesFirstPassing);
   FreeAndNil(FFormPassingSimulator);

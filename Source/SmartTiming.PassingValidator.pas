@@ -115,6 +115,7 @@ type
     PassingTime: TDateTime;
     Message: string;
     CanScore: Boolean;
+    AllowAlwaysAccept: Boolean; (* True only for MinLap-only AskOperator *)
   end;
 
   TPlausibilityDecisionEvent = procedure(const ARequest: TPlausibilityDecisionRequest) of object;
@@ -429,7 +430,7 @@ begin
     Result.RaceStatus := MainDataModule.GetRaceStatus(AResolution.RaceId);
     Result.RaceAcceptsPassings :=
       TTransponderAssignmentService.IsRaceStatusAcceptingPassings(Result.RaceStatus);
-    Result.LastValidPassingTime := TPassingStore.GetSingleton.GetLastValidPassingTime(
+    Result.LastValidPassingTime := TPassingStore.GetSingleton.GetLastPassingTimeForChip(
       AResolution.RaceId, APassing.ChipId, APassing.PassingTime);
   end;
 

@@ -52,6 +52,15 @@ Self-Tests: `TPassingValidator.RunCatalogSelfTests` — aufrufbar im Decoder-Sim
 5. Logging und UI-Hinweis (z. B. Zähler verworfener/markierter Passagen). — **erledigt**
    (`TPlausibilitySessionStats` + Statusleisten-Label; strukturiertes Plausibility-Log)
 
+### Review-Nachzüge (nach Schritt 5)
+
+- Status-Marker (`ChangeRaceStatus`) auch im `PassingStore` → Accept/`RecalcCountingLaps` sicher
+- MinLap-Timeline inkl. pending/invalid Hits; Always-Accept nur für reine MinLap-Fälle
+- Dialog-Warteschlange; ungültige Passagen in der Liste grau/durchgestrichen
+- Resolve: nicht-wertende Rennen → `pvrRaceNotAccepting` + RaceId (statt nur Unassigned)
+- Thread-Lock für Always-Accept/Stats; SYSTEM-Flags-Pfad abgesichert
+- Konfigurierbare Dispositionen → später mit Settings
+
 ## Abhängigkeiten
 
 - [Plan 2](02-chip-zuordnung.md) für Chip/Race-Eindeutigkeit.

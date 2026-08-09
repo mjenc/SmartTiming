@@ -150,7 +150,7 @@ resourcestring
   cMessagesPlausibilityHeader =
     'Chip %s um %s'#13#10#13#10'%s';
   cMessagesPlausibilityAlwaysAccept =
-    'Für Chip %s immer annehmen (diese Sitzung)';
+    'Für Chip %s MinLap immer annehmen (diese Sitzung)';
   cMessagesPlausibilityAccept = 'Annehmen';
   cMessagesPlausibilityReject = 'Verwerfen';
   cMessagesPlausibilityAcknowledge = 'OK';

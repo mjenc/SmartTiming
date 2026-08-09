@@ -22,7 +22,7 @@ type
   public
     (* True = accept/score. AAlwaysAccept set when checkbox checked on accept. *)
     class function Execute(AOwner: TComponent; const AChipId, AMessage: string;
-      ACanScore: Boolean; out AAlwaysAccept: Boolean): Boolean; static;
+      ACanScore, AAllowAlwaysAccept: Boolean; out AAlwaysAccept: Boolean): Boolean; static;
   end;
 
 implementation
@@ -34,7 +34,7 @@ uses
 
 {==============================================================================}
 class function TFormPlausibilityDecision.Execute(AOwner: TComponent;
-  const AChipId, AMessage: string; ACanScore: Boolean;
+  const AChipId, AMessage: string; ACanScore, AAllowAlwaysAccept: Boolean;
   out AAlwaysAccept: Boolean): Boolean;
 var
   lForm: TFormPlausibilityDecision;
@@ -51,7 +51,7 @@ begin
     lForm.ButtonReject.Caption := cMessagesPlausibilityReject;
 
     lForm.ButtonAccept.Visible := ACanScore;
-    lForm.CheckBoxAlwaysAccept.Visible := ACanScore;
+    lForm.CheckBoxAlwaysAccept.Visible := ACanScore and AAllowAlwaysAccept;
     if not ACanScore then
     begin
       lForm.ButtonReject.Caption := cMessagesPlausibilityAcknowledge;
@@ -67,7 +67,7 @@ begin
       Result := False;
     end;
 
-    if Result then
+    if Result and lForm.CheckBoxAlwaysAccept.Visible then
       AAlwaysAccept := lForm.CheckBoxAlwaysAccept.Checked;
   finally
     FreeAndNil(lForm);

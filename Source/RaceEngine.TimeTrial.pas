@@ -166,6 +166,8 @@ begin
   TListView(FPassingDisplay).Items.AddItem(lListItem);
   if APassing.Flags = 1 then
     lListItem.ImageIndex := 3
+  else if APassing.PassingStatus <> Ord(psValid) then
+    lListItem.ImageIndex := 1
   else
     lListItem.ImageIndex := 0;
   TListView(FPassingDisplay).Refresh;

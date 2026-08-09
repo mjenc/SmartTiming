@@ -67,7 +67,8 @@ type
     class function FindConflictsAgainstOtherActiveRaces(ARaceId: Integer): TArray<TAssignmentConflict>; static;
     class procedure EnsureAssignmentsFromCompetitorChips(ARaceId: Integer); static;
 
-    (* Chip + time → scored (RaceId, CompetitorId); 0 or >1 matches → RaceId -1. *)
+    (* Chip + time → unique assignment (any race status); MatchCount 0/>1 → RaceId -1.
+       Scoring still requires RaceAcceptsPassings (validator / participation). *)
     class function ResolvePassing(const AChipId: string; APassingTime: TDateTime;
       out AResolution: TPassingAssignmentResolution): Boolean; static;
 
@@ -168,12 +169,12 @@ begin
     TTransponderAssignmentStore.GetSingleton.FindAssignmentsForChipAtTime(
       lChipId, APassingTime, lMatches);
 
+    (* Unique race assignment (any status) drives RaceNotAccepting vs NotAssigned.
+       Scoring still requires RaceAcceptsPassings in the validator/controller. *)
     for i := 0 to lMatches.Count - 1 do
     begin
       lAssignment := lMatches[i];
       if not MainDataModule.IsCompetitorAssignedToRace(lAssignment.RaceId, lAssignment.CompetitorId) then
-        Continue;
-      if not IsRaceStatusAcceptingPassings(MainDataModule.GetRaceStatus(lAssignment.RaceId)) then
         Continue;
       lCandidates.Add(lAssignment);
     end;

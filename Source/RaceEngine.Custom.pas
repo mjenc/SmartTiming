@@ -121,6 +121,7 @@ type
 
     // corrections
     procedure RecalcCountingLaps;
+    procedure RefreshPassingListStatus; virtual;
 
     // Reports
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual; abstract;
@@ -309,6 +310,9 @@ var
   rt, r: TRect;
   s: String;
   i: Integer;
+  lPassingNumber: Integer;
+  lPassing: TPassing;
+  lInvalid: Boolean;
 
   // Fit the rect used for TextRect
   Procedure PrepareTextRect;
@@ -318,10 +322,33 @@ var
     rt.Top := rt.Top + 1;
   end;
 begin
-  SmartTimingTools.GetColorsForRaceStatus(TRaceStatus(AItem.Data), true, lBgColor, lFgColor);
+  lInvalid := False;
+  if (AItem.SubItems.Count > cPassingItemSubItemIdxPassingNumber) and
+     TryStrToInt(AItem.SubItems[cPassingItemSubItemIdxPassingNumber], lPassingNumber) then
+  begin
+    try
+      lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+      lInvalid := ((lPassing.Flags and 2) <> 2) and
+        (lPassing.PassingStatus <> Ord(psValid));
+    except
+      lInvalid := False;
+    end;
+  end;
+
+  if lInvalid then
+  begin
+    lBgColor := $00E8E8E8;
+    lFGColor := clGray;
+  end
+  else
+    SmartTimingTools.GetColorsForRaceStatus(TRaceStatus(AItem.Data), true, lBgColor, lFgColor);
 
   TListView(ASender).Canvas.Brush.Color := lBgColor;
-  TListView(ASender).Canvas.Font.Color := lFgColor;
+  TListView(ASender).Canvas.Font.Color := lFGColor;
+  if lInvalid then
+    TListView(ASender).Canvas.Font.Style := [fsStrikeOut]
+  else
+    TListView(ASender).Canvas.Font.Style := [];
 
   r := AItem.DisplayRect(drBounds);
   ASender.Canvas.FillRect(r);
@@ -546,6 +573,15 @@ begin
   finally
     FreeAndNil(lPassingList);
   end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.RefreshPassingListStatus;
+begin
+  if (FPassingDisplay = nil) or not (FPassingDisplay is TListView) then
+    Exit;
+  TListView(FPassingDisplay).Invalidate;
+  TListView(FPassingDisplay).Update;
 end;
 
 {==============================================================================}
