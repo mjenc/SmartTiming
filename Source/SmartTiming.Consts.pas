@@ -89,8 +89,11 @@ resourcestring
   cRaceTypeNameUnknown = 'Unbestimmt';
   cRaceTypeNameITT = 'Einzelzeitfahren';
   cRaceTypeNameTTT = 'Mannschaftszeitfahren';
-  cRaceTypeNameTTTLocked = 'Mannschaftszeitfahren (nicht verfügbar)';
-  cMessagesRaceTypeLocked = 'Mannschaftszeitfahren ist derzeit gesperrt und wird später implementiert.';
+  cRaceTypeNameCircuit = 'Rundstrecke';
+  cRaceTypeNameCriterium = 'Kriterium';
+  cMessagesRaceTypeUnknown = 'Unbekannter oder ungültiger Renntyp.';
+  cMessagesRaceEngineSkeletonExport =
+    'Export und Druck für diesen Renntyp sind noch nicht implementiert.';
 
   cRaceStatusNotStarted = 'Nicht gestartet';
   cRaceStatusWarmUp = 'Vorbereitung';
@@ -224,7 +227,7 @@ resourcestring
   cMessagesSimulatorRunCorrectionTests = 'Korrektur-Regression';
 
 type
-  TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);
+  TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial, rtCircuit, rtCriterium);
   TRaceTypes = set of TRaceType;
   TRaceStatus = (rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped);
   TRaceStates = set of TRaceStatus;

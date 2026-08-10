@@ -38,9 +38,6 @@ type
     procedure PrintResults(AGroupByClass: boolean); override;
   end;
 
-  TTeamTimeTrialRaceEngine = class(TTimeTrialRaceEngine)
-  end;
-
 implementation
 
 uses

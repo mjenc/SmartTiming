@@ -206,18 +206,9 @@ begin
         if lRaceItem.RaceEngine = nil then
         begin
           if not SmartTimingTools.IsRaceTypeSupported(lRaceItem.RaceType) then
-          begin
-            LogOnDebug(cLogger, ['Unsupported race type locked; using ITT engine',
-              lRaceId.ToString, Ord(lRaceItem.RaceType).ToString]);
-            // Keep stored RaceType for display; factory only accepts supported types.
-            lRaceItem.RaceType := rtIndividualTimeTrial;
-            lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(
-              GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);
-            SmartTimingTools.FillRaceItemFromDataSet(MainDataModule.DataSourceRaces.DataSet, lRaceItem);
-          end
-          else
-            lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(
-              GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);
+            raise Exception.Create(cMessagesRaceTypeUnknown);
+          lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(
+            GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);
         end;
 
         lVisited.Add(lRaceId);

@@ -25,12 +25,17 @@ Die Basisklasse `TCustomRaceEngine` und die Factory `TRaceEngineFactory` sind de
 
 ## Schritte
 
-1. Enum, Anzeigenamen und Factory erweitern; unbekannte/ungültige Typen hart ablehnen.
-2. ITT hinter der bestehenden Implementierung belassen (Referenzverhalten, keine Fachänderung).
-3. Skelette anlegen: `RaceEngine.Circuit`, `RaceEngine.Criterium`, `RaceEngine.TeamTimeTrial` (TTT nicht mehr leere ITT-Ableitung).
+1. Enum, Anzeigenamen und Factory erweitern; unbekannte/ungültige Typen hart ablehnen. — **erledigt**
+   (`rtCircuit`/`rtCriterium` angehängt nach ITT/TTT wegen stabiler Ordinals;
+   Factory mappt alle unterstützten Typen; `rtUnknown` → Exception)
+2. ITT hinter der bestehenden Implementierung belassen (Referenzverhalten, keine Fachänderung). — **erledigt**
+3. Skelette anlegen: `RaceEngine.Circuit`, `RaceEngine.Criterium`, `RaceEngine.TeamTimeTrial` (TTT nicht mehr leere ITT-Ableitung). — **erledigt**
+   (gemeinsame Basis `RaceEngine.Skeleton`; Platzhalter-Ranking ohne Scoring; Export/Druck Hinweis)
 4. Pro Engine definieren: `AvailableRaceStates`, `UpdateParticipationTable`, Ranking-SQL-Hook.
 5. Controller und WebService: Ranking nur noch über Engine-API, nicht über hardcodierte View-Namen.
+   (teilweise durch Plan 7 abgedeckt — bei neuen Engines prüfen)
 6. UI/Factory für neue Typen verdrahten; unbekannte Typen ablehnen (keine DB-Migrationspfade).
+   (Combo über `GetSupportedRaceTypes` bereits; typabhängige Felder noch offen)
 
 ## Abhängigkeiten
 

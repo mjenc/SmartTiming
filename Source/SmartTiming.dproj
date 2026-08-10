@@ -155,6 +155,10 @@
         <DCCReference Include="SmartTiming.DecoderEngine.pas"/>
         <DCCReference Include="RaceEngine.Custom.pas"/>
         <DCCReference Include="RaceEngine.TimeTrial.pas"/>
+        <DCCReference Include="RaceEngine.Skeleton.pas"/>
+        <DCCReference Include="RaceEngine.Circuit.pas"/>
+        <DCCReference Include="RaceEngine.Criterium.pas"/>
+        <DCCReference Include="RaceEngine.TeamTimeTrial.pas"/>
         <DCCReference Include="SmartTiming.Cache.pas"/>
         <DCCReference Include="SmartTiming.TransponderAssignment.pas"/>
         <DCCReference Include="SmartTiming.PassingValidator.pas"/>

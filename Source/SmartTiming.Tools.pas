@@ -61,7 +61,8 @@ var
 implementation
 
 uses
-  RaceEngine.TimeTrial, SmartTiming.Cache;
+  RaceEngine.TimeTrial, RaceEngine.Circuit, RaceEngine.Criterium,
+  RaceEngine.TeamTimeTrial, SmartTiming.Cache;
 
 {==============================================================================}
 class function SmartTimingTools.ShowDialog(const AMessage: string; const ATitle: string = ''; AButtons: TTaskDialogCommonButtons = [tcbOk]; ADefaultButton: TTaskDialogCommonButton = tcbCancel): TModalResult;
@@ -215,8 +216,12 @@ class function SmartTimingTools.GetRaceTypeEnumFromString(const AValue: string):
 begin
   if SameText(cRaceTypeNameITT, AValue) then
     Exit(rtIndividualTimeTrial);
-  if SameText(cRaceTypeNameTTT, AValue) or SameText(cRaceTypeNameTTTLocked, AValue) then
+  if SameText(cRaceTypeNameTTT, AValue) then
     Exit(rtTeamTimeTrial);
+  if SameText(cRaceTypeNameCircuit, AValue) then
+    Exit(rtCircuit);
+  if SameText(cRaceTypeNameCriterium, AValue) then
+    Exit(rtCriterium);
   result := rtUnknown;
 end;
 
@@ -227,7 +232,11 @@ begin
   rtIndividualTimeTrial:
     result := cRaceTypeNameITT;
   rtTeamTimeTrial:
-    result := cRaceTypeNameTTTLocked;
+    result := cRaceTypeNameTTT;
+  rtCircuit:
+    result := cRaceTypeNameCircuit;
+  rtCriterium:
+    result := cRaceTypeNameCriterium;
   else
     result := cRaceTypeNameUnknown;
   end;
@@ -242,8 +251,7 @@ end;
 {==============================================================================}
 class function SmartTimingTools.GetSupportedRaceTypes: TRaceTypes;
 begin
-  // TTT (rtTeamTimeTrial) intentionally locked until fully implemented (Plan 8d / Plan 1).
-  Result := [rtUnknown, rtIndividualTimeTrial];
+  Result := [rtIndividualTimeTrial, rtTeamTimeTrial, rtCircuit, rtCriterium];
 end;
 
 {==============================================================================}
@@ -603,12 +611,16 @@ end;
 class function TRaceEngineFactory.CreateRaceEngineForRaceType(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem): TCustomRaceEngine;
 begin
   case ARaceItem.RaceType of
-  rtIndividualTimeTrial, rtUnknown:
+  rtIndividualTimeTrial:
     Exit(TTimeTrialRaceEngine.Create(AParent, AEvent, ARaceItem));
+  rtCircuit:
+    Exit(TCircuitRaceEngine.Create(AParent, AEvent, ARaceItem));
+  rtCriterium:
+    Exit(TCriteriumRaceEngine.Create(AParent, AEvent, ARaceItem));
   rtTeamTimeTrial:
-    raise Exception.Create(cMessagesRaceTypeLocked);
+    Exit(TTeamTimeTrialRaceEngine.Create(AParent, AEvent, ARaceItem));
   else
-    raise Exception.Create('Race type is unknown');
+    raise Exception.Create(cMessagesRaceTypeUnknown);
   end;
 end;
 
