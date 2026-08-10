@@ -3,7 +3,7 @@
 interface
 
 uses
-  Controls, StdCtrls, ComCtrls, SysUtils, Graphics, Types, UITypes, Classes, Grids,
+  Controls, StdCtrls, ComCtrls, ExtCtrls, SysUtils, Graphics, Types, UITypes, Classes, Grids,
   Menus, DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages,
   SmartTiming.Consts, DecoderInterface, SmartTiming.Event, Report.ExcelTemplateFiller,
   Generics.Collections;
@@ -31,6 +31,7 @@ type
   private
     function GetSelectedCompetitorIds: TArray<integer>;
     procedure SetParticipantState(AState: TParticipantState);
+    procedure OnProtocolFilterChange(ASender: TObject);
 
   protected
     const
@@ -45,7 +46,11 @@ type
     FParent: TWinControl;
     FEvent: TEventDataObject;
     FRaceItem: TRaceItem;
+    FProtocolHost: TPanel;
+    FFilterPanel: TPanel;
+    FFilterCombo: TComboBox;
     FPassingDisplay: TWinControl;
+    FProtocolFilter: TPassingProtocolFilter;
     FRankingGrid: TDBGrid;
     FRankingGroupedByClass: boolean;
     FAvailableRaceStates: TRaceStates;
@@ -100,6 +105,8 @@ type
 
     procedure AssignLap(var APassing: TPassing); virtual;
     function PassingImageIndex(const APassing: TPassing): Integer; virtual;
+    function PassingMatchesFilter(const APassing: TPassing): Boolean; virtual;
+    procedure AppendPassingListItem(const APassing: TPassing; AAutoScroll: Boolean); virtual;
 
     procedure OnPassingItemDragDrop(ASender, ASource: TObject; AX, AY: Integer);
     procedure OnPassingItemDragOver(ASender, ASource: TObject; AX, AY: Integer; AState: TDragState; var AAccept: Boolean);
@@ -129,6 +136,7 @@ type
     procedure ReassignLapsForRace; virtual;
     procedure ShowCompetitorPassings(ACompetitorId: Integer); virtual;
     procedure SetPassingStatusAndRecalc(APassingNumber: Integer; AStatus: TPassingState);
+    procedure RebuildProtocolDisplay; virtual;
 
     // Reports
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual; abstract;
@@ -143,7 +151,8 @@ uses
   SmartTiming.Tools, Math, SmartTiming.Controller, SmartTiming.GridFormatProvider,
   DataModule, FormMain, FormCompetitorDetails, FormPenalty, FormTime,
   SmartTiming.Cache, DateUtils, FormAssignCompetitorToTransponder,
-  FormCompetitorPassings, SmartTiming.TransponderAssignment, Data.DBXCommon;
+  FormCompetitorPassings, SmartTiming.TransponderAssignment, Data.DBXCommon,
+  System.Generics.Defaults;
 
 {==============================================================================}
 destructor TRaceItem.Destroy;
@@ -182,6 +191,10 @@ end;
 constructor TCustomRaceEngine.Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem);
 begin
   FPassingDisplay := nil;
+  FProtocolHost := nil;
+  FFilterPanel := nil;
+  FFilterCombo := nil;
+  FProtocolFilter := ppfAll;
   FOwner := AParent;
   FParent := AParent;
 
@@ -213,7 +226,16 @@ end;
 destructor TCustomRaceEngine.Destroy;
 begin
   try
-    FreeAndNil(FPassingDisplay);
+    (* Host owns filter panel + listview when created. *)
+    if FProtocolHost <> nil then
+    begin
+      FPassingDisplay := nil;
+      FFilterPanel := nil;
+      FFilterCombo := nil;
+      FreeAndNil(FProtocolHost);
+    end
+    else
+      FreeAndNil(FPassingDisplay);
     FreeAndNil(FDataSourceRankings);
     FreeAndNil(FClientDataSetRankings);
     FreeAndNil(FDataSetProviderRankings);
@@ -262,12 +284,49 @@ end;
 
 {==============================================================================}
 function TCustomRaceEngine.GetPassingDisplay: TWinControl;
+var
+  lFilterLabel: TLabel;
 begin
   if FPassingDisplay <> nil then
     Exit(FPassingDisplay);
 
-  FPassingDisplay := TListView.CreateParented(FParent.Handle);
-  FPassingDisplay.Parent := FParent;
+  FProtocolHost := TPanel.Create(FOwner);
+  FProtocolHost.Parent := FParent;
+  FProtocolHost.Align := alClient;
+  FProtocolHost.BevelOuter := bvNone;
+  FProtocolHost.Caption := '';
+
+  FFilterPanel := TPanel.Create(FProtocolHost);
+  FFilterPanel.Parent := FProtocolHost;
+  FFilterPanel.Align := alTop;
+  FFilterPanel.Height := 30;
+  FFilterPanel.BevelOuter := bvNone;
+  FFilterPanel.Caption := '';
+  FFilterPanel.Padding.Left := 6;
+  FFilterPanel.Padding.Top := 4;
+  FFilterPanel.Padding.Right := 6;
+  FFilterPanel.Padding.Bottom := 2;
+
+  lFilterLabel := TLabel.Create(FFilterPanel);
+  lFilterLabel.Parent := FFilterPanel;
+  lFilterLabel.Align := alLeft;
+  lFilterLabel.Layout := tlCenter;
+  lFilterLabel.Caption := cMessagesProtocolFilterLabel;
+  lFilterLabel.Width := 48;
+
+  FFilterCombo := TComboBox.Create(FFilterPanel);
+  FFilterCombo.Parent := FFilterPanel;
+  FFilterCombo.Align := alLeft;
+  FFilterCombo.Width := 140;
+  FFilterCombo.Style := csDropDownList;
+  FFilterCombo.Items.Add(cMessagesProtocolFilterAll);
+  FFilterCombo.Items.Add(cMessagesProtocolFilterValid);
+  FFilterCombo.Items.Add(cMessagesProtocolFilterManual);
+  FFilterCombo.ItemIndex := Ord(FProtocolFilter);
+  FFilterCombo.OnChange := OnProtocolFilterChange;
+
+  FPassingDisplay := TListView.Create(FProtocolHost);
+  FPassingDisplay.Parent := FProtocolHost;
   FPassingDisplay.Visible := true;
   FPassingDisplay.Align := alClient;
 
@@ -834,29 +893,12 @@ procedure TCustomRaceEngine.SetPassingStatusAndRecalc(APassingNumber: Integer;
   AStatus: TPassingState);
 var
   lPassing: TPassing;
-  i: Integer;
-  lItem: TListItem;
 begin
   lPassing := TPassingStore.GetSingleton.GetPassing(APassingNumber);
   GSmartTimingController.UpdatePassing(APassingNumber, lPassing.PassingTime, AStatus);
   RecalcCountingLaps;
   ReassignLapsForRace;
-
-  if (FPassingDisplay <> nil) and (FPassingDisplay is TListView) then
-  begin
-    for i := 0 to TListView(FPassingDisplay).Items.Count - 1 do
-    begin
-      lItem := TListView(FPassingDisplay).Items[i];
-      if (lItem.SubItems.Count <= cPassingItemSubItemIdxPassingNumber) then
-        Continue;
-      if lItem.SubItems[cPassingItemSubItemIdxPassingNumber] <> APassingNumber.ToString then
-        Continue;
-      lPassing := TPassingStore.GetSingleton.GetPassing(APassingNumber);
-      lItem.ImageIndex := PassingImageIndex(lPassing);
-      Break;
-    end;
-  end;
-  RefreshPassingListStatus;
+  RebuildProtocolDisplay;
 end;
 
 {==============================================================================}
@@ -877,6 +919,80 @@ begin
   if APassing.Flags = 1 then
     Exit(cPassingImageFlagged);
   Result := cPassingImageValid;
+end;
+
+{==============================================================================}
+function TCustomRaceEngine.PassingMatchesFilter(const APassing: TPassing): Boolean;
+begin
+  if APassing.IsSystemMarker then
+    Exit(True);
+  case FProtocolFilter of
+    ppfValidOnly:
+      Result := APassing.PassingStatus = Ord(psValid);
+    ppfManualOnly:
+      Result := APassing.IsManual;
+  else
+    Result := True;
+  end;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.AppendPassingListItem(const APassing: TPassing;
+  AAutoScroll: Boolean);
+begin
+  (* Memo / non-ListView engines: no structured list item. *)
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.OnProtocolFilterChange(ASender: TObject);
+begin
+  if FFilterCombo = nil then
+    Exit;
+  if (FFilterCombo.ItemIndex < Ord(Low(TPassingProtocolFilter))) or
+     (FFilterCombo.ItemIndex > Ord(High(TPassingProtocolFilter))) then
+    Exit;
+  FProtocolFilter := TPassingProtocolFilter(FFilterCombo.ItemIndex);
+  RebuildProtocolDisplay;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.RebuildProtocolDisplay;
+var
+  lList: TList<TPassing>;
+  lPassing: TPassing;
+  i: Integer;
+begin
+  if (FPassingDisplay = nil) or not (FPassingDisplay is TListView) then
+    Exit;
+
+  TListView(FPassingDisplay).Items.BeginUpdate;
+  try
+    TListView(FPassingDisplay).Items.Clear;
+    lList := TList<TPassing>.Create;
+    try
+      TPassingStore.GetSingleton.FillPassingsForRace(FRaceItem.Id, lList);
+      lList.Sort(
+        TComparer<TPassing>.Construct(
+          function(const Left, Right: TPassing): Integer
+          begin
+            Result := CompareDateTime(Left.PassingTime, Right.PassingTime);
+            if Result = 0 then
+              Result := Left.PassingNumber - Right.PassingNumber;
+          end));
+      for i := 0 to lList.Count - 1 do
+      begin
+        lPassing := lList[i];
+        if not PassingMatchesFilter(lPassing) then
+          Continue;
+        AppendPassingListItem(lPassing, False);
+      end;
+    finally
+      FreeAndNil(lList);
+    end;
+  finally
+    TListView(FPassingDisplay).Items.EndUpdate;
+  end;
+  RefreshPassingListStatus;
 end;
 
 {==============================================================================}
@@ -973,6 +1089,7 @@ begin
   lCurrentItem.SubItems[cPassingItemSubItemIdxName] := lName;
   RecalcCountingLaps;
   ReassignLapsForRace;
+  RebuildProtocolDisplay;
 end;
 
 {==============================================================================}

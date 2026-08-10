@@ -29,7 +29,8 @@ Die `TListView` der RaceEngine ist de facto das Rundenprotokoll, aber ohne Domä
 4. Invalidate/Validate → DB + Cache + `RecalculateParticipation`. — **erledigt**
    (`SetPassingStatusAndRecalc` → UpdatePassing + RecalcCountingLaps + ReassignLaps)
 5. Drag&Drop-Zeitkorrektur ersetzen oder stark einschränken (explizite Zeitkorrektur bevorzugen).
-6. Filter im Protokoll: nur gültig / alle / nur manuell.
+6. Filter im Protokoll: nur gültig / alle / nur manuell. — **erledigt**
+   (ComboBox über der Passagen-ListView; Statusmarker immer sichtbar; Rebuild aus Cache)
 
 ## Abhängigkeiten
 

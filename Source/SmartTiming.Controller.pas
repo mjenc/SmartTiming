@@ -749,7 +749,7 @@ begin
     begin
       lRaceItem.RaceEngine.RecalcCountingLaps;
       lRaceItem.RaceEngine.ReassignLapsForRace;
-      lRaceItem.RaceEngine.RefreshPassingListStatus;
+      lRaceItem.RaceEngine.RebuildProtocolDisplay;
     end;
 
     FPlausibilityLock.Enter;

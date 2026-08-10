@@ -23,6 +23,7 @@ type
     procedure OnPassingItemCompare(ASender: TObject; AItem1, AItem2: TListItem; AData: Integer; var ACompare: Integer); override;
     function GetPassingDisplay: TWinControl; override;
     procedure AssignLap(var APassing: TPassing); override;
+    procedure AppendPassingListItem(const APassing: TPassing; AAutoScroll: Boolean); override;
 
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject; ARaceItem: TRaceItem); override;
@@ -138,6 +139,25 @@ begin
 end;
 {==============================================================================}
 procedure TTimeTrialRaceEngine.AddPassingToDisplay(APassing: TPassing; AAutoScroll: boolean);
+begin
+  if not APassing.IsSystemMarker then
+  begin
+    AssignLap(APassing);
+    TPassingStore.GetSingleton.UpdatePassingDomainFields(
+      APassing.PassingNumber, APassing.LapIndex, APassing.CompetitorId);
+    UpdateParticipationTable(APassing.PassingNumber);
+    FLastChangeTimestamp := Now;
+  end;
+
+  if not PassingMatchesFilter(APassing) then
+    Exit;
+
+  AppendPassingListItem(APassing, AAutoScroll);
+end;
+
+{==============================================================================}
+procedure TTimeTrialRaceEngine.AppendPassingListItem(const APassing: TPassing;
+  AAutoScroll: Boolean);
 var
   lListItem: TListItem;
   lBIB: integer;
@@ -159,10 +179,6 @@ begin
     Exit;
   end;
 
-  AssignLap(APassing);
-  TPassingStore.GetSingleton.UpdatePassingDomainFields(
-    APassing.PassingNumber, APassing.LapIndex, APassing.CompetitorId);
-
   MainDataModule.GetCompetitorInfoForPassing(APassing, lBIB, lName, lTeamClub);
   lListItem.Caption := lBIB.ToString;
   lListItem.SubItems.Add(lName);
@@ -176,9 +192,6 @@ begin
 
   if AAutoScroll then
     lListItem.MakeVisible(false);
-
-  UpdateParticipationTable(APassing.PassingNumber);
-  FLastChangeTimestamp := Now;
 end;
 
 {==============================================================================}

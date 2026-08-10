@@ -163,6 +163,10 @@ resourcestring
   cMessagesPassingSourceDecoder = 'Decoder';
   cMessagesPassingLapStart = 'Start';
   cMessagesMenuCompetitorPassings = 'Rundenprotokoll…';
+  cMessagesProtocolFilterLabel = 'Filter:';
+  cMessagesProtocolFilterAll = 'Alle';
+  cMessagesProtocolFilterValid = 'Nur gültig';
+  cMessagesProtocolFilterManual = 'Nur manuell';
   cMessagesPlausibilityTitle = 'Plausibilitätsprüfung';
   cMessagesPlausibilityHeader =
     'Chip %s um %s'#13#10#13#10'%s';
@@ -214,6 +218,8 @@ type
 
   TParticipantState = (psActive, psDNS, psDNF, psDSQ);
   TPassingState = (psValid = 0, psInvalid);
+  (* Plan 3 step 6: protocol list filter. *)
+  TPassingProtocolFilter = (ppfAll, ppfValidOnly, ppfManualOnly);
 
 var
   gHInstResDll: HINST = 0;
