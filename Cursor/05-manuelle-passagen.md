@@ -16,7 +16,7 @@
 ## Scope
 
 - UI: Rennwahl, Bib/Fahrer, Zeit (Default: jetzt), optional Chip
-- Eindeutige `PassingNumber` (Sequence / MAX+1)
+- Eindeutige `PassingNumber` (synthetisch negativ; nicht Decoder-`MAX+1`)
 - `DecoderId = 'MANUAL'`; Status nach Validator
 - Ohne Chip: Assignment (Plan 2) oder explizite Chip-Eingabe
 
@@ -26,7 +26,9 @@
    (Combo nur aktive Rennen: WarmUp/Started/Neutralized; Default = Rennen des aktuellen Rundenprotokolls/`GetSelectedRaceId`)
 2. Ohne aktives Rennen / ohne Zuordnung: klare Fehlermeldung (kein stilles No-Op). — **erledigt**
    (Dialoge für kein aktives Rennen, ungültige/fehlende Bib, Bib nicht im Rennen, kein Chip; OK deaktiviert ohne Rennen)
-3. PassingNumber eindeutig vergeben.
+3. PassingNumber eindeutig vergeben. — **erledigt**
+   (Synthetische IDs im negativen Raum via `AllocateSyntheticPassingNumber` = `Min(0, GetMinPassingNumber)-1`;
+   Decoder-Sequenz / Lückenerkennung bleibt unangetastet; gilt für MANUAL und SYSTEM-Marker)
 4. Validator aus Plan 4 mit Flag `IsManual` aufrufen.
 5. Im Protokoll (Plan 3) als manuell kennzeichnen.
 6. Nach Erfolg: gleiche Display-/Ranking-Aktualisierung wie bei Live-Passagen.

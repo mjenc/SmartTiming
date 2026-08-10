@@ -341,7 +341,7 @@ begin
     if ARaceStatus in [rsFinished, rsAborted, rsStopped] then
       MainDataModule.CloseAllOpenTransponderAssignmentsForRace(ARaceId);
 
-    lPassing.PassingNumber := MainDataModule.GetMinPassingNumber - 1;
+    lPassing.PassingNumber := MainDataModule.AllocateSyntheticPassingNumber;
     lPassing.ChipId := '';
     lPassing.PassingTime := Now;
     lPassing.SignalStrength := 100;
@@ -533,6 +533,7 @@ procedure TSmartTimingController.AddManualPassing(APassing: TPassing);
 begin
   try
     LogOnDebug(cLogger, ['AddManualPassing']);
+    APassing.PassingNumber := MainDataModule.AllocateSyntheticPassingNumber;
     TDecoderEngine.GetSingleton.SendSimulatedPassing(APassing);
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['AddManualPassing']);

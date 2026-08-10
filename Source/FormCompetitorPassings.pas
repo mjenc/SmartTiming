@@ -176,9 +176,9 @@ procedure TFormCompetitorPassings.SetSelectedStatus(AStatus: TPassingState);
 var
   lPassingNumber: Integer;
 begin
-  lPassingNumber := GetSelectedPassingNumber;
-  if lPassingNumber < 0 then
+  if ListViewPassings.Selected = nil then
     Exit;
+  lPassingNumber := Integer(ListViewPassings.Selected.Data);
   if FRaceItem.RaceEngine = nil then
     Exit;
   FRaceItem.RaceEngine.SetPassingStatusAndRecalc(lPassingNumber, AStatus);

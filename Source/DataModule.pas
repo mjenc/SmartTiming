@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, Data.DbxSqlite, Data.FMTBcd, DBGrids,
   Datasnap.DBClient, Datasnap.Provider, Data.DB, Data.SqlExpr, DBCtrls,
-  Graphics, Dialogs, Registry, Windows, JclFileUtils, Variants, Vcl.ComCtrls,
+  Graphics, Dialogs, Registry, Windows, JclFileUtils, Variants, Vcl.ComCtrls, System.Math,
   SmartTiming.Consts, SmartTiming.Tools, DecoderInterface, DateUtils,
   StrUtils;
 
@@ -63,6 +63,7 @@ type
     function GetCompetitorIdsForRace(ARaceId: Integer): TArray<Integer>;
     function GetMaxPassingNumber: integer;
     function GetMinPassingNumber: integer;
+    function AllocateSyntheticPassingNumber: Integer;
 
     procedure FillWithDistinctValues(const ATableName, AFieldName: string; AStrings: TStrings);
 
@@ -646,6 +647,15 @@ end;
 function TMainDataModule.GetMaxPassingNumber: integer;
 begin
   result := GetMaxIdOf('PASSINGS', 'PASSINGNUMBER');
+end;
+
+{==============================================================================}
+function TMainDataModule.AllocateSyntheticPassingNumber: Integer;
+begin
+  (* SYSTEM markers and MANUAL passings must not occupy the decoder sequence:
+     gaps in positive PassingNumbers signal network loss / reload candidates.
+     Stay strictly negative (never 0 / never MAX+1). *)
+  Result := Min(0, GetMinPassingNumber) - 1;
 end;
 
 {==============================================================================}

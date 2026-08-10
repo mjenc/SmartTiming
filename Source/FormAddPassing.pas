@@ -336,7 +336,7 @@ begin
     Exit;
   end;
 
-  lPassing.PassingNumber := 0;
+  lPassing.PassingNumber := 0; (* overwritten in AddManualPassing: synthetic negative id *)
   lPassing.ChipId := lChipId;
   lPassing.PassingTime := GetTime + Trunc(Now);
   lPassing.SignalStrength := 100;

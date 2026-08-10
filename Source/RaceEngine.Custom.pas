@@ -638,7 +638,9 @@ begin
           Continue;
         if not lInActiveRaceSection then
           Continue;
-        if lPassing.PassingNumber < 0 then
+        (* SYSTEM markers use synthetic negative ids (Flags=2). MANUAL also uses
+           negatives but must score — skip markers only. *)
+        if lPassing.Flags = 2 then
           Continue;
 
         FLastConsideredPassingId := lPassing.PassingNumber - 1;
