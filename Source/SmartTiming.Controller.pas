@@ -426,14 +426,19 @@ begin
       Exit;
     end;
 
-    TTransponderAssignmentService.ResolvePassing(APassing.ChipId, APassing.PassingTime, lResolution);
+    lIsManual := SameText(APassing.DecoderId, 'MANUAL');
+    if lIsManual and (APassing.RaceId >= 0) then
+      TTransponderAssignmentService.ResolvePassing(APassing.ChipId, APassing.PassingTime,
+        lResolution, APassing.RaceId)
+    else
+      TTransponderAssignmentService.ResolvePassing(APassing.ChipId, APassing.PassingTime,
+        lResolution);
 
     if lResolution.IsUnique then
       lMinLap := GetMinLapDurationForRace(lResolution.RaceId)
     else
       lMinLap := 0;
 
-    lIsManual := SameText(APassing.DecoderId, 'MANUAL');
     lContext := TPassingValidator.BuildLiveContext(APassing, lResolution, lMinLap, lIsManual);
     lValidation := TPassingValidator.Validate(lContext);
     lAskOperator := False;

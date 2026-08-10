@@ -68,9 +68,11 @@ type
     class procedure EnsureAssignmentsFromCompetitorChips(ARaceId: Integer); static;
 
     (* Chip + time → unique assignment (any race status); MatchCount 0/>1 → RaceId -1.
+       Optional APreferredRaceId limits candidates to that race (manual passings).
        Scoring still requires RaceAcceptsPassings (validator / participation). *)
     class function ResolvePassing(const AChipId: string; APassingTime: TDateTime;
-      out AResolution: TPassingAssignmentResolution): Boolean; static;
+      out AResolution: TPassingAssignmentResolution;
+      APreferredRaceId: Integer = -1): Boolean; static;
 
     (* Competitor owning chip in a given race at APassingTime (assignment window). *)
     class function TryGetCompetitorForRaceChipAtTime(ARaceId: Integer; const AChipId: string;
@@ -146,7 +148,8 @@ end;
 
 {==============================================================================}
 class function TTransponderAssignmentService.ResolvePassing(const AChipId: string;
-  APassingTime: TDateTime; out AResolution: TPassingAssignmentResolution): Boolean;
+  APassingTime: TDateTime; out AResolution: TPassingAssignmentResolution;
+  APreferredRaceId: Integer): Boolean;
 var
   lMatches: TList<TTransponderAssignment>;
   lCandidates: TList<TTransponderAssignment>;
@@ -174,6 +177,8 @@ begin
     for i := 0 to lMatches.Count - 1 do
     begin
       lAssignment := lMatches[i];
+      if (APreferredRaceId >= 0) and (lAssignment.RaceId <> APreferredRaceId) then
+        Continue;
       if not MainDataModule.IsCompetitorAssignedToRace(lAssignment.RaceId, lAssignment.CompetitorId) then
         Continue;
       lCandidates.Add(lAssignment);

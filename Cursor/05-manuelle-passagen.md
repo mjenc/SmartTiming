@@ -29,9 +29,13 @@
 3. PassingNumber eindeutig vergeben. — **erledigt**
    (Synthetische IDs im negativen Raum via `AllocateSyntheticPassingNumber` = `Min(0, GetMinPassingNumber)-1`;
    Decoder-Sequenz / Lückenerkennung bleibt unangetastet; gilt für MANUAL und SYSTEM-Marker)
-4. Validator aus Plan 4 mit Flag `IsManual` aufrufen.
-5. Im Protokoll (Plan 3) als manuell kennzeichnen.
-6. Nach Erfolg: gleiche Display-/Ranking-Aktualisierung wie bei Live-Passagen.
+4. Validator aus Plan 4 mit Flag `IsManual` aufrufen. — **erledigt**
+   (`BuildLiveContext`/`Validate`; MinLap → `pdAcceptMarked`; aktive Rennen inkl. WarmUp/Neutralized;
+   Resolve auf gewähltes `RaceId` beschränkt)
+5. Im Protokoll (Plan 3) als manuell kennzeichnen. — **erledigt**
+   (`TPassing.IsManual`, Icon `cPassingImageManual`, Filter „Nur manuell“)
+6. Nach Erfolg: gleiche Display-/Ranking-Aktualisierung wie bei Live-Passagen. — **erledigt**
+   (Pipeline `AddPassingForRaceId` → Display/Participation/Ranking; synthetische IDs in `UpdateParticipationTable`)
 
 ## Abhängigkeiten
 

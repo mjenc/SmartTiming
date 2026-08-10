@@ -643,7 +643,8 @@ begin
         if lPassing.Flags = 2 then
           Continue;
 
-        FLastConsideredPassingId := lPassing.PassingNumber - 1;
+        if lPassing.PassingNumber >= 0 then
+          FLastConsideredPassingId := lPassing.PassingNumber - 1;
         UpdateParticipationTable(lPassing.PassingNumber);
       end;
       MainDataModule.SQLConnection.CommitFreeAndNil(lTransaction);

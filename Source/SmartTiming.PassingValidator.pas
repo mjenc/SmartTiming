@@ -19,6 +19,7 @@
   Default dispositions (cautious; settings later):
     Unknown / NotAssigned / RaceNotAccepting / DoubleHit → Reject
     MinLapDuration / Ambiguous / ParallelConflict       → AskOperator
+    MinLapDuration + IsManual                           → AcceptMarked
 ==============================================================================}
 
 interface
@@ -88,11 +89,12 @@ type
 
   TPassingValidator = class
   private
-    class function DispositionForRule(ARule: TPassingValidationRule): TPassingDisposition; static;
+    class function DispositionForRule(ARule: TPassingValidationRule;
+      AIsManual: Boolean = False): TPassingDisposition; static;
     class function SeverityForDisposition(ADisposition: TPassingDisposition): TPassingValidationSeverity; static;
     class function WorseDisposition(A, B: TPassingDisposition): TPassingDisposition; static;
     class procedure AddFinding(var AResult: TPassingValidationResult; ARule: TPassingValidationRule;
-      const AMessage: string); static;
+      const AMessage: string; AIsManual: Boolean = False); static;
     class function SecondsBetweenPassings(AEarlier, ALater: TDateTime): Double; static;
   public
     class function RuleDisplayName(ARule: TPassingValidationRule): string; static;
@@ -257,7 +259,8 @@ begin
 end;
 
 {==============================================================================}
-class function TPassingValidator.DispositionForRule(ARule: TPassingValidationRule): TPassingDisposition;
+class function TPassingValidator.DispositionForRule(ARule: TPassingValidationRule;
+  AIsManual: Boolean): TPassingDisposition;
 begin
   case ARule of
     pvrUnknownChip,
@@ -265,7 +268,12 @@ begin
     pvrRaceNotAccepting,
     pvrDoubleHit:
       Result := pdReject;
-    pvrMinLapDuration,
+    pvrMinLapDuration:
+      (* Manual: operator already chose the time — accept marked instead of dialog. *)
+      if AIsManual then
+        Result := pdAcceptMarked
+      else
+        Result := pdAskOperator;
     pvrAmbiguousAssignment,
     pvrParallelChipConflict:
       Result := pdAskOperator;
@@ -326,13 +334,13 @@ end;
 
 {==============================================================================}
 class procedure TPassingValidator.AddFinding(var AResult: TPassingValidationResult;
-  ARule: TPassingValidationRule; const AMessage: string);
+  ARule: TPassingValidationRule; const AMessage: string; AIsManual: Boolean);
 var
   lFinding: TPassingValidationFinding;
   n: Integer;
 begin
   lFinding.Rule := ARule;
-  lFinding.Disposition := DispositionForRule(ARule);
+  lFinding.Disposition := DispositionForRule(ARule, AIsManual);
   lFinding.Severity := SeverityForDisposition(lFinding.Disposition);
   lFinding.Message := AMessage;
 
@@ -354,34 +362,37 @@ class function TPassingValidator.Validate(
   const AContext: TPassingValidationContext): TPassingValidationResult;
 var
   lDeltaSec: Double;
+  lManual: Boolean;
 begin
   Result.Disposition := pdAccept;
   SetLength(Result.Findings, 0);
   Result.TriggeredRules := [];
+  lManual := AContext.IsManual;
 
   if not AContext.ChipKnownInMapping then
     AddFinding(Result, pvrUnknownChip,
-      Format('Chip %s ist im Transponder-Mapping unbekannt.', [AContext.ChipId]));
+      Format('Chip %s ist im Transponder-Mapping unbekannt.', [AContext.ChipId]), lManual);
 
   if AContext.AssignmentMatchCount > 1 then
     AddFinding(Result, pvrAmbiguousAssignment,
       Format('Chip %s hat %d Zuordnungen zur Passagenzeit.',
-        [AContext.ChipId, AContext.AssignmentMatchCount]));
+        [AContext.ChipId, AContext.AssignmentMatchCount]), lManual);
 
   if AContext.ParallelChipConflict then
     AddFinding(Result, pvrParallelChipConflict,
       Format('Chip %s ist parallel in einem anderen aktiven Rennen zugeordnet.',
-        [AContext.ChipId]));
+        [AContext.ChipId]), lManual);
 
   if AContext.AssignmentMatchCount = 0 then
     AddFinding(Result, pvrNotAssigned,
-      Format('Chip %s ist keinem wertenden Rennen/Teilnehmer zugeordnet.', [AContext.ChipId]));
+      Format('Chip %s ist keinem wertenden Rennen/Teilnehmer zugeordnet.', [AContext.ChipId]),
+      lManual);
 
   if (AContext.AssignmentMatchCount = 1) and (AContext.ResolvedRaceId >= 0) and
      (not AContext.RaceAcceptsPassings) then
     AddFinding(Result, pvrRaceNotAccepting,
       Format('Rennen %d akzeptiert keine Wertungs-Passagen (Status %d).',
-        [AContext.ResolvedRaceId, Ord(AContext.RaceStatus)]));
+        [AContext.ResolvedRaceId, Ord(AContext.RaceStatus)]), lManual);
 
   if (AContext.AssignmentMatchCount = 1) and (AContext.LastValidPassingTime > 0) and
      (AContext.PassingTime >= AContext.LastValidPassingTime) then
@@ -390,12 +401,12 @@ begin
 
     if lDeltaSec <= 0 then
       AddFinding(Result, pvrDoubleHit,
-        Format('Doppelhit für Chip %s (Δt = %.3f s).', [AContext.ChipId, lDeltaSec]))
+        Format('Doppelhit für Chip %s (Δt = %.3f s).', [AContext.ChipId, lDeltaSec]), lManual)
     else if (AContext.MinLapDurationSeconds > 0) and
             (lDeltaSec < AContext.MinLapDurationSeconds) then
       AddFinding(Result, pvrMinLapDuration,
         Format('Rundenzeit %.1f s unter MinLapDuration %d s (Chip %s).',
-          [lDeltaSec, AContext.MinLapDurationSeconds, AContext.ChipId]));
+          [lDeltaSec, AContext.MinLapDurationSeconds, AContext.ChipId]), lManual);
   end;
 end;
 
@@ -428,8 +439,13 @@ begin
   if AResolution.MatchCount = 1 then
   begin
     Result.RaceStatus := MainDataModule.GetRaceStatus(AResolution.RaceId);
-    Result.RaceAcceptsPassings :=
-      TTransponderAssignmentService.IsRaceStatusAcceptingPassings(Result.RaceStatus);
+    if AIsManual then
+      (* Manual entry allowed for active races (WarmUp/Started/Neutralized). *)
+      Result.RaceAcceptsPassings :=
+        TTransponderAssignmentService.IsRaceStatusActiveForChipConflict(Result.RaceStatus)
+    else
+      Result.RaceAcceptsPassings :=
+        TTransponderAssignmentService.IsRaceStatusAcceptingPassings(Result.RaceStatus);
     Result.LastValidPassingTime := TPassingStore.GetSingleton.GetLastPassingTimeForChip(
       AResolution.RaceId, APassing.ChipId, APassing.PassingTime);
   end;
@@ -529,6 +545,12 @@ begin
     lCtx := TPassingValidationContext.MakeCleanLiveHit('CL-11540',
       lT0 + (5 / SecsPerDay), 1, 10, 20, lT0);
     Expect('min lap duration', lCtx, pdAskOperator, [pvrMinLapDuration], [pvrDoubleHit]);
+
+    lCtx := TPassingValidationContext.MakeCleanLiveHit('CL-11540',
+      lT0 + (5 / SecsPerDay), 1, 10, 20, lT0);
+    lCtx.IsManual := True;
+    Expect('manual min lap → marked', lCtx, pdAcceptMarked, [pvrMinLapDuration],
+      [pvrDoubleHit]);
 
     lCtx := TPassingValidationContext.MakeCleanLiveHit('CL-11540', lT0, 1, 10, 20, lT0);
     Expect('double hit', lCtx, pdReject, [pvrDoubleHit], [pvrMinLapDuration]);

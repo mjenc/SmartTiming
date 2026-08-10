@@ -303,7 +303,63 @@ var
   lStartTime: TDatetime;
   lFinishTime: TDatetime;
   lRankingTime: TDatetime;
+
+  procedure ApplyPassingToParticipation(const APassing: TPassing);
+  begin
+    if APassing.RaceId < 0 then
+      Exit;
+    if APassing.RaceId <> FRaceItem.Id then
+      Exit;
+    if APassing.PassingStatus <> Ord(psValid) then
+      Exit;
+    if APassing.IsSystemMarker then
+      Exit;
+
+    lLaps := MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, APassing.ChipId,
+      APassing.PassingTime, lParticipationId, lStartTime);
+    if lParticipationId < 0 then
+      Exit;
+
+    if lLaps + 1 > FRaceItem.Laps then
+      Exit;
+
+    if (lLaps > 0) or (lLaps = 0) and FRaceItem.FirstPassingIsLap then
+      Inc(lLaps);
+
+    lFinishTime := Frac(APassing.PassingTime);
+    SetLength(lFields, 3);
+    SetLength(lValues, 3);
+    lFields[0] := 'LAPS';
+    lValues[0] := lLaps;
+    lFields[1] := 'FINISHTIME';
+    lValues[1] := FormatDatetime('hh:mm:ss.zzz', lFinishTime);
+    lFields[2] := 'RANKINGTIME';
+    if lLaps = FRaceItem.Laps then
+    begin
+      lStartTime := Frac(lStartTime);
+      lRankingTime := lFinishTime - lStartTime;
+      lValues[2] := FormatDatetime('hh:mm:ss.zzz', lRankingTime);
+    end
+    else
+      lValues[2] := null;
+
+    MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
+  end;
+
 begin
+  (* Synthetic MANUAL numbers are outside the decoder sequence — update this hit only
+     without advancing FLastConsideredPassingId (would break live decoder tracking). *)
+  if ACurrentPassingId < 0 then
+  begin
+    try
+      lPassing := TPassingStore.GetSingleton.GetPassing(ACurrentPassingId);
+    except
+      Exit;
+    end;
+    ApplyPassingToParticipation(lPassing);
+    Exit;
+  end;
+
   if FLastConsideredPassingId >= ACurrentPassingId then
     Exit;
 
@@ -312,44 +368,7 @@ begin
     TPassingStore.GetSingleton.FillPassingListFrom(FLastConsideredPassingId + 1, lPassingList);
 
     for lPassing in lPassingList.Values do
-    begin
-      if lPassing.RaceId < 0 then
-        Continue;
-      if lPassing.RaceId <> FRaceItem.Id then
-        Continue;
-      if lPassing.PassingStatus <> Ord(psValid) then
-        Continue;
-
-      lLaps := MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, lPassing.ChipId,
-        lPassing.PassingTime, lParticipationId, lStartTime);
-      if lParticipationId < 0 then
-        Continue;
-
-      if lLaps + 1 > FRaceItem.Laps then
-        Continue;
-
-      if (lLaps > 0) or (lLaps = 0) and FRaceItem.FirstPassingIsLap then
-        Inc(lLaps);
-
-      lFinishTime := Frac(lPassing.PassingTime);
-      SetLength(lFields, 3);
-      SetLength(lValues, 3);
-      lFields[0] := 'LAPS';
-      lValues[0] := lLaps;
-      lFields[1] := 'FINISHTIME';
-      lValues[1] :=  FormatDatetime('hh:mm:ss.zzz', lFinishTime);
-      lFields[2] := 'RANKINGTIME';
-      if lLaps = FRaceItem.Laps then
-      begin
-        lStartTime := Frac(lStartTime);
-        lRankingTime := lFinishTime - lStartTime;
-        lValues[2] := FormatDatetime('hh:mm:ss.zzz', lRankingTime);
-      end
-      else
-        lValues[2] := null;
-
-      MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
-    end;
+      ApplyPassingToParticipation(lPassing);
     FLastConsideredPassingId := ACurrentPassingId;
   finally
     FreeAndNil(lPassingList);
