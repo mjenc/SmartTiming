@@ -179,6 +179,15 @@ resourcestring
   cMessagesManualPassingPreviewNoChip = '%s · kein Chip';
   cMessagesManualPassingNoActiveRace =
     'Kein aktives Rennen (Vorbereitung / Gestartet / Neutralisiert) verfügbar.';
+  cMessagesManualPassingNoBib =
+    'Bitte eine Startnummer eingeben.';
+  cMessagesManualPassingBibInvalid =
+    '„%s“ ist keine gültige Startnummer.';
+  cMessagesManualPassingBibNotInRace =
+    'Startnummer %d ist in diesem Rennen nicht gemeldet.';
+  cMessagesManualPassingNoChip =
+    'Für Startnummer %d (%s) ist kein Chip zugeordnet.'#13#10 +
+    'Bitte zuerst eine Chip-Zuordnung vornehmen.';
   cMessagesChipUnassignConfirm = 'Chip-Zuordnung für %d Teilnehmer wirklich beenden?';
   cMessagesAssignmentHistoryEmpty = 'Keine Chip-Zuordnungen für dieses Rennen.';
   cMessagesWarmUpChipConflictsTitle = 'Chip-Konflikte vor Vorbereitung';

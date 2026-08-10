@@ -39,13 +39,14 @@ type
     FMs: Word;
     FUpdatingUI: Boolean;
 
-    procedure AddPassingForBib(ABib: Integer);
+    function TryAddPassingForBib(ABib: Integer): Boolean;
     procedure SetTime(ATime: TDatetime);
     function GetTime: TDatetime;
     function GetSelectedRaceId: Integer;
     procedure FillRaceCombo;
     procedure ReloadCompetitors;
     procedure UpdatePreview;
+    procedure UpdateControlsEnabled;
     procedure SelectListItemForBib(const ABibText: string);
   end;
 
@@ -59,7 +60,8 @@ uses
 {==============================================================================}
 procedure TFormManuallyAddPassing.FormActivate(Sender: TObject);
 begin
-  EditBIB.SetFocus;
+  if EditBIB.CanFocus then
+    EditBIB.SetFocus;
 end;
 
 {==============================================================================}
@@ -136,6 +138,25 @@ begin
   if (lIndex < 0) and (ComboBoxRace.Items.Count > 0) then
     lIndex := 0;
   ComboBoxRace.ItemIndex := lIndex;
+  UpdateControlsEnabled;
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.UpdateControlsEnabled;
+var
+  lHasRace: Boolean;
+begin
+  lHasRace := GetSelectedRaceId >= 0;
+  ComboBoxRace.Enabled := ComboBoxRace.Items.Count > 0;
+  EditBIB.Enabled := lHasRace;
+  EditTime.Enabled := lHasRace;
+  ButtonOK.Enabled := lHasRace;
+  ListViewCompetitors.Enabled := lHasRace;
+  if not lHasRace then
+  begin
+    LabelPreview.Caption := cMessagesManualPassingNoActiveRace;
+    LabelPreview.Font.Color := clGrayText;
+  end;
 end;
 
 {==============================================================================}
@@ -155,7 +176,14 @@ var
   lName, lTeam, lClass, lChipId: string;
 begin
   lRaceId := GetSelectedRaceId;
-  if (lRaceId < 0) or (Trim(EditBIB.Text) = '') or not TryStrToInt(Trim(EditBIB.Text), lBib) then
+  if lRaceId < 0 then
+  begin
+    LabelPreview.Caption := cMessagesManualPassingNoActiveRace;
+    LabelPreview.Font.Color := clGrayText;
+    Exit;
+  end;
+
+  if (Trim(EditBIB.Text) = '') or not TryStrToInt(Trim(EditBIB.Text), lBib) then
   begin
     LabelPreview.Caption := cMessagesManualPassingPreviewNone;
     LabelPreview.Font.Color := clGrayText;
@@ -165,7 +193,7 @@ begin
   if not MainDataModule.TryGetCompetitorInRaceByBib(lRaceId, lBib, lCompetitorId,
        lName, lTeam, lClass, lChipId) then
   begin
-    LabelPreview.Caption := cMessagesManualPassingPreviewNone;
+    LabelPreview.Caption := Format(cMessagesManualPassingBibNotInRace, [lBib]);
     LabelPreview.Font.Color := clGrayText;
     Exit;
   end;
@@ -210,7 +238,10 @@ begin
   finally
     FUpdatingUI := False;
   end;
-  EditBIB.SetFocus;
+  if EditBIB.CanFocus then
+    EditBIB.SetFocus
+  else if ButtonCancel.CanFocus then
+    ButtonCancel.SetFocus;
 end;
 
 {==============================================================================}
@@ -240,8 +271,47 @@ end;
 procedure TFormManuallyAddPassing.ButtonOKClick(Sender: TObject);
 var
   lBib: Integer;
-  lRaceId: Integer;
+  lBibText: string;
 begin
+  if GetSelectedRaceId < 0 then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesManualPassingNoActiveRace, '', [tcbOk], tcbOk);
+    Exit;
+  end;
+
+  lBibText := Trim(EditBIB.Text);
+  if lBibText = '' then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesManualPassingNoBib, '', [tcbOk], tcbOk);
+    EditBIB.SetFocus;
+    Exit;
+  end;
+
+  if not TryStrToInt(lBibText, lBib) then
+  begin
+    SmartTimingTools.ShowDialog(Format(cMessagesManualPassingBibInvalid, [lBibText]),
+      '', [tcbOk], tcbOk);
+    EditBIB.SetFocus;
+    Exit;
+  end;
+
+  if not TryAddPassingForBib(lBib) then
+    Exit;
+
+  SetTime(Now);
+  EditBIB.Clear;
+  EditBIB.SetFocus;
+end;
+
+{==============================================================================}
+function TFormManuallyAddPassing.TryAddPassingForBib(ABib: Integer): Boolean;
+var
+  lPassing: TPassing;
+  lRaceId: Integer;
+  lCompetitorId: Integer;
+  lName, lTeam, lClass, lChipId: string;
+begin
+  Result := False;
   lRaceId := GetSelectedRaceId;
   if lRaceId < 0 then
   begin
@@ -249,36 +319,22 @@ begin
     Exit;
   end;
 
-  if Trim(EditBIB.Text) = '' then
+  if not MainDataModule.TryGetCompetitorInRaceByBib(lRaceId, ABib, lCompetitorId,
+       lName, lTeam, lClass, lChipId) then
   begin
-    Close;
+    SmartTimingTools.ShowDialog(Format(cMessagesManualPassingBibNotInRace, [ABib]),
+      '', [tcbOk], tcbOk);
     Exit;
   end;
 
-  if not TryStrToInt(Trim(EditBIB.Text), lBib) then
+  if Trim(lChipId) = '' then
+  begin
+    if lName = '' then
+      lName := ABib.ToString;
+    SmartTimingTools.ShowDialog(Format(cMessagesManualPassingNoChip, [ABib, lName]),
+      '', [tcbOk], tcbOk);
     Exit;
-
-  AddPassingForBib(lBib);
-  SetTime(Now);
-  EditBIB.Clear;
-  EditBIB.SetFocus;
-end;
-
-{==============================================================================}
-procedure TFormManuallyAddPassing.AddPassingForBib(ABib: Integer);
-var
-  lPassing: TPassing;
-  lRaceId: Integer;
-  lCompetitorId: Integer;
-  lName, lTeam, lClass, lChipId: string;
-begin
-  lRaceId := GetSelectedRaceId;
-  if lRaceId < 0 then
-    Exit;
-
-  if not MainDataModule.TryGetCompetitorInRaceByBib(lRaceId, ABib, lCompetitorId,
-       lName, lTeam, lClass, lChipId) then
-    lChipId := MainDataModule.GetActiveTransponderIdForBib(ABib, lRaceId);
+  end;
 
   lPassing.PassingNumber := 0;
   lPassing.ChipId := lChipId;
@@ -290,6 +346,7 @@ begin
   lPassing.DecoderId := 'MANUAL';
   lPassing.RaceId := lRaceId;
   GSmartTimingController.AddManualPassing(lPassing);
+  Result := True;
 end;
 
 {==============================================================================}
@@ -332,9 +389,11 @@ begin
   finally
     FUpdatingUI := False;
   end;
-  AddPassingForBib(lBib);
-  SetTime(Now);
-  UpdatePreview;
+  if TryAddPassingForBib(lBib) then
+  begin
+    SetTime(Now);
+    UpdatePreview;
+  end;
 end;
 
 end.

@@ -24,7 +24,8 @@
 
 1. `FormAddPassing` erweitern: Race-Combo (relevante Status), Bib-Suche, Zeitedit, Vorschau Fahrer/Chip. — **erledigt**
    (Combo nur aktive Rennen: WarmUp/Started/Neutralized; Default = Rennen des aktuellen Rundenprotokolls/`GetSelectedRaceId`)
-2. Ohne aktives Rennen / ohne Zuordnung: klare Fehlermeldung (kein stilles No-Op).
+2. Ohne aktives Rennen / ohne Zuordnung: klare Fehlermeldung (kein stilles No-Op). — **erledigt**
+   (Dialoge für kein aktives Rennen, ungültige/fehlende Bib, Bib nicht im Rennen, kein Chip; OK deaktiviert ohne Rennen)
 3. PassingNumber eindeutig vergeben.
 4. Validator aus Plan 4 mit Flag `IsManual` aufrufen.
 5. Im Protokoll (Plan 3) als manuell kennzeichnen.
