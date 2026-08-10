@@ -1391,59 +1391,49 @@ end;
 {==============================================================================}
 procedure TCustomRaceEngine.OnPassingItemDragDrop(ASender, ASource: TObject; AX, AY: Integer);
 var
-  lDropItem, lCurrentItem, lNextItem: TListItem;
+  lDropItem, lDragItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
   lPassingTime: TDatetime;
   lPassing: TPassing;
-  lChanged: Boolean;
 begin
   if ASender <> ASource then
     Exit;
 
   lListView := TListView(ASender);
-  lDropItem := lListView.GetItemAt(AX, AY);
-  if lDropItem = nil then
-    Exit;
-
-  lChanged := False;
-  lCurrentItem := lListView.Selected;
-  while lCurrentItem <> nil do
+  if lListView.SelCount <> 1 then
   begin
-    lNextItem := lListView.GetNextItem(lCurrentItem, SdAll, [IsSelected]);
-    if lCurrentItem = lDropItem then
-    begin
-      lCurrentItem := lNextItem;
-      Continue;
-    end;
-
-    lPassingNumber := lDropItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
-    lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
-    lPassingTime := lPassing.PassingTime;
-    lPassingTime := IncMilliSecond(lPassingTime, -1);
-
-    lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
-    lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
-    if lPassing.IsSystemMarker then
-    begin
-      lCurrentItem := lNextItem;
-      Continue;
-    end;
-
-    GSmartTimingController.UpdatePassing(lPassingNumber, lPassingTime,
-      TPassingState(lPassing.PassingStatus));
-    lChanged := True;
-    lCurrentItem := lNextItem;
+    SmartTimingTools.ShowDialog(cMessagesPassingDragSingleOnly, '', [tcbOk], tcbOk);
+    Exit;
   end;
 
-  if lChanged then
-    AfterPassingCorrection;
+  lDropItem := lListView.GetItemAt(AX, AY);
+  lDragItem := lListView.Selected;
+  if (lDropItem = nil) or (lDragItem = nil) or (lDragItem = lDropItem) then
+    Exit;
+
+  lPassingNumber := lDropItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+  lPassingTime := IncMilliSecond(lPassing.PassingTime, -1);
+
+  lPassingNumber := lDragItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+  if lPassing.IsSystemMarker then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesPassingIsSystemMarker, '', [tcbOk], tcbOk);
+    Exit;
+  end;
+
+  GSmartTimingController.UpdatePassing(lPassingNumber, lPassingTime,
+    TPassingState(lPassing.PassingStatus));
+  AfterPassingCorrection;
 end;
 
 {==============================================================================}
 procedure TCustomRaceEngine.OnPassingItemDragOver(ASender, ASource: TObject; AX, AY: Integer; AState: TDragState; var AAccept: Boolean);
 begin
-  AAccept := ASender = FPassingDisplay;
+  AAccept := (ASender = FPassingDisplay) and (ASender is TListView) and
+    (TListView(ASender).SelCount = 1);
 end;
 
 end.

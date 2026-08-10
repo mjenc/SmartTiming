@@ -197,6 +197,8 @@ resourcestring
   cMessagesCommuniqueHeader = 'Kommuniqué';
   cMessagesNoParticipantSelected = 'Bitte einen Teilnehmer im Ranking auswählen.';
   cMessagesPassingIsSystemMarker = 'System-Markierungen können nicht gelöscht oder bearbeitet werden.';
+  cMessagesPassingDragSingleOnly =
+    'Zeitkorrektur per Drag&Drop ist nur mit einer ausgewählten Passage möglich.';
   cMessagesChangeCompetitorNoChip = 'Diese Passage hat keinen Chip — Fahrer kann nicht geändert werden.';
   cMessagesFinishTimeOverrideHint =
     'Manuelle Zielzeit aktiv — Recalc überschreibt sie nicht. Zurücksetzen stellt die Passagen-Zeit wieder her.';
