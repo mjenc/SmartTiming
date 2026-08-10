@@ -169,7 +169,7 @@ begin
   begin
     lListItem.Caption := '';
     lListItem.SubItems.Add(SmartTimingTools.GetFlagNameFromRaceStatus(TRaceStatus(-APassing.Hits)));
-    lListItem.SubItems.Add(FormatDateTime('hh:mm:ss.zzz', APassing.PassingTime));
+    lListItem.SubItems.Add(FormatDateTime('hh:nn:ss.zzz', APassing.PassingTime));
     lListItem.SubItems.Add('');
     lListItem.SubItems.Add('');
     lListItem.SubItems.Add(APassing.PassingNumber.ToString);
@@ -182,7 +182,7 @@ begin
   MainDataModule.GetCompetitorInfoForPassing(APassing, lBIB, lName, lTeamClub);
   lListItem.Caption := lBIB.ToString;
   lListItem.SubItems.Add(lName);
-  lListItem.SubItems.Add(FormatDateTime('hh:mm:ss.zzz', APassing.PassingTime));
+  lListItem.SubItems.Add(FormatDateTime('hh:nn:ss.zzz', APassing.PassingTime));
   lListItem.SubItems.Add(APassing.TxId.ToString);
   lListItem.SubItems.Add(APassing.ChipId);
   lListItem.SubItems.Add(APassing.PassingNumber.ToString);
@@ -326,19 +326,30 @@ var
     if (lLaps > 0) or (lLaps = 0) and FRaceItem.FirstPassingIsLap then
       Inc(lLaps);
 
+    if MainDataModule.IsParticipationFinishTimeOverridden(lParticipationId) then
+    begin
+      (* Manual Zielzeit: keep FINISHTIME/RANKINGTIME; still advance laps. *)
+      SetLength(lFields, 1);
+      SetLength(lValues, 1);
+      lFields[0] := 'LAPS';
+      lValues[0] := lLaps;
+      MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
+      Exit;
+    end;
+
     lFinishTime := Frac(APassing.PassingTime);
     SetLength(lFields, 3);
     SetLength(lValues, 3);
     lFields[0] := 'LAPS';
     lValues[0] := lLaps;
     lFields[1] := 'FINISHTIME';
-    lValues[1] := FormatDatetime('hh:mm:ss.zzz', lFinishTime);
+    lValues[1] := FormatDatetime('hh:nn:ss.zzz', lFinishTime);
     lFields[2] := 'RANKINGTIME';
     if lLaps = FRaceItem.Laps then
     begin
       lStartTime := Frac(lStartTime);
       lRankingTime := lFinishTime - lStartTime;
-      lValues[2] := FormatDatetime('hh:mm:ss.zzz', lRankingTime);
+      lValues[2] := FormatDatetime('hh:nn:ss.zzz', lRankingTime);
     end
     else
       lValues[2] := null;

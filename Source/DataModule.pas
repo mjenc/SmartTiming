@@ -91,7 +91,9 @@ type
     procedure UpdateParticipationValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
     function TryGetParticipationId(ARaceId, ACompetitorId: Integer; out AParticipationId: Integer): Boolean;
     function GetParticipationStringField(AParticipationId: Integer; const AFieldName: string): string;
+    function IsParticipationFinishTimeOverridden(AParticipationId: Integer): Boolean;
     function GetPenaltyCommuniqueText(ARaceId: Integer): string;
+    procedure EnsureFinishTimeOverrideColumn;
 
     function ImportTxMapping(const AFileName: string): integer;
     procedure ExportTxMapping(const AFileName: string);
@@ -168,6 +170,7 @@ begin
   FDatabaseName := ADatabaseName;
   SQLConnection.Params.Add('Database=' + ADatabaseName);
   SQLConnection.Connected := true;
+  EnsureFinishTimeOverrideColumn;
 end;
 
 {==============================================================================}
@@ -1073,7 +1076,12 @@ end;
 {==============================================================================}
 procedure TMainDataModule.ResetRaceParticitipations(ARaceId: Integer);
 begin
-  SQLConnection.ExecuteDirect('UPDATE PARTICIPATION SET LAPS = 0, RANKINGTIME = NULL, FINISHTIME = NULL, CURRENTRANKING = NULL, POINTS = 0, CRITRANKINGVALUE = NULL WHERE RACEID = ' + ARaceId.ToString);
+  (* Keep manual finish / ranking times when FINISHTIMEOVERRIDE is set. *)
+  SQLConnection.ExecuteDirect(
+    'UPDATE PARTICIPATION SET LAPS = 0, CURRENTRANKING = NULL, POINTS = 0, CRITRANKINGVALUE = NULL, ' +
+    'FINISHTIME = CASE WHEN IFNULL(FINISHTIMEOVERRIDE, 0) <> 0 THEN FINISHTIME ELSE NULL END, ' +
+    'RANKINGTIME = CASE WHEN IFNULL(FINISHTIMEOVERRIDE, 0) <> 0 THEN RANKINGTIME ELSE NULL END ' +
+    'WHERE RACEID = ' + ARaceId.ToString);
 end;
 
 {==============================================================================}
@@ -1190,6 +1198,58 @@ begin
   finally
     FreeAndNil(lResultSet);
   end;
+end;
+
+{==============================================================================}
+function TMainDataModule.IsParticipationFinishTimeOverridden(
+  AParticipationId: Integer): Boolean;
+var
+  lResultSet: TDataSet;
+begin
+  Result := False;
+  if AParticipationId <= 0 then
+    Exit;
+  SQLConnection.Execute(Format(
+    'SELECT IFNULL(FINISHTIMEOVERRIDE, 0) FROM PARTICIPATION WHERE PARTICIPATIONID = %d',
+    [AParticipationId]), nil, lResultSet);
+  try
+    if (lResultSet = nil) or lResultSet.IsEmpty then
+      Exit;
+    Result := lResultSet.Fields[0].AsInteger <> 0;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+procedure TMainDataModule.EnsureFinishTimeOverrideColumn;
+var
+  lResultSet: TDataSet;
+  lHasColumn: Boolean;
+begin
+  if not SQLConnection.Connected then
+    Exit;
+  lHasColumn := False;
+  SQLConnection.Execute('PRAGMA table_info(PARTICIPATION)', nil, lResultSet);
+  try
+    if lResultSet = nil then
+      Exit;
+    lResultSet.First;
+    while not lResultSet.Eof do
+    begin
+      if SameText(lResultSet.FieldByName('name').AsString, 'FINISHTIMEOVERRIDE') then
+      begin
+        lHasColumn := True;
+        Break;
+      end;
+      lResultSet.Next;
+    end;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+  if not lHasColumn then
+    SQLConnection.ExecuteDirect(
+      'ALTER TABLE PARTICIPATION ADD COLUMN FINISHTIMEOVERRIDE BOOLEAN NOT NULL DEFAULT 0');
 end;
 
 {==============================================================================}

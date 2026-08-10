@@ -37,7 +37,8 @@ Neue Disziplinen würden diese Lücken multiplizieren.
 4. Passage: Zeit ändern, Fahrer ändern, gültig/ungültig, entfernen. — **erledigt**
    (volle Recalc-Kette; SYSTEM geschützt; Drag&Drop mit Recalc)
 5. Ranking-Kontextmenü: DNS/DNF/DSQ, Strafen, Zeit editieren → echte `PARTICIPATION`-Updates. — **erledigt**
-   (Strafen-Freitext; Zielzeit=`FINISHTIME`; Kommuniqué an Excel/Druck)
+   (Strafen-Freitext; Zielzeit=`FINISHTIME` + `FINISHTIMEOVERRIDE`; Kommuniqué an Excel/Druck;
+   manuelle Zielzeit wird von Recalc nicht überschrieben; „Zurücksetzen“ → Recalc aus Passagen)
 6. Regression ITT: typische Korrekturszenarien manuell/automatisiert prüfen. — **erledigt**
    (Self-Tests `TCorrectionRegression.RunSelfTests` im Decoder-Simulator; manuelle Checkliste unten)
 
@@ -52,7 +53,8 @@ Neue Disziplinen würden diese Lücken multiplizieren.
 | Drag&Drop Zeit | — | PASSINGS | Store | ja | Protokoll+Ranking |
 | DNS/DNF/DSQ/Aktiv | — | PARTICIPATION | — | — | Ranking |
 | Strafen | FormPenalty | PARTICIPATION.PENALTIES | — | — | Ranking (+Kommuniqué Export) |
-| Zielzeit ändern | FormEditTime | PARTICIPATION.FINISHTIME | — | — | Ranking |
+| Zielzeit ändern | FormEditTime | PARTICIPATION.FINISHTIME + **FINISHTIMEOVERRIDE** | — | bei Reset: ja | Ranking |
+| Zielzeit zurücksetzen | FormEditTime „Zurücksetzen“ | OVERRIDE=0, Zeiten NULL | — | Recalc | Ranking |
 | Chip entziehen | Confirm | Assignments | Store | ja | Protokoll+Ranking |
 | Teilnehmer entfernen | — | PARTICIPATION+Assign close | — | — | Ranking |
 
@@ -190,7 +192,7 @@ Voraussetzung: ITT-Lauf mit ≥2 Teilnehmern, Chip-Zuordnung, einige Passagen; p
 | 4 | Passage löschen | weg aus Protokoll; Ranking; SYSTEM nicht löschbar | ja |
 | 5 | DNS / DNF / DSQ / Reaktivieren | Status in Ranking/DB | ja |
 | 6 | Strafen-Freitext speichern | `PENALTIES` in DB; Excel/Druck Kommuniqué am Ende | ja |
-| 7 | Zielzeit ändern | `FINISHTIME` persistiert; Ranking | ja |
+| 7 | Zielzeit ändern | `FINISHTIME` + Override; Recalc lässt sie stehen; Zurücksetzen → Passagen-Zeit | ja |
 | 8 | Chip entziehen | Assignment zu; Protokoll/Ranking Refresh | ja |
 | 9 | Parallel: gleicher Chip in Lauf B | Zuweisung/Live blockiert bzw. AskOperator | — |
 | 10 | Korrektur nur in Lauf B | Lauf A Ranking unverändert | ja |

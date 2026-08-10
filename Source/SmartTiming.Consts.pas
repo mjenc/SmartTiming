@@ -198,6 +198,9 @@ resourcestring
   cMessagesNoParticipantSelected = 'Bitte einen Teilnehmer im Ranking auswählen.';
   cMessagesPassingIsSystemMarker = 'System-Markierungen können nicht gelöscht oder bearbeitet werden.';
   cMessagesChangeCompetitorNoChip = 'Diese Passage hat keinen Chip — Fahrer kann nicht geändert werden.';
+  cMessagesFinishTimeOverrideHint =
+    'Manuelle Zielzeit aktiv — Recalc überschreibt sie nicht. Zurücksetzen stellt die Passagen-Zeit wieder her.';
+  cMessagesFinishTimeReset = 'Zurücksetzen';
   cMessagesChipUnassignConfirm = 'Chip-Zuordnung für %d Teilnehmer wirklich beenden?';
   cMessagesAssignmentHistoryEmpty = 'Keine Chip-Zuordnungen für dieses Rennen.';
   cMessagesWarmUpChipConflictsTitle = 'Chip-Konflikte vor Vorbereitung';

@@ -918,10 +918,35 @@ var
   lForm: TFormEditTime;
   lParticipationId: Integer;
   lCurrent: string;
+  lStartStr: string;
   lTime: TDateTime;
+  lStartTime: TDateTime;
+  lRankingTime: TDateTime;
   lFields: TArray<string>;
   lValues: TArray<Variant>;
   lFormatSettings: TFormatSettings;
+  lModal: Integer;
+  lOverride: Boolean;
+
+  function TryParseParticipationTime(const AText: string; out ATime: TDateTime): Boolean;
+  begin
+    Result := False;
+    ATime := 0;
+    if Trim(AText) = '' then
+      Exit;
+    lFormatSettings := TFormatSettings.Create;
+    lFormatSettings.TimeSeparator := ':';
+    lFormatSettings.DecimalSeparator := '.';
+    if TryStrToTime(AText, ATime, lFormatSettings) then
+    begin
+      ATime := Frac(ATime);
+      Exit(True);
+    end;
+    Result := TryStrToDateTime(AText, ATime, lFormatSettings);
+    if Result then
+      ATime := Frac(ATime);
+  end;
+
 begin
   if not TryGetFirstSelectedParticipationId(lParticipationId) then
   begin
@@ -929,32 +954,56 @@ begin
     Exit;
   end;
 
+  lOverride := MainDataModule.IsParticipationFinishTimeOverridden(lParticipationId);
   lCurrent := Trim(MainDataModule.GetParticipationStringField(lParticipationId, 'FINISHTIME'));
   lForm := TFormEditTime.Create(nil);
   try
-    if lCurrent <> '' then
-    begin
-      lFormatSettings := TFormatSettings.Create;
-      lFormatSettings.TimeSeparator := ':';
-      lFormatSettings.DecimalSeparator := '.';
-      if TryStrToTime(lCurrent, lTime, lFormatSettings) then
-        lForm.Time := Frac(lTime)
-      else
-        lForm.Time := Frac(Now);
-    end
+    lForm.OverrideActive := lOverride;
+    if TryParseParticipationTime(lCurrent, lTime) then
+      lForm.Time := lTime
     else
       lForm.Time := Frac(Now);
-    if lForm.ShowModal <> mrOK then
+    lModal := lForm.ShowModal;
+    if lModal = mrRetry then
+    begin
+      (* Clear override → full Recalc restores finish/ranking from passings. *)
+      SetLength(lFields, 3);
+      SetLength(lValues, 3);
+      lFields[0] := 'FINISHTIMEOVERRIDE';
+      lValues[0] := 0;
+      lFields[1] := 'FINISHTIME';
+      lValues[1] := Null;
+      lFields[2] := 'RANKINGTIME';
+      lValues[2] := Null;
+      MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
+      RecalcCountingLaps;
+      AfterRankingCorrection;
+      Exit;
+    end;
+    if lModal <> mrOK then
       Exit;
     lTime := Frac(lForm.Time);
   finally
     FreeAndNil(lForm);
   end;
 
-  SetLength(lFields, 1);
-  SetLength(lValues, 1);
+  SetLength(lFields, 3);
+  SetLength(lValues, 3);
   lFields[0] := 'FINISHTIME';
   lValues[0] := FormatDateTime('hh:nn:ss.zzz', lTime);
+  lFields[1] := 'FINISHTIMEOVERRIDE';
+  lValues[1] := 1;
+  lFields[2] := 'RANKINGTIME';
+  lStartStr := Trim(MainDataModule.GetParticipationStringField(lParticipationId, 'STARTTIME'));
+  if TryParseParticipationTime(lStartStr, lStartTime) then
+  begin
+    lRankingTime := lTime - lStartTime;
+    if lRankingTime < 0 then
+      lRankingTime := lRankingTime + 1; (* crossed midnight *)
+    lValues[2] := FormatDateTime('hh:nn:ss.zzz', lRankingTime);
+  end
+  else
+    lValues[2] := Null;
   MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
   AfterRankingCorrection;
 end;
