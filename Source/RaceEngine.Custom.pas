@@ -4,7 +4,7 @@ interface
 
 uses
   Controls, StdCtrls, ComCtrls, ExtCtrls, SysUtils, Graphics, Types, UITypes, Classes, Grids,
-  Menus, DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages,
+  Menus, DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages, ImgList,
   SmartTiming.Consts, DecoderInterface, SmartTiming.Event, Report.ExcelTemplateFiller,
   Generics.Collections;
 

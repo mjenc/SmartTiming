@@ -3,8 +3,8 @@ object FormManuallyAddPassing: TFormManuallyAddPassing
   Top = 0
   BorderStyle = bsDialog
   Caption = 'Durchfahrt manuell hinzuf'#252'gen'
-  ClientHeight = 389
-  ClientWidth = 416
+  ClientHeight = 460
+  ClientWidth = 480
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -20,116 +20,144 @@ object FormManuallyAddPassing: TFormManuallyAddPassing
   TextHeight = 15
   object PanelGrid: TPanel
     Left = 0
-    Top = 73
-    Width = 416
-    Height = 316
+    Top = 140
+    Width = 480
+    Height = 320
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 97
-    ExplicitWidth = 375
-    ExplicitHeight = 307
     object ListViewCompetitors: TListView
       Left = 0
       Top = 0
-      Width = 414
-      Height = 308
+      Width = 480
+      Height = 320
       Align = alClient
       Columns = <
         item
           Caption = 'Start#'
-          Width = 45
+          Width = 55
         end
         item
           Caption = 'Name'
-          Width = 120
+          Width = 140
         end
         item
           Caption = 'Team'
           Width = 120
         end
         item
+          Caption = 'Chip'
+          Width = 100
+        end
+        item
           Caption = 'Klasse'
-          Width = 120
+          Width = 80
         end>
       ReadOnly = True
       RowSelect = True
       TabOrder = 0
       ViewStyle = vsReport
+      OnClick = ListViewCompetitorsClick
       OnDblClick = ListViewCompetitorsDblClick
-      ExplicitTop = -10
     end
   end
   object PanelControls: TPanel
     Left = 0
     Top = 0
-    Width = 416
-    Height = 73
+    Width = 480
+    Height = 140
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 414
     DesignSize = (
-      416
-      73)
+      480
+      140)
+    object LabelRace: TLabel
+      Left = 8
+      Top = 10
+      Width = 40
+      Height = 15
+      Caption = 'Rennen'
+    end
     object Label3: TLabel
       Left = 8
-      Top = 8
+      Top = 41
       Width = 38
       Height = 15
       Caption = 'Startnr.'
     end
     object Label2: TLabel
-      Left = 8
-      Top = 37
+      Left = 200
+      Top = 41
       Width = 37
       Height = 15
       Caption = 'Uhrzeit'
     end
-    object EditTime: TMaskEdit
+    object LabelPreview: TLabel
+      Left = 8
+      Top = 72
+      Width = 300
+      Height = 15
+      Anchors = [akLeft, akTop, akRight]
+      Caption = 'Fahrer / Chip'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clGrayText
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+    end
+    object ComboBoxRace: TComboBox
       Left = 80
-      Top = 34
-      Width = 89
+      Top = 7
+      Width = 280
+      Height = 23
+      Style = csDropDownList
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 0
+      OnChange = ComboBoxRaceChange
+    end
+    object EditTime: TMaskEdit
+      Left = 248
+      Top = 38
+      Width = 112
       Height = 23
       Alignment = taCenter
       EditMask = '!90:00:00.000;1;_'
       MaxLength = 12
-      TabOrder = 1
+      TabOrder = 2
       Text = '  :  :  .   '
     end
     object EditBIB: TEdit
       Left = 80
-      Top = 5
+      Top = 38
       Width = 89
       Height = 23
       NumbersOnly = True
-      TabOrder = 0
+      TabOrder = 1
+      OnChange = EditBIBChange
     end
     object ButtonOK: TButton
-      Left = 241
-      Top = 20
+      Left = 300
+      Top = 100
       Width = 83
       Height = 25
       Anchors = [akTop, akRight]
       Caption = 'Hinzuf'#252'gen'
       Default = True
-      ModalResult = 1
-      TabOrder = 2
+      TabOrder = 3
       OnClick = ButtonOKClick
-      ExplicitLeft = 239
     end
     object ButtonCancel: TButton
-      Left = 330
-      Top = 20
+      Left = 389
+      Top = 100
       Width = 75
       Height = 25
       Anchors = [akTop, akRight]
       Cancel = True
       Caption = 'Schlie'#223'en'
-      ModalResult = 2
-      TabOrder = 3
+      TabOrder = 4
       OnClick = ButtonCancelClick
-      ExplicitLeft = 328
     end
   end
 end

@@ -127,12 +127,6 @@ resourcestring
   cFieldTitleLapTime = 'Rundenzeit';
   cFieldTitleSource = 'Quelle';
 
-  cPassingImageValid = 0;
-  cPassingImageInvalid = 1;
-  cPassingImageManual = 2;
-  cPassingImageFlagged = 3;
-
-
   cButtonCaptionBackup = 'Sichern';
   cButtonCaptionExport = 'Exportieren';
   cButtonCaptionImport = 'Importieren';
@@ -180,6 +174,11 @@ resourcestring
   cMessagesPlausibilityStatsNone = 'Plausibilität: —';
   cMessagesNoRaceSelectedForAssign =
     'Bitte zuerst ein Rennen in der Zeitmessung auswählen.';
+  cMessagesManualPassingPreviewNone = 'Fahrer / Chip';
+  cMessagesManualPassingPreviewFmt = '%s · Chip %s';
+  cMessagesManualPassingPreviewNoChip = '%s · kein Chip';
+  cMessagesManualPassingNoActiveRace =
+    'Kein aktives Rennen (Vorbereitung / Gestartet / Neutralisiert) verfügbar.';
   cMessagesChipUnassignConfirm = 'Chip-Zuordnung für %d Teilnehmer wirklich beenden?';
   cMessagesAssignmentHistoryEmpty = 'Keine Chip-Zuordnungen für dieses Rennen.';
   cMessagesWarmUpChipConflictsTitle = 'Chip-Konflikte vor Vorbereitung';
@@ -206,6 +205,10 @@ type
   TRaceStates = set of TRaceStatus;
 
 const
+  cPassingImageValid = 0;
+  cPassingImageInvalid = 1;
+  cPassingImageManual = 2;
+  cPassingImageFlagged = 3;
   cUnassignedPassingsDisplayLimit = 500;
   (* Race statuses that block parallel chip reuse (Plan 2). *)
   cActiveRaceStatusesForChipConflict: TRaceStates = [rsWarmUp, rsStarted, rsNeutralized];

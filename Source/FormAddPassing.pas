@@ -5,8 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Mask,
-  Data.SqlExpr, DataModule, Vcl.ComCtrls, Generics.Collections,
-  DecoderInterface, SmartTiming.Consts, SmartTiming.Cache;
+  DataModule, Vcl.ComCtrls, DecoderInterface, SmartTiming.Consts;
 
 type
   TFormManuallyAddPassing = class(TForm)
@@ -19,6 +18,9 @@ type
     PanelControls: TPanel;
     PanelGrid: TPanel;
     ListViewCompetitors: TListView;
+    LabelRace: TLabel;
+    LabelPreview: TLabel;
+    ComboBoxRace: TComboBox;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -27,17 +29,24 @@ type
     procedure ButtonOKClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure ListViewCompetitorsDblClick(Sender: TObject);
+    procedure ListViewCompetitorsClick(Sender: TObject);
+    procedure ComboBoxRaceChange(Sender: TObject);
+    procedure EditBIBChange(Sender: TObject);
   private
-    FSQLDataSet: TSQLDataSet;
     FHour: Word;
     FMin: Word;
     FSec: Word;
     FMs: Word;
-    FRecentlyUsed: TList<Integer>;
+    FUpdatingUI: Boolean;
 
     procedure AddPassingForBib(ABib: Integer);
     procedure SetTime(ATime: TDatetime);
     function GetTime: TDatetime;
+    function GetSelectedRaceId: Integer;
+    procedure FillRaceCombo;
+    procedure ReloadCompetitors;
+    procedure UpdatePreview;
+    procedure SelectListItemForBib(const ABibText: string);
   end;
 
 implementation
@@ -45,7 +54,7 @@ implementation
 {$R *.dfm}
 
 uses
-  SmartTiming.Controller, FormMain;
+  SmartTiming.Controller, SmartTiming.Tools, FormMain, RaceEngine.Custom;
 
 {==============================================================================}
 procedure TFormManuallyAddPassing.FormActivate(Sender: TObject);
@@ -53,16 +62,16 @@ begin
   EditBIB.SetFocus;
 end;
 
+{==============================================================================}
 procedure TFormManuallyAddPassing.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  FreeAndNil(FSQLDataSet);
   Action := caHide;
 end;
 
 {==============================================================================}
 procedure TFormManuallyAddPassing.FormCreate(Sender: TObject);
 begin
-  FRecentlyUsed := TList<Integer>.Create;
+  FUpdatingUI := False;
 end;
 
 {==============================================================================}
@@ -75,25 +84,150 @@ end;
 {==============================================================================}
 procedure TFormManuallyAddPassing.FormDestroy(Sender: TObject);
 begin
-  FreeAndNil(FRecentlyUsed);
+  { no owned state }
+end;
+
+{==============================================================================}
+function TFormManuallyAddPassing.GetSelectedRaceId: Integer;
+begin
+  Result := -1;
+  if ComboBoxRace.ItemIndex < 0 then
+    Exit;
+  Result := Integer(ComboBoxRace.Items.Objects[ComboBoxRace.ItemIndex]);
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.FillRaceCombo;
+var
+  lRaceId: Integer;
+  lRaceItem: TRaceItem;
+  lDefaultRaceId: Integer;
+  lText: string;
+  lIndex: Integer;
+  i: Integer;
+begin
+  lDefaultRaceId := GFormMain.GetSelectedRaceId;
+  ComboBoxRace.Items.BeginUpdate;
+  try
+    ComboBoxRace.Items.Clear;
+    for lRaceId in GSmartTimingController.RaceList.Keys do
+    begin
+      if not GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) then
+        Continue;
+      if not (lRaceItem.Status in cActiveRaceStatusesForChipConflict) then
+        Continue;
+      lText := FormatDatetime('hh:mm', lRaceItem.StartTime) + ' - ' + lRaceItem.Title +
+        ' (' + SmartTimingTools.GetRaceStatusStringFromEnum(lRaceItem.Status) + ')';
+      ComboBoxRace.Items.AddObject(lText, TObject(lRaceId));
+    end;
+    ComboBoxRace.Sorted := True;
+  finally
+    ComboBoxRace.Items.EndUpdate;
+  end;
+
+  lIndex := -1;
+  if lDefaultRaceId >= 0 then
+    for i := 0 to ComboBoxRace.Items.Count - 1 do
+      if Integer(ComboBoxRace.Items.Objects[i]) = lDefaultRaceId then
+      begin
+        lIndex := i;
+        Break;
+      end;
+  if (lIndex < 0) and (ComboBoxRace.Items.Count > 0) then
+    lIndex := 0;
+  ComboBoxRace.ItemIndex := lIndex;
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.ReloadCompetitors;
+begin
+  MainDataModule.FillCompetitorsInRace(GetSelectedRaceId, ListViewCompetitors,
+    Trim(EditBIB.Text));
+  UpdatePreview;
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.UpdatePreview;
+var
+  lRaceId: Integer;
+  lBib: Integer;
+  lCompetitorId: Integer;
+  lName, lTeam, lClass, lChipId: string;
+begin
+  lRaceId := GetSelectedRaceId;
+  if (lRaceId < 0) or (Trim(EditBIB.Text) = '') or not TryStrToInt(Trim(EditBIB.Text), lBib) then
+  begin
+    LabelPreview.Caption := cMessagesManualPassingPreviewNone;
+    LabelPreview.Font.Color := clGrayText;
+    Exit;
+  end;
+
+  if not MainDataModule.TryGetCompetitorInRaceByBib(lRaceId, lBib, lCompetitorId,
+       lName, lTeam, lClass, lChipId) then
+  begin
+    LabelPreview.Caption := cMessagesManualPassingPreviewNone;
+    LabelPreview.Font.Color := clGrayText;
+    Exit;
+  end;
+
+  LabelPreview.Font.Color := clWindowText;
+  if lChipId = '' then
+    LabelPreview.Caption := Format(cMessagesManualPassingPreviewNoChip, [lName])
+  else
+    LabelPreview.Caption := Format(cMessagesManualPassingPreviewFmt, [lName, lChipId]);
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.SelectListItemForBib(const ABibText: string);
+var
+  i: Integer;
+  lItem: TListItem;
+begin
+  ListViewCompetitors.Selected := nil;
+  if ABibText = '' then
+    Exit;
+  for i := 0 to ListViewCompetitors.Items.Count - 1 do
+  begin
+    lItem := ListViewCompetitors.Items[i];
+    if lItem.Caption.StartsWith(ABibText) then
+    begin
+      lItem.Selected := True;
+      lItem.MakeVisible(False);
+      Exit;
+    end;
+  end;
 end;
 
 {==============================================================================}
 procedure TFormManuallyAddPassing.FormShow(Sender: TObject);
-var
-  lItem: TListItem;
-  lBib: Integer;
 begin
-  SetTime(Now);
-
-  ListViewCompetitors.Items.Clear;
-  for lBib in FRecentlyUsed do
-  begin
-    lItem := ListViewCompetitors.Items.Add;
-    lItem.Caption := lBib.ToString;
+  FUpdatingUI := True;
+  try
+    SetTime(Now);
+    EditBIB.Text := '';
+    FillRaceCombo;
+    ReloadCompetitors;
+  finally
+    FUpdatingUI := False;
   end;
+  EditBIB.SetFocus;
+end;
 
-  EditBib.SetFocus;
+{==============================================================================}
+procedure TFormManuallyAddPassing.ComboBoxRaceChange(Sender: TObject);
+begin
+  if FUpdatingUI then
+    Exit;
+  ReloadCompetitors;
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.EditBIBChange(Sender: TObject);
+begin
+  if FUpdatingUI then
+    Exit;
+  ReloadCompetitors;
+  SelectListItemForBib(Trim(EditBIB.Text));
 end;
 
 {==============================================================================}
@@ -106,35 +240,55 @@ end;
 procedure TFormManuallyAddPassing.ButtonOKClick(Sender: TObject);
 var
   lBib: Integer;
+  lRaceId: Integer;
 begin
-  if EditBib.Text = '' then
+  lRaceId := GetSelectedRaceId;
+  if lRaceId < 0 then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesManualPassingNoActiveRace, '', [tcbOk], tcbOk);
+    Exit;
+  end;
+
+  if Trim(EditBIB.Text) = '' then
   begin
     Close;
     Exit;
   end;
 
-  lBib := StrToInt(EditBib.Text);
-  if not FRecentlyUsed.Contains(lBib) then
-    FRecentlyUsed.Insert(0, lBib);
+  if not TryStrToInt(Trim(EditBIB.Text), lBib) then
+    Exit;
+
   AddPassingForBib(lBib);
   SetTime(Now);
+  EditBIB.Clear;
+  EditBIB.SetFocus;
 end;
 
 {==============================================================================}
 procedure TFormManuallyAddPassing.AddPassingForBib(ABib: Integer);
 var
   lPassing: TPassing;
+  lRaceId: Integer;
+  lCompetitorId: Integer;
+  lName, lTeam, lClass, lChipId: string;
 begin
+  lRaceId := GetSelectedRaceId;
+  if lRaceId < 0 then
+    Exit;
+
+  if not MainDataModule.TryGetCompetitorInRaceByBib(lRaceId, ABib, lCompetitorId,
+       lName, lTeam, lClass, lChipId) then
+    lChipId := MainDataModule.GetActiveTransponderIdForBib(ABib, lRaceId);
+
   lPassing.PassingNumber := 0;
-  lPassing.ChipId := MainDataModule.GetActiveTransponderIdForBib(ABib,
-    GFormMain.GetSelectedRaceId);
+  lPassing.ChipId := lChipId;
   lPassing.PassingTime := GetTime + Trunc(Now);
   lPassing.SignalStrength := 100;
   lPassing.Hits := 90;
   lPassing.Flags := 0;
   lPassing.Sport := sSportsIdCycling;
   lPassing.DecoderId := 'MANUAL';
-  lPassing.RaceId := 0;
+  lPassing.RaceId := lRaceId;
   GSmartTimingController.AddManualPassing(lPassing);
 end;
 
@@ -146,14 +300,41 @@ begin
   lFormatSettings.TimeSeparator := ':';
   lFormatSettings.DecimalSeparator := '.';
   lFormatSettings.LongTimeFormat := 'HH:mm:ss.zzz';
-  result := StrToTime(EditTime.Text, lFormatSettings);
+  Result := StrToTime(EditTime.Text, lFormatSettings);
+end;
+
+{==============================================================================}
+procedure TFormManuallyAddPassing.ListViewCompetitorsClick(Sender: TObject);
+begin
+  if ListViewCompetitors.Selected = nil then
+    Exit;
+  FUpdatingUI := True;
+  try
+    EditBIB.Text := ListViewCompetitors.Selected.Caption;
+  finally
+    FUpdatingUI := False;
+  end;
+  UpdatePreview;
 end;
 
 {==============================================================================}
 procedure TFormManuallyAddPassing.ListViewCompetitorsDblClick(Sender: TObject);
+var
+  lBib: Integer;
 begin
-  AddPassingForBib(StrToInt(ListViewCompetitors.Selected.Caption));
+  if ListViewCompetitors.Selected = nil then
+    Exit;
+  if not TryStrToInt(ListViewCompetitors.Selected.Caption, lBib) then
+    Exit;
+  FUpdatingUI := True;
+  try
+    EditBIB.Text := ListViewCompetitors.Selected.Caption;
+  finally
+    FUpdatingUI := False;
+  end;
+  AddPassingForBib(lBib);
   SetTime(Now);
+  UpdatePreview;
 end;
 
 end.

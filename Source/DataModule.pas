@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, Data.DbxSqlite, Data.FMTBcd, DBGrids,
   Datasnap.DBClient, Datasnap.Provider, Data.DB, Data.SqlExpr, DBCtrls,
-  Graphics, Dialogs, Registry, Windows, JclFileUtils, Variants,
+  Graphics, Dialogs, Registry, Windows, JclFileUtils, Variants, Vcl.ComCtrls,
   SmartTiming.Consts, SmartTiming.Tools, DecoderInterface, DateUtils,
   StrUtils;
 
@@ -77,6 +77,10 @@ type
     procedure SetRaceStatus(ARaceId: integer; ARaceStatus: TRaceStatus);
     procedure GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
     function GetActiveTransponderIdForBib(ABib: integer; APreferredRaceId: Integer = -1): string;
+    function TryGetCompetitorInRaceByBib(ARaceId, ABib: Integer; out ACompetitorId: Integer;
+      out AName, ATeam, AClass, AChipId: string): Boolean;
+    procedure FillCompetitorsInRace(ARaceId: Integer; AList: TListView;
+      const ABibFilter: string = '');
 
     procedure SetParticipantState(ARaceId: Integer; ACompetitorIDs: TArray<Integer>; AParticipantState: TParticipantState);
 
@@ -798,6 +802,116 @@ begin
     Result := lFallback;
   finally
     FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.TryGetCompetitorInRaceByBib(ARaceId, ABib: Integer;
+  out ACompetitorId: Integer; out AName, ATeam, AClass, AChipId: string): Boolean;
+var
+  lResultSet: TDataSet;
+  lAssignment: TTransponderAssignment;
+begin
+  Result := False;
+  ACompetitorId := -1;
+  AName := '';
+  ATeam := '';
+  AClass := '';
+  AChipId := '';
+  if (ARaceId < 0) or (ABib <= 0) then
+    Exit;
+
+  SQLConnection.Execute(Format(
+    'SELECT C.COMPETITORID, C.LASTNAME, C.FIRSTNAME, C.TEAM, C.CLASS, C.CHIPID ' +
+    'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+    'WHERE P.RACEID = %d AND C.BIB = %d',
+    [ARaceId, ABib]), nil, lResultSet);
+  try
+    if (lResultSet = nil) or lResultSet.IsEmpty then
+      Exit;
+    ACompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
+    AName := Trim(lResultSet.FieldByName('LASTNAME').AsString + ', ' +
+      lResultSet.FieldByName('FIRSTNAME').AsString);
+    if AName = ',' then
+      AName := '';
+    ATeam := lResultSet.FieldByName('TEAM').AsString;
+    AClass := lResultSet.FieldByName('CLASS').AsString;
+    if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
+         ARaceId, ACompetitorId, lAssignment) then
+      AChipId := lAssignment.ChipId
+    else
+      AChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
+    Result := True;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+procedure TMainDataModule.FillCompetitorsInRace(ARaceId: Integer; AList: TListView;
+  const ABibFilter: string);
+var
+  lResultSet: TDataSet;
+  lItem: TListItem;
+  lBib: Integer;
+  lFilter: string;
+  lAssignment: TTransponderAssignment;
+  lCompetitorId: Integer;
+  lChipId: string;
+  lName: string;
+begin
+  if AList = nil then
+    Exit;
+  AList.Items.BeginUpdate;
+  try
+    AList.Items.Clear;
+    if ARaceId < 0 then
+      Exit;
+
+    lFilter := Trim(ABibFilter);
+    SQLConnection.Execute(Format(
+      'SELECT C.COMPETITORID, C.BIB, C.LASTNAME, C.FIRSTNAME, C.TEAM, C.CLASS, C.CHIPID ' +
+      'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+      'WHERE P.RACEID = %d ORDER BY C.BIB',
+      [ARaceId]), nil, lResultSet);
+    try
+      if (lResultSet = nil) or lResultSet.IsEmpty then
+        Exit;
+      lResultSet.First;
+      while not lResultSet.Eof do
+      begin
+        lBib := lResultSet.FieldByName('BIB').AsInteger;
+        if (lFilter <> '') and not lBib.ToString.StartsWith(lFilter) then
+        begin
+          lResultSet.Next;
+          Continue;
+        end;
+
+        lCompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
+        if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
+             ARaceId, lCompetitorId, lAssignment) then
+          lChipId := lAssignment.ChipId
+        else
+          lChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
+
+        lName := Trim(lResultSet.FieldByName('LASTNAME').AsString + ', ' +
+          lResultSet.FieldByName('FIRSTNAME').AsString);
+        if lName = ',' then
+          lName := '';
+        lItem := AList.Items.Add;
+        lItem.Caption := lBib.ToString;
+        lItem.SubItems.Add(lName);
+        lItem.SubItems.Add(lResultSet.FieldByName('TEAM').AsString);
+        lItem.SubItems.Add(lChipId);
+        lItem.SubItems.Add(lResultSet.FieldByName('CLASS').AsString);
+        lItem.Data := Pointer(lCompetitorId);
+        lResultSet.Next;
+      end;
+    finally
+      FreeAndNil(lResultSet);
+    end;
+  finally
+    AList.Items.EndUpdate;
   end;
 end;
 
