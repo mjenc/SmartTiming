@@ -76,6 +76,7 @@ type
     FRankingSQLClassSorting: string;
     FFormatSuffix: string;
     FDefaultListFormatRanking: string;
+    FResultsJsonFieldTitles: string;
 
     function GetPassingDisplay: TWinControl; virtual;
     procedure OnDrawListItem(ASender: TCustomListView; AItem: TListItem; AState: TCustomDrawState; var ADefaultDraw: Boolean);
@@ -130,6 +131,10 @@ type
 
     // ranking
     procedure RefreshRankingDisplay;
+    function GetRankingSQL(AGroupByClass: Boolean;
+      const AExtraWhere: string = ''): string; virtual;
+    function GetResultSQL(AGroupByClass: Boolean): string; virtual;
+    function GetResultsJsonFieldTitles: string; virtual;
     property RankingDisplay: TCustomGrid read GetRankingGrid;
     property RankingDataSet: TDataSet read GetRankingDataSet;
     property RankingGroupedByClass: boolean read FRankingGroupedByClass write SetRankingGroupedByClass;
@@ -544,6 +549,52 @@ begin
 end;
 
 {==============================================================================}
+function TCustomRaceEngine.GetRankingSQL(AGroupByClass: Boolean;
+  const AExtraWhere: string): string;
+var
+  lGroup: string;
+  lSort: string;
+begin
+  if AGroupByClass then
+  begin
+    lGroup := FRankingSQLClassGrouping;
+    lSort := FRankingSQLClassSorting;
+  end
+  else
+  begin
+    lGroup := '';
+    lSort := '';
+  end;
+  Result := Format(FRankingSQLFormat,
+    [FRaceItem.Id.ToString, lGroup, lSort, AExtraWhere]);
+end;
+
+{==============================================================================}
+function TCustomRaceEngine.GetResultSQL(AGroupByClass: Boolean): string;
+var
+  lGroup: string;
+  lSort: string;
+begin
+  if AGroupByClass then
+  begin
+    lGroup := FRankingSQLClassGrouping;
+    lSort := FRankingSQLClassSorting;
+  end
+  else
+  begin
+    lGroup := '';
+    lSort := '';
+  end;
+  Result := Format(FResultSQLFormat, [FRaceItem.Id.ToString, lGroup, lSort]);
+end;
+
+{==============================================================================}
+function TCustomRaceEngine.GetResultsJsonFieldTitles: string;
+begin
+  Result := FResultsJsonFieldTitles;
+end;
+
+{==============================================================================}
 procedure TCustomRaceEngine.SetRankingGroupedByClass(AValue: boolean);
 begin
   FRankingGroupedByClass := AValue;
@@ -725,7 +776,7 @@ begin
   lResultSet := nil;
   try
     MainDataModule.FillReadOnlyDataSetForSQL(
-      Format(FResultSQLFormat, [FRaceItem.Id.ToString, '']),
+      GetResultSQL(False),
       lResultSet);
 
     lResultSet.First;

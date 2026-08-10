@@ -22,9 +22,13 @@ Ranking-SQL, Excel-Templates und HTTP-`/results` sind auf Time-Trial-Views ausge
 
 ## Schritte
 
-1. ITT-Refactor: bestehende Views hinter Engine-Methoden kapseln (Verhalten unverändert).
-2. Servlet: `RaceId` → RaceItem/Engine → SQL/JSON.
-3. Export und Print analog umstellen.
+1. ITT-Refactor: bestehende Views hinter Engine-Methoden kapseln (Verhalten unverändert). — **erledigt**
+   (`GetRankingSQL` / `GetResultSQL` / `GetResultsJsonFieldTitles` auf `TCustomRaceEngine`;
+   ITT setzt Format-Strings inkl. optionalem `%3:s`-Filter; UI-Refresh über diese API)
+2. Servlet: `RaceId` → RaceItem/Engine → SQL/JSON. — **erledigt**
+   (`FillResultResponse` ohne hardcodiertes `RANKING_TIMETRIAL`)
+3. Export und Print analog umstellen. — **erledigt**
+   (Excel Export/Print + CSV über `GetResultSQL`)
 4. Mit Skelett-Engines aus Plan 1: Platzhalter-Ranking (z. B. Laps/Zeit), bis Fachregeln stehen.
 5. Views für Circuit/Criterium/TTT anlegen, sobald Scoring definiert ist.
 

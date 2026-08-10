@@ -54,7 +54,7 @@ begin
     'SELECT CURRENTRANKING, CLASS, BIB, NAME, TEAM, RANKINGTIME, GAP, ' +
     'FINISHTIME, STARTTIME, DNS, DNF, DSQ, PENALTIES, PARTICIPATIONID, COMPETITORID ' +
     'FROM RANKING_TIMETRIAL%1:s ' +
-    'WHERE RACEID = %0:s ' +
+    'WHERE RACEID = %0:s %3:s ' +
     'ORDER BY %2:s DNS, DNF, DSQ, RANKINGTIME IS NULL, LAPS DESC, RANKINGTIME, STARTTIME';
   FResultSQLFormat :=
     'SELECT CURRENTRANKING, CLASS, BIB, NAME, TEAM, UCIID, RANKINGTIME, GAP, ' +
@@ -67,6 +67,8 @@ begin
   FRankingSQLClassSorting := 'CLASS,';
 
   FFormatSuffix := '.TimeTrial';
+  FResultsJsonFieldTitles :=
+    'Platz,Klasse,Nr,Name,Team,Wertungszeit,Diff,Zielzeit,Startzeit,DNS,DNF,DSQ,Strafen';
   FDefaultListFormatRanking :=
     '{"columns":[' +
     '{"Alignment":0,"Fieldname":"CLASS","Visible":true,"Width":100,"Title":"Klasse","Index":0},' +
@@ -89,7 +91,7 @@ begin
 
   FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsStopped];
 
-  FRankingQuery := Format(FRankingSQLFormat, [ARaceItem.Id.ToString, '', '']);
+  FRankingQuery := GetRankingSQL(False);
   FSQLDataSetRankings.CommandText := FRankingQuery;
 
   FRankingGridFormatInitialized := false;
@@ -133,7 +135,7 @@ begin
     FSQLSortingString := '';
   end;
 
-  FRankingQuery := Format(FRankingSQLFormat, [FRaceItem.Id.ToString, FSQLGroupingString, FSQLSortingString]);
+  FRankingQuery := GetRankingSQL(AValue);
   FRankingGridFormatInitialized := false;
   inherited SetRankingGroupedByClass(AValue);
 end;
@@ -418,7 +420,6 @@ procedure TTimeTrialRaceEngine.PrintResults(AGroupByClass: boolean);
 var
   lExcelFiller: TExcelFiller;
   lResultSet: TSQLDataSet;
-  lGroupByClassString: string;
 begin
   lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
   try
@@ -426,13 +427,7 @@ begin
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
     lExcelFiller.CommuniqueRaceId := FRaceItem.Id;
     lResultSet := nil;
-    if AGroupByClass then
-      lGroupByClassString := FRankingSQLClassGrouping
-    else
-      lGroupByClassString := '';
-    MainDataModule.FillReadOnlyDataSetForSQL(
-      Format(FResultSQLFormat, [FRaceItem.Id.ToString, lGroupByClassString]),
-      lResultSet);
+    MainDataModule.FillReadOnlyDataSetForSQL(GetResultSQL(AGroupByClass), lResultSet);
 
     lExcelFiller.FillDataRowsAndPrint(lResultSet, AGroupByClass);
   finally
@@ -446,9 +441,6 @@ procedure TTimeTrialRaceEngine.ExportResultsToExcelTemplate(const AOutputFile: s
 var
   lExcelFiller: TExcelFiller;
   lResultSet: TSQLDataSet;
-  lGroupByClassString: string;
-  lSQLSortingString: string;
-  lSQL: string;
 begin
   lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
   try
@@ -456,18 +448,7 @@ begin
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
     lExcelFiller.CommuniqueRaceId := FRaceItem.Id;
     lResultSet := nil;
-    if AGroupByClass then
-    begin
-      lGroupByClassString := FRankingSQLClassGrouping;
-      lSQLSortingString := FSQLSortingString;
-    end
-    else
-    begin
-      lGroupByClassString := '';
-      lSQLSortingString := '';
-    end;
-    lSQL := Format(FResultSQLFormat, [FRaceItem.Id.ToString, lGroupByClassString, lSQLSortingString]);
-    MainDataModule.FillReadOnlyDataSetForSQL(lSQL, lResultSet);
+    MainDataModule.FillReadOnlyDataSetForSQL(GetResultSQL(AGroupByClass), lResultSet);
 
     lExcelFiller.FillDataRowsAndSave(gStdDataPath + Format('Results-%s.xlsx', [FRaceItem.Title]),
                                      lResultSet,

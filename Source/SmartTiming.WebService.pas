@@ -201,9 +201,11 @@ procedure TSmartTimingServlet.FillResultResponse(ARequestInfo: TIdHTTPRequestInf
 var
   lDataSet: TSQLDataSet;
   lRaceIdStr: string;
-  lGrouped: string;
-  lSorting: string;
+  lRaceId: Integer;
+  lRaceItem: TRaceItem;
+  lGrouped: Boolean;
   lFilter: string;
+  lSql: string;
 begin
   try
     LogOnDebug(cLogger, ['FillResultResponse']);
@@ -211,31 +213,30 @@ begin
     AResponseInfo.ContentType := 'text/json';
 
     lRaceIdStr := ARequestInfo.Params.Values['raceid'];
-    if lRaceIdStr.IsEmpty then
+    if lRaceIdStr.IsEmpty or not TryStrToInt(lRaceIdStr, lRaceId) then
       Exit;
 
-    if ARequestInfo.Params.Values['grouped'] = 'true' then
-    begin
-      lGrouped := '_BYCLASS';
-      lSorting := 'CLASS,';
-    end;
+    if not GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) then
+      Exit;
+    if (lRaceItem = nil) or (lRaceItem.RaceEngine = nil) then
+      Exit;
 
+    lGrouped := ARequestInfo.Params.Values['grouped'] = 'true';
+    lFilter := '';
     if ARequestInfo.Params.Values['finishedonly'] = 'true' then
       lFilter := 'AND RANKINGTIME IS NOT NULL OR DNS != 0 OR DNF != 0 OR DSQ != 0';
+
+    lSql := lRaceItem.RaceEngine.GetRankingSQL(lGrouped, lFilter);
+    if Trim(lSql) = '' then
+      Exit;
 
     AResponseInfo.ResponseNo := 200;
 
     lDataSet := TSQLDataSet.Create(nil);
     try
-      MainDataModule.FillReadOnlyDataSetForSQL(Format(
-        'SELECT CURRENTRANKING, CLASS, BIB, NAME, TEAM, RANKINGTIME, GAP, ' +
-        'FINISHTIME, STARTTIME, DNS, DNF, DSQ, PENALTIES, PARTICIPATIONID, COMPETITORID ' +
-        'FROM RANKING_TIMETRIAL%1:s ' +
-        'WHERE RACEID = %0:s %3:s ' +
-        'ORDER BY %2:s DNS, DNF, DSQ, RANKINGTIME IS NULL, LAPS DESC, RANKINGTIME, STARTTIME',
-        [lRaceIdStr, lGrouped, lSorting, lFilter]),
-        lDataSet);
-      AResponseInfo.ContentText := TMainDataModule.GetJSONFromDataSet(lDataSet, 'Platz,Klasse,Nr,Name,Team,Wertungszeit,Diff,Zielzeit,Startzeit,DNS,DNF,DSQ,Strafen');
+      MainDataModule.FillReadOnlyDataSetForSQL(lSql, lDataSet);
+      AResponseInfo.ContentText := TMainDataModule.GetJSONFromDataSet(lDataSet,
+        lRaceItem.RaceEngine.GetResultsJsonFieldTitles);
     finally
       FreeAndNil(lDataSet);
     end;
