@@ -413,6 +413,7 @@ begin
   try
     lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListTT.xlsx';
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
+    lExcelFiller.CommuniqueText := MainDataModule.GetPenaltyCommuniqueText(FRaceItem.Id);
     lResultSet := nil;
     if AGroupByClass then
       lGroupByClassString := FRankingSQLClassGrouping
@@ -442,6 +443,7 @@ begin
   try
     lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListTT.xlsx';
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
+    lExcelFiller.CommuniqueText := MainDataModule.GetPenaltyCommuniqueText(FRaceItem.Id);
     lResultSet := nil;
     if AGroupByClass then
     begin

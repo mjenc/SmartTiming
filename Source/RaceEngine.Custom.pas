@@ -30,7 +30,11 @@ type
   TCustomRaceEngine = class
   private
     function GetSelectedCompetitorIds: TArray<integer>;
+    function TryGetFirstSelectedParticipationId(out AParticipationId: Integer): Boolean;
     procedure SetParticipantState(AState: TParticipantState);
+    (* Plan 6: Dialog → DB/Cache already done → Recalc → UI. *)
+    procedure AfterPassingCorrection(ARebuildProtocol: Boolean = True);
+    procedure AfterRankingCorrection;
     procedure OnProtocolFilterChange(ASender: TObject);
 
   protected
@@ -152,7 +156,7 @@ uses
   DataModule, FormMain, FormCompetitorDetails, FormPenalty, FormTime,
   SmartTiming.Cache, DateUtils, FormAssignCompetitorToTransponder,
   FormCompetitorPassings, SmartTiming.TransponderAssignment, Data.DBXCommon,
-  System.Generics.Defaults;
+  System.Generics.Defaults, System.Variants;
 
 {==============================================================================}
 destructor TRaceItem.Destroy;
@@ -785,14 +789,52 @@ begin
 end;
 
 {==============================================================================}
+function TCustomRaceEngine.TryGetFirstSelectedParticipationId(
+  out AParticipationId: Integer): Boolean;
+var
+  lIds: TArray<Integer>;
+  lCompetitorId: Integer;
+begin
+  Result := False;
+  AParticipationId := -1;
+  lIds := GetSelectedCompetitorIds;
+  if Length(lIds) = 0 then
+    Exit;
+  lCompetitorId := lIds[0];
+  Result := MainDataModule.TryGetParticipationId(FRaceItem.Id, lCompetitorId, AParticipationId);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.AfterPassingCorrection(ARebuildProtocol: Boolean);
+begin
+  FLastChangeTimestamp := Now;
+  RecalcCountingLaps;
+  ReassignLapsForRace;
+  if ARebuildProtocol then
+    RebuildProtocolDisplay;
+  RefreshRankingDisplay;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.AfterRankingCorrection;
+begin
+  FLastChangeTimestamp := Now;
+  RefreshRankingDisplay;
+end;
+
+{==============================================================================}
 procedure TCustomRaceEngine.SetParticipantState(AState: TParticipantState);
 var
   lCompetitorIDs: TArray<integer>;
 begin
   lCompetitorIDs := GetSelectedCompetitorIds;
+  if Length(lCompetitorIDs) = 0 then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesNoParticipantSelected, '', [tcbOk], tcbOk);
+    Exit;
+  end;
   MainDataModule.SetParticipantState(FRaceItem.Id, lCompetitorIDs, AState);
-  FLastChangeTimestamp := Now;
-  RefreshRankingDisplay;
+  AfterRankingCorrection;
 end;
 
 {==============================================================================}
@@ -801,9 +843,13 @@ var
   lCompetitorIDs: TArray<integer>;
 begin
   lCompetitorIDs := GetSelectedCompetitorIds;
+  if Length(lCompetitorIDs) = 0 then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesNoParticipantSelected, '', [tcbOk], tcbOk);
+    Exit;
+  end;
   MainDataModule.RemoveCompetitorsFromRace(GSmartTimingController.Event.EventId, FRaceItem.Id, lCompetitorIDs);
-  FLastChangeTimestamp := Now;
-  RefreshRankingDisplay;
+  AfterRankingCorrection;
 end;
 
 {==============================================================================}
@@ -834,31 +880,83 @@ end;
 procedure TCustomRaceEngine.OnPenalties(ASender: TObject);
 var
   lForm: TFormEditPenalty;
+  lParticipationId: Integer;
+  lText: string;
+  lFields: TArray<string>;
+  lValues: TArray<Variant>;
 begin
+  if not TryGetFirstSelectedParticipationId(lParticipationId) then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesNoParticipantSelected, '', [tcbOk], tcbOk);
+    Exit;
+  end;
+
   lForm := TFormEditPenalty.Create(nil);
   try
-    lForm.MemoPenalty.Text := '';
-    if not lForm.ShowModal = mrOK then
+    lForm.MemoPenalty.Text := MainDataModule.GetParticipationStringField(lParticipationId, 'PENALTIES');
+    if lForm.ShowModal <> mrOK then
       Exit;
-
+    lText := Trim(lForm.MemoPenalty.Text);
   finally
     FreeAndNil(lForm);
   end;
+
+  SetLength(lFields, 1);
+  SetLength(lValues, 1);
+  lFields[0] := 'PENALTIES';
+  if lText = '' then
+    lValues[0] := Null
+  else
+    lValues[0] := lText;
+  MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
+  AfterRankingCorrection;
 end;
 
 {==============================================================================}
 procedure TCustomRaceEngine.OnEditTime(ASender: TObject);
 var
   lForm: TFormEditTime;
+  lParticipationId: Integer;
+  lCurrent: string;
+  lTime: TDateTime;
+  lFields: TArray<string>;
+  lValues: TArray<Variant>;
+  lFormatSettings: TFormatSettings;
 begin
+  if not TryGetFirstSelectedParticipationId(lParticipationId) then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesNoParticipantSelected, '', [tcbOk], tcbOk);
+    Exit;
+  end;
+
+  lCurrent := Trim(MainDataModule.GetParticipationStringField(lParticipationId, 'FINISHTIME'));
   lForm := TFormEditTime.Create(nil);
   try
-    lForm.Time := Frac(Now);
-    if not lForm.ShowModal = mrOK then
+    if lCurrent <> '' then
+    begin
+      lFormatSettings := TFormatSettings.Create;
+      lFormatSettings.TimeSeparator := ':';
+      lFormatSettings.DecimalSeparator := '.';
+      if TryStrToTime(lCurrent, lTime, lFormatSettings) then
+        lForm.Time := Frac(lTime)
+      else
+        lForm.Time := Frac(Now);
+    end
+    else
+      lForm.Time := Frac(Now);
+    if lForm.ShowModal <> mrOK then
       Exit;
+    lTime := Frac(lForm.Time);
   finally
     FreeAndNil(lForm);
   end;
+
+  SetLength(lFields, 1);
+  SetLength(lValues, 1);
+  lFields[0] := 'FINISHTIME';
+  lValues[0] := FormatDateTime('hh:nn:ss.zzz', lTime);
+  MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
+  AfterRankingCorrection;
 end;
 
 {==============================================================================}
@@ -901,9 +999,7 @@ var
 begin
   lPassing := TPassingStore.GetSingleton.GetPassing(APassingNumber);
   GSmartTimingController.UpdatePassing(APassingNumber, lPassing.PassingTime, AStatus);
-  RecalcCountingLaps;
-  ReassignLapsForRace;
-  RebuildProtocolDisplay;
+  AfterPassingCorrection;
 end;
 
 {==============================================================================}
@@ -1065,9 +1161,6 @@ var
   lPassing: TPassing;
   lCompetitorId: Integer;
   lResult: TAssignmentOperationResult;
-  lBIB: Integer;
-  lName: string;
-  lTeamClub: string;
 begin
   lListView := TListView(FPassingDisplay);
   lCurrentItem := lListView.Selected;
@@ -1076,8 +1169,16 @@ begin
 
   lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
   lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
-  if Trim(lPassing.ChipId) = '' then
+  if lPassing.IsSystemMarker then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesPassingIsSystemMarker, '', [tcbOk], tcbOk);
     Exit;
+  end;
+  if Trim(lPassing.ChipId) = '' then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesChangeCompetitorNoChip, '', [tcbOk], tcbOk);
+    Exit;
+  end;
 
   if not TFormAssignCompetitor.Execute(nil, FRaceItem.Id, lCompetitorId) then
     Exit;
@@ -1089,12 +1190,10 @@ begin
     Exit;
   end;
 
-  MainDataModule.GetCompetitorInfoForPassing(lPassing, lBIB, lName, lTeamClub);
-  lCurrentItem.Caption := lBIB.ToString;
-  lCurrentItem.SubItems[cPassingItemSubItemIdxName] := lName;
-  RecalcCountingLaps;
-  ReassignLapsForRace;
-  RebuildProtocolDisplay;
+  TPassingStore.GetSingleton.UpdatePassingRaceId(lPassingNumber, FRaceItem.Id);
+  TPassingStore.GetSingleton.UpdatePassingDomainFields(lPassingNumber, lPassing.LapIndex,
+    lCompetitorId);
+  AfterPassingCorrection;
 end;
 
 {==============================================================================}
@@ -1114,6 +1213,11 @@ begin
 
   lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
   lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+  if lPassing.IsSystemMarker then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesPassingIsSystemMarker, '', [tcbOk], tcbOk);
+    Exit;
+  end;
 
   lForm := TFormEditTime.Create(nil);
   try
@@ -1125,9 +1229,8 @@ begin
     FreeAndNil(lForm);
   end;
 
-  GSmartTimingController.UpdatePassing(lPassingNumber, lNewTime, psValid);
-  lCurrentItem.SubItems[cPassingItemSubItemIdxTime] := FormatDateTime('hh:nn:ss.zzz', lNewTime);
-  RefreshRankingDisplay;
+  GSmartTimingController.UpdatePassing(lPassingNumber, lNewTime, TPassingState(lPassing.PassingStatus));
+  AfterPassingCorrection;
 end;
 
 {==============================================================================}
@@ -1140,7 +1243,10 @@ var
 begin
   lCompetitorIDs := GetSelectedCompetitorIds;
   if Length(lCompetitorIDs) = 0 then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesNoParticipantSelected, '', [tcbOk], tcbOk);
     Exit;
+  end;
 
   if SmartTimingTools.ShowDialog(
        Format(cMessagesChipUnassignConfirm, [Length(lCompetitorIDs)]), '',
@@ -1160,6 +1266,7 @@ begin
 
   if lFailed <> '' then
     SmartTimingTools.ShowDialog(lFailed, '', [tcbOk], tcbOk);
+  AfterPassingCorrection;
 end;
 
 {==============================================================================}
@@ -1207,57 +1314,80 @@ var
   lCurrentItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
+  lPassing: TPassing;
 begin
   lListView := TListView(FPassingDisplay);
   lCurrentItem := lListView.Selected;
   if lCurrentItem = nil then
     Exit;
 
-  if SmartTimingTools.ShowDialog(Format(cMessagesPassingDeleteConfirm, [lCurrentItem.SubItems[cPassingItemSubItemIdxName]]), '', [tcbYes, tcbNo], tcbNo) <> mrYes then
+  lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+  if lPassing.IsSystemMarker then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesPassingIsSystemMarker, '', [tcbOk], tcbOk);
+    Exit;
+  end;
+
+  if SmartTimingTools.ShowDialog(Format(cMessagesPassingDeleteConfirm,
+       [lCurrentItem.SubItems[cPassingItemSubItemIdxName]]), '',
+       [tcbYes, tcbNo], tcbNo) <> mrYes then
     Exit;
 
-  lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
-  lListView.DeleteSelected;
   GSmartTimingController.RemovePassing(lPassingNumber);
+  AfterPassingCorrection;
 end;
 
 {==============================================================================}
 procedure TCustomRaceEngine.OnPassingItemDragDrop(ASender, ASource: TObject; AX, AY: Integer);
 var
-  lDragItem, lDropItem, lCurrentItem, lNextItem: TListItem;
+  lDropItem, lCurrentItem, lNextItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
   lPassingTime: TDatetime;
+  lPassing: TPassing;
+  lChanged: Boolean;
 begin
   if ASender <> ASource then
     Exit;
 
   lListView := TListView(ASender);
-  lDropItem    := lListView.GetItemAt(AX, AY);
+  lDropItem := lListView.GetItemAt(AX, AY);
+  if lDropItem = nil then
+    Exit;
+
+  lChanged := False;
   lCurrentItem := lListView.Selected;
   while lCurrentItem <> nil do
   begin
     lNextItem := lListView.GetNextItem(lCurrentItem, SdAll, [IsSelected]);
-    if lDropItem = nil then
-      lDragItem := lListView.Items.Add
-    else
-      lDragItem := lListView.Items.Insert(lDropItem.Index);
-    lDragItem.SubItems.SetStrings(lCurrentItem.SubItems);
-    lDragItem.Data := lDropItem.Data;
+    if lCurrentItem = lDropItem then
+    begin
+      lCurrentItem := lNextItem;
+      Continue;
+    end;
 
-    // Set time of current item to -1 ms of the Item dropped onto
     lPassingNumber := lDropItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
-    lPassingTime := TPassingStore.GetSingleton.GetPassing(lPassingNumber).PassingTime;
-    lPassingTime.AddMilliSecond(-1);
-    lDragItem.SubItems[cPassingItemSubItemIdxTime] := FormatDatetime('hh:mm:ss.zzz', lPassingTime);
+    lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+    lPassingTime := lPassing.PassingTime;
+    lPassingTime := IncMilliSecond(lPassingTime, -1);
 
     lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
-    GSmartTimingController.UpdatePassing(lPassingNumber, lPassingTime, psValid);
+    lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+    if lPassing.IsSystemMarker then
+    begin
+      lCurrentItem := lNextItem;
+      Continue;
+    end;
 
-    lDragItem.Caption := lCurrentItem.Caption;
-    lCurrentItem.Free;
+    GSmartTimingController.UpdatePassing(lPassingNumber, lPassingTime,
+      TPassingState(lPassing.PassingStatus));
+    lChanged := True;
     lCurrentItem := lNextItem;
   end;
+
+  if lChanged then
+    AfterPassingCorrection;
 end;
 
 {==============================================================================}

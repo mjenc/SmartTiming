@@ -158,6 +158,7 @@
         <DCCReference Include="SmartTiming.Cache.pas"/>
         <DCCReference Include="SmartTiming.TransponderAssignment.pas"/>
         <DCCReference Include="SmartTiming.PassingValidator.pas"/>
+        <DCCReference Include="SmartTiming.CorrectionRegression.pas"/>
         <DCCReference Include="Report.ExcelTemplateFiller.pas"/>
         <DCCReference Include="SmartTiming.Event.pas"/>
         <DCCReference Include="SmartTiming.WebService.pas"/>

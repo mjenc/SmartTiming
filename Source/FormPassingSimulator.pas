@@ -34,6 +34,7 @@ type
     LabelMappingStatus: TLabel;
     ButtonImportMapping: TButton;
     ButtonRunRuleTests: TButton;
+    ButtonRunCorrectionTests: TButton;
     ListViewLog: TListView;
     PanelButtons: TPanel;
     ButtonClose: TButton;
@@ -45,6 +46,7 @@ type
     procedure ButtonUseNowClick(Sender: TObject);
     procedure ButtonImportMappingClick(Sender: TObject);
     procedure ButtonRunRuleTestsClick(Sender: TObject);
+    procedure ButtonRunCorrectionTestsClick(Sender: TObject);
     procedure EditShortIdChange(Sender: TObject);
   private
     FNextPassingNumber: Integer;
@@ -64,7 +66,8 @@ implementation
 {$R *.dfm}
 
 uses
-  DataModule, SmartTiming.Tools, SmartTiming.PassingValidator;
+  DataModule, SmartTiming.Tools, SmartTiming.PassingValidator,
+  SmartTiming.CorrectionRegression;
 
 {==============================================================================}
 procedure TFormPassingSimulator.FormCreate(Sender: TObject);
@@ -72,6 +75,7 @@ begin
   Caption := cMessagesSimulatorCaption;
   ButtonSend.Caption := cMessagesSimulatorSend;
   ButtonImportMapping.Caption := cMessagesSimulatorImportMapping;
+  ButtonRunCorrectionTests.Caption := cMessagesSimulatorRunCorrectionTests;
   SyncNextPassingNumber;
   SetTimeEdit(Now);
 end;
@@ -189,6 +193,15 @@ var
   lReport: string;
 begin
   TPassingValidator.RunCatalogSelfTests(lReport);
+  SmartTimingTools.ShowDialog(lReport, cMessagesSimulatorCaption, [tcbOk], tcbOk);
+end;
+
+{==============================================================================}
+procedure TFormPassingSimulator.ButtonRunCorrectionTestsClick(Sender: TObject);
+var
+  lReport: string;
+begin
+  TCorrectionRegression.RunSelfTests(lReport);
   SmartTimingTools.ShowDialog(lReport, cMessagesSimulatorCaption, [tcbOk], tcbOk);
 end;
 

@@ -21,6 +21,7 @@ type
 
   protected
     FOnGetFieldValue: TFNFillerOnGetFieldValue;
+    FCommuniqueText: string;
     procedure FillTitle; virtual;
     procedure GenerateRankValue(const AFieldName: string; var AValue: string);
     function IsOutputField(const AFieldName: string): boolean;
@@ -37,6 +38,7 @@ type
 
     property TemplateFile: string read FTemplateFile write FTemplateFile;
     property OnGetFieldValue: TFNFillerOnGetFieldValue read FOnGetFieldValue write FOnGetFieldValue;
+    property CommuniqueText: string read FCommuniqueText write FCommuniqueText;
   end;
 
 implementation
@@ -271,6 +273,10 @@ begin
 
         GetRangeCellNames('A', 2, lVisibleFieldCount, lRecordCount, lStartCell, lEndCell);
         lExcelSheet.Cells.Range[lStartCell, lEndCell].Value[xlRangeValueDefault] := lCellRange;
+
+        if Trim(FCommuniqueText) <> '' then
+          lExcelSheet.Cells.Item[cDataRowStartIndex + lRecordCount + 1, 1].Value2 :=
+            FCommuniqueText;
 
         if AGroupByClass then
           lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lCurrentClass;

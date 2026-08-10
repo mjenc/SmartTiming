@@ -89,6 +89,9 @@ type
     function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string;
       APassingTime: TDateTime; var AParticipationId: integer; var AStartTime: TDatetime): integer;
     procedure UpdateParticipationValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
+    function TryGetParticipationId(ARaceId, ACompetitorId: Integer; out AParticipationId: Integer): Boolean;
+    function GetParticipationStringField(AParticipationId: Integer; const AFieldName: string): string;
+    function GetPenaltyCommuniqueText(ARaceId: Integer): string;
 
     function ImportTxMapping(const AFileName: string): integer;
     procedure ExportTxMapping(const AFileName: string);
@@ -1143,6 +1146,90 @@ begin
   lCmd[Length(lCmd)] := ' ';
   lCmd := lCmd + ' WHERE PARTICIPATIONID = ' + AParticipationId.ToString;
   MainDataModule.SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+function TMainDataModule.TryGetParticipationId(ARaceId, ACompetitorId: Integer;
+  out AParticipationId: Integer): Boolean;
+var
+  lResultSet: TDataSet;
+begin
+  Result := False;
+  AParticipationId := -1;
+  if (ARaceId < 0) or (ACompetitorId <= 0) then
+    Exit;
+  SQLConnection.Execute(Format(
+    'SELECT PARTICIPATIONID FROM PARTICIPATION WHERE RACEID = %d AND COMPETITORID = %d',
+    [ARaceId, ACompetitorId]), nil, lResultSet);
+  try
+    if (lResultSet = nil) or lResultSet.IsEmpty then
+      Exit;
+    AParticipationId := lResultSet.Fields[0].AsInteger;
+    Result := AParticipationId > 0;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetParticipationStringField(AParticipationId: Integer;
+  const AFieldName: string): string;
+var
+  lResultSet: TDataSet;
+begin
+  Result := '';
+  if (AParticipationId <= 0) or (Trim(AFieldName) = '') then
+    Exit;
+  SQLConnection.Execute(Format(
+    'SELECT %s FROM PARTICIPATION WHERE PARTICIPATIONID = %d',
+    [AFieldName, AParticipationId]), nil, lResultSet);
+  try
+    if (lResultSet = nil) or lResultSet.IsEmpty then
+      Exit;
+    Result := lResultSet.Fields[0].AsString;
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetPenaltyCommuniqueText(ARaceId: Integer): string;
+var
+  lResultSet: TDataSet;
+  lLines: TStringList;
+  lText: string;
+begin
+  Result := '';
+  if ARaceId < 0 then
+    Exit;
+  lLines := TStringList.Create;
+  try
+    SQLConnection.Execute(Format(
+      'SELECT P.PENALTIES FROM PARTICIPATION P ' +
+      'INNER JOIN COMPETITORS C ON C.COMPETITORID = P.COMPETITORID ' +
+      'WHERE P.RACEID = %d AND IFNULL(TRIM(P.PENALTIES), '''') <> '''' ' +
+      'ORDER BY C.BIB, P.PARTICIPATIONID',
+      [ARaceId]), nil, lResultSet);
+    try
+      if (lResultSet = nil) or lResultSet.IsEmpty then
+        Exit;
+      lResultSet.First;
+      while not lResultSet.Eof do
+      begin
+        lText := Trim(lResultSet.Fields[0].AsString);
+        if lText <> '' then
+          lLines.Add(lText);
+        lResultSet.Next;
+      end;
+    finally
+      FreeAndNil(lResultSet);
+    end;
+    if lLines.Count = 0 then
+      Exit;
+    Result := cMessagesCommuniqueHeader + sLineBreak + sLineBreak + lLines.Text;
+  finally
+    FreeAndNil(lLines);
+  end;
 end;
 
 {==============================================================================}

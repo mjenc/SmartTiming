@@ -194,6 +194,10 @@ resourcestring
     'Manuelle Passage erfasst — bitte Bestätigung im Plausibilitätsdialog:'#13#10'%s';
   cMessagesManualPassingAssignFailed =
     'Chip %s konnte für den Nachtrag nicht zugeordnet werden:'#13#10'%s';
+  cMessagesCommuniqueHeader = 'Kommuniqué';
+  cMessagesNoParticipantSelected = 'Bitte einen Teilnehmer im Ranking auswählen.';
+  cMessagesPassingIsSystemMarker = 'System-Markierungen können nicht gelöscht oder bearbeitet werden.';
+  cMessagesChangeCompetitorNoChip = 'Diese Passage hat keinen Chip — Fahrer kann nicht geändert werden.';
   cMessagesChipUnassignConfirm = 'Chip-Zuordnung für %d Teilnehmer wirklich beenden?';
   cMessagesAssignmentHistoryEmpty = 'Keine Chip-Zuordnungen für dieses Rennen.';
   cMessagesWarmUpChipConflictsTitle = 'Chip-Konflikte vor Vorbereitung';
@@ -212,6 +216,7 @@ resourcestring
   cMessagesSimulatorSend = 'Senden';
   cMessagesSimulatorMappingCount = 'Mapping: %d Einträge';
   cMessagesSimulatorMappingNone = 'Mapping: leer';
+  cMessagesSimulatorRunCorrectionTests = 'Korrektur-Regression';
 
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial);

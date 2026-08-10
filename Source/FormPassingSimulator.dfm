@@ -166,7 +166,7 @@ object FormPassingSimulator: TFormPassingSimulator
       Caption = 'Mapping: -'
     end
     object ButtonImportMapping: TButton
-      Left = 320
+      Left = 168
       Top = 8
       Width = 148
       Height = 25
@@ -176,14 +176,24 @@ object FormPassingSimulator: TFormPassingSimulator
       OnClick = ButtonImportMappingClick
     end
     object ButtonRunRuleTests: TButton
-      Left = 474
+      Left = 322
       Top = 8
-      Width = 154
+      Width = 148
       Height = 25
       Anchors = [akTop, akRight]
       Caption = 'Regelkatalog testen'
       TabOrder = 1
       OnClick = ButtonRunRuleTestsClick
+    end
+    object ButtonRunCorrectionTests: TButton
+      Left = 476
+      Top = 8
+      Width = 152
+      Height = 25
+      Anchors = [akTop, akRight]
+      Caption = 'Korrektur-Regression'
+      TabOrder = 2
+      OnClick = ButtonRunCorrectionTestsClick
     end
   end
   object ListViewLog: TListView
