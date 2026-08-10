@@ -30,7 +30,7 @@ type
   TCustomRaceEngine = class
   private
     function GetSelectedCompetitorIds: TArray<integer>;
-    function TryGetFirstSelectedParticipationId(out AParticipationId: Integer): Boolean;
+    function TryGetSelectedParticipationIds(out AParticipationIds: TArray<Integer>): Boolean;
     procedure SetParticipantState(AState: TParticipantState);
     (* Plan 6: Dialog → DB/Cache already done → Recalc → UI. *)
     procedure AfterPassingCorrection(ARebuildProtocol: Boolean = True);
@@ -789,19 +789,33 @@ begin
 end;
 
 {==============================================================================}
-function TCustomRaceEngine.TryGetFirstSelectedParticipationId(
-  out AParticipationId: Integer): Boolean;
+function TCustomRaceEngine.TryGetSelectedParticipationIds(
+  out AParticipationIds: TArray<Integer>): Boolean;
 var
-  lIds: TArray<Integer>;
-  lCompetitorId: Integer;
+  lCompetitorIds: TArray<Integer>;
+  lIds: TList<Integer>;
+  lParticipationId: Integer;
+  i: Integer;
 begin
   Result := False;
-  AParticipationId := -1;
-  lIds := GetSelectedCompetitorIds;
-  if Length(lIds) = 0 then
+  SetLength(AParticipationIds, 0);
+  lCompetitorIds := GetSelectedCompetitorIds;
+  if Length(lCompetitorIds) = 0 then
     Exit;
-  lCompetitorId := lIds[0];
-  Result := MainDataModule.TryGetParticipationId(FRaceItem.Id, lCompetitorId, AParticipationId);
+
+  lIds := TList<Integer>.Create;
+  try
+    for i := 0 to High(lCompetitorIds) do
+      if MainDataModule.TryGetParticipationId(FRaceItem.Id, lCompetitorIds[i],
+           lParticipationId) then
+        lIds.Add(lParticipationId);
+    if lIds.Count = 0 then
+      Exit;
+    AParticipationIds := lIds.ToArray;
+    Result := True;
+  finally
+    FreeAndNil(lIds);
+  end;
 end;
 
 {==============================================================================}
@@ -880,20 +894,36 @@ end;
 procedure TCustomRaceEngine.OnPenalties(ASender: TObject);
 var
   lForm: TFormEditPenalty;
-  lParticipationId: Integer;
-  lText: string;
+  lParticipationIds: TArray<Integer>;
+  lText, lPrefill, lOne: string;
   lFields: TArray<string>;
   lValues: TArray<Variant>;
+  i: Integer;
+  lSame: Boolean;
 begin
-  if not TryGetFirstSelectedParticipationId(lParticipationId) then
+  if not TryGetSelectedParticipationIds(lParticipationIds) then
   begin
     SmartTimingTools.ShowDialog(cMessagesNoParticipantSelected, '', [tcbOk], tcbOk);
     Exit;
   end;
 
+  lPrefill := MainDataModule.GetParticipationStringField(lParticipationIds[0], 'PENALTIES');
+  lSame := True;
+  for i := 1 to High(lParticipationIds) do
+  begin
+    lOne := MainDataModule.GetParticipationStringField(lParticipationIds[i], 'PENALTIES');
+    if not SameStr(lOne, lPrefill) then
+    begin
+      lSame := False;
+      Break;
+    end;
+  end;
+  if not lSame then
+    lPrefill := '';
+
   lForm := TFormEditPenalty.Create(nil);
   try
-    lForm.MemoPenalty.Text := MainDataModule.GetParticipationStringField(lParticipationId, 'PENALTIES');
+    lForm.MemoPenalty.Text := lPrefill;
     if lForm.ShowModal <> mrOK then
       Exit;
     lText := Trim(lForm.MemoPenalty.Text);
@@ -908,7 +938,8 @@ begin
     lValues[0] := Null
   else
     lValues[0] := lText;
-  MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
+  for i := 0 to High(lParticipationIds) do
+    MainDataModule.UpdateParticipationValues(lParticipationIds[i], lFields, lValues);
   AfterRankingCorrection;
 end;
 
@@ -916,9 +947,8 @@ end;
 procedure TCustomRaceEngine.OnEditTime(ASender: TObject);
 var
   lForm: TFormEditTime;
-  lParticipationId: Integer;
-  lCurrent: string;
-  lStartStr: string;
+  lParticipationIds: TArray<Integer>;
+  lCurrent, lStartStr, lOne: string;
   lTime: TDateTime;
   lStartTime: TDateTime;
   lRankingTime: TDateTime;
@@ -927,6 +957,8 @@ var
   lFormatSettings: TFormatSettings;
   lModal: Integer;
   lOverride: Boolean;
+  lSame: Boolean;
+  i: Integer;
 
   function TryParseParticipationTime(const AText: string; out ATime: TDateTime): Boolean;
   begin
@@ -948,14 +980,34 @@ var
   end;
 
 begin
-  if not TryGetFirstSelectedParticipationId(lParticipationId) then
+  if not TryGetSelectedParticipationIds(lParticipationIds) then
   begin
     SmartTimingTools.ShowDialog(cMessagesNoParticipantSelected, '', [tcbOk], tcbOk);
     Exit;
   end;
 
-  lOverride := MainDataModule.IsParticipationFinishTimeOverridden(lParticipationId);
-  lCurrent := Trim(MainDataModule.GetParticipationStringField(lParticipationId, 'FINISHTIME'));
+  lOverride := False;
+  for i := 0 to High(lParticipationIds) do
+    if MainDataModule.IsParticipationFinishTimeOverridden(lParticipationIds[i]) then
+    begin
+      lOverride := True;
+      Break;
+    end;
+
+  lCurrent := Trim(MainDataModule.GetParticipationStringField(lParticipationIds[0], 'FINISHTIME'));
+  lSame := True;
+  for i := 1 to High(lParticipationIds) do
+  begin
+    lOne := Trim(MainDataModule.GetParticipationStringField(lParticipationIds[i], 'FINISHTIME'));
+    if not SameText(lOne, lCurrent) then
+    begin
+      lSame := False;
+      Break;
+    end;
+  end;
+  if not lSame then
+    lCurrent := '';
+
   lForm := TFormEditTime.Create(nil);
   try
     lForm.OverrideActive := lOverride;
@@ -966,7 +1018,7 @@ begin
     lModal := lForm.ShowModal;
     if lModal = mrRetry then
     begin
-      (* Clear override → full Recalc restores finish/ranking from passings. *)
+      (* Clear override on all selected → Recalc restores finish/ranking from passings. *)
       SetLength(lFields, 3);
       SetLength(lValues, 3);
       lFields[0] := 'FINISHTIMEOVERRIDE';
@@ -975,7 +1027,8 @@ begin
       lValues[1] := Null;
       lFields[2] := 'RANKINGTIME';
       lValues[2] := Null;
-      MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
+      for i := 0 to High(lParticipationIds) do
+        MainDataModule.UpdateParticipationValues(lParticipationIds[i], lFields, lValues);
       RecalcCountingLaps;
       AfterRankingCorrection;
       Exit;
@@ -987,24 +1040,27 @@ begin
     FreeAndNil(lForm);
   end;
 
-  SetLength(lFields, 3);
-  SetLength(lValues, 3);
-  lFields[0] := 'FINISHTIME';
-  lValues[0] := FormatDateTime('hh:nn:ss.zzz', lTime);
-  lFields[1] := 'FINISHTIMEOVERRIDE';
-  lValues[1] := 1;
-  lFields[2] := 'RANKINGTIME';
-  lStartStr := Trim(MainDataModule.GetParticipationStringField(lParticipationId, 'STARTTIME'));
-  if TryParseParticipationTime(lStartStr, lStartTime) then
+  for i := 0 to High(lParticipationIds) do
   begin
-    lRankingTime := lTime - lStartTime;
-    if lRankingTime < 0 then
-      lRankingTime := lRankingTime + 1; (* crossed midnight *)
-    lValues[2] := FormatDateTime('hh:nn:ss.zzz', lRankingTime);
-  end
-  else
-    lValues[2] := Null;
-  MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
+    SetLength(lFields, 3);
+    SetLength(lValues, 3);
+    lFields[0] := 'FINISHTIME';
+    lValues[0] := FormatDateTime('hh:nn:ss.zzz', lTime);
+    lFields[1] := 'FINISHTIMEOVERRIDE';
+    lValues[1] := 1;
+    lFields[2] := 'RANKINGTIME';
+    lStartStr := Trim(MainDataModule.GetParticipationStringField(lParticipationIds[i], 'STARTTIME'));
+    if TryParseParticipationTime(lStartStr, lStartTime) then
+    begin
+      lRankingTime := lTime - lStartTime;
+      if lRankingTime < 0 then
+        lRankingTime := lRankingTime + 1; (* crossed midnight *)
+      lValues[2] := FormatDateTime('hh:nn:ss.zzz', lRankingTime);
+    end
+    else
+      lValues[2] := Null;
+    MainDataModule.UpdateParticipationValues(lParticipationIds[i], lFields, lValues);
+  end;
   AfterRankingCorrection;
 end;
 

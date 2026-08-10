@@ -52,9 +52,9 @@ Neue Disziplinen würden diese Lücken multiplizieren.
 | Passage entfernen | Confirm | PASSINGS DELETE | Store | ja | Protokoll+Ranking |
 | Drag&Drop Zeit | — (nur 1 Selektion) | PASSINGS | Store | ja | Protokoll+Ranking |
 | DNS/DNF/DSQ/Aktiv | — | PARTICIPATION | — | — | Ranking |
-| Strafen | FormPenalty | PARTICIPATION.PENALTIES | — | — | Ranking (+Kommuniqué Export) |
-| Zielzeit ändern | FormEditTime | PARTICIPATION.FINISHTIME + **FINISHTIMEOVERRIDE** | — | bei Reset: ja | Ranking |
-| Zielzeit zurücksetzen | FormEditTime „Zurücksetzen“ | OVERRIDE=0, Zeiten NULL | — | Recalc | Ranking |
+| Strafen | FormPenalty | PARTICIPATION.PENALTIES (alle Selektion) | — | — | Ranking (+Kommuniqué Export) |
+| Zielzeit ändern | FormEditTime | FINISHTIME + OVERRIDE (alle Selektion) | — | bei Reset: ja | Ranking |
+| Zielzeit zurücksetzen | FormEditTime „Zurücksetzen“ | OVERRIDE=0 (alle Selektion) | — | Recalc | Ranking |
 | Chip entziehen | Confirm | Assignments | Store | ja | Protokoll+Ranking |
 | Teilnehmer entfernen | — | PARTICIPATION+Assign close | — | — | Ranking |
 
