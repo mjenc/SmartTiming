@@ -30,6 +30,8 @@ type
     function GetMinIdOf(const ATableName, AColumnName: string): Integer;
     function GetMaxIdOf(const ATableName, AColumnName: string): Integer;
     function GetSQLValueFromVariant(AValue: Variant): string;
+    function BuildPenaltyCommuniqueText(ARaceId: Integer; AFilterByClass: Boolean;
+      const AClass: string): string;
   public
     procedure LoadEventHistory(AStrings: TStrings);
     procedure PushEventToHistory(const ATitle: string);
@@ -92,7 +94,8 @@ type
     function TryGetParticipationId(ARaceId, ACompetitorId: Integer; out AParticipationId: Integer): Boolean;
     function GetParticipationStringField(AParticipationId: Integer; const AFieldName: string): string;
     function IsParticipationFinishTimeOverridden(AParticipationId: Integer): Boolean;
-    function GetPenaltyCommuniqueText(ARaceId: Integer): string;
+    function GetPenaltyCommuniqueText(ARaceId: Integer): string; overload;
+    function GetPenaltyCommuniqueText(ARaceId: Integer; const AClass: string): string; overload;
     procedure EnsureFinishTimeOverrideColumn;
 
     function ImportTxMapping(const AFileName: string): integer;
@@ -1253,23 +1256,29 @@ begin
 end;
 
 {==============================================================================}
-function TMainDataModule.GetPenaltyCommuniqueText(ARaceId: Integer): string;
+function TMainDataModule.BuildPenaltyCommuniqueText(ARaceId: Integer;
+  AFilterByClass: Boolean; const AClass: string): string;
 var
   lResultSet: TDataSet;
   lLines: TStringList;
   lText: string;
+  lSql: string;
 begin
   Result := '';
   if ARaceId < 0 then
     Exit;
   lLines := TStringList.Create;
   try
-    SQLConnection.Execute(Format(
+    lSql :=
       'SELECT P.PENALTIES FROM PARTICIPATION P ' +
       'INNER JOIN COMPETITORS C ON C.COMPETITORID = P.COMPETITORID ' +
-      'WHERE P.RACEID = %d AND IFNULL(TRIM(P.PENALTIES), '''') <> '''' ' +
-      'ORDER BY C.BIB, P.PARTICIPATIONID',
-      [ARaceId]), nil, lResultSet);
+      'WHERE P.RACEID = ' + ARaceId.ToString +
+      ' AND IFNULL(TRIM(P.PENALTIES), '''') <> '''' ';
+    if AFilterByClass then
+      lSql := lSql + ' AND IFNULL(C.CLASS, '''') = ' + AClass.QuotedString;
+    lSql := lSql + ' ORDER BY C.BIB, P.PARTICIPATIONID';
+
+    SQLConnection.Execute(lSql, nil, lResultSet);
     try
       if (lResultSet = nil) or lResultSet.IsEmpty then
         Exit;
@@ -1290,6 +1299,19 @@ begin
   finally
     FreeAndNil(lLines);
   end;
+end;
+
+{==============================================================================}
+function TMainDataModule.GetPenaltyCommuniqueText(ARaceId: Integer): string;
+begin
+  Result := BuildPenaltyCommuniqueText(ARaceId, False, '');
+end;
+
+{==============================================================================}
+function TMainDataModule.GetPenaltyCommuniqueText(ARaceId: Integer;
+  const AClass: string): string;
+begin
+  Result := BuildPenaltyCommuniqueText(ARaceId, True, AClass);
 end;
 
 {==============================================================================}

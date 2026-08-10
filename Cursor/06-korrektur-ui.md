@@ -52,7 +52,7 @@ Neue Disziplinen würden diese Lücken multiplizieren.
 | Passage entfernen | Confirm | PASSINGS DELETE | Store | ja | Protokoll+Ranking |
 | Drag&Drop Zeit | — (nur 1 Selektion) | PASSINGS | Store | ja | Protokoll+Ranking |
 | DNS/DNF/DSQ/Aktiv | — | PARTICIPATION | — | — | Ranking |
-| Strafen | FormPenalty | PARTICIPATION.PENALTIES (alle Selektion) | — | — | Ranking (+Kommuniqué Export) |
+| Strafen | FormPenalty | PARTICIPATION.PENALTIES (alle Selektion) | — | — | Ranking (+Kommuniqué Export je Klasse) |
 | Zielzeit ändern | FormEditTime | FINISHTIME + OVERRIDE (alle Selektion) | — | bei Reset: ja | Ranking |
 | Zielzeit zurücksetzen | FormEditTime „Zurücksetzen“ | OVERRIDE=0 (alle Selektion) | — | Recalc | Ranking |
 | Chip entziehen | Confirm | Assignments | Store | ja | Protokoll+Ranking |
@@ -161,8 +161,9 @@ Abgeleitet aus Schritt 1; Reihenfolge orientiert an Plan-Schritten 2–6.
 
 11. `OnPenalties`: aktuelle `PENALTIES` laden → Memo-Dialog (Freitext) → `UpdateParticipationValues` → Ranking-Refresh.
     Persistenz: ein Freitext pro Participation; leer = kein Kommuniqué-Eintrag.
-12. Kommuniqué-Ausgabe: bei offiziellem Ergebnis (Excel/Druck/CSV/HTML/JSON) alle nicht-leeren `PENALTIES`
-    des Rennens am Ende anhängen (Überschrift z. B. „Kommuniqué“ / „Strafen“), Reihenfolge stabil (z. B. Bib).
+12. Kommuniqué-Ausgabe: bei offiziellem Ergebnis (Excel/Druck) nicht-leere `PENALTIES`
+    am Ende anhängen — **ohne Klassengruppierung** rennweit; **mit Klassentrennung**
+    nur Strafen der jeweiligen Klasse am Ende jedes Klassenblatts.
 13. `OnEditTime` (Zielzeit): Selection → aktuelle `FINISHTIME`/`STARTTIME` vorbelegen → persistieren → Ranking-Refresh (und klären: Startzeit vs. Zielzeit vs. manuelle Override-Semantik).
 14. DNS/DNF/DSQ: Smoke-Test nach Event-Reload; bei Bedarf Assignment schließen analog Race-Ende.
 

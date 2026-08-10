@@ -18,16 +18,15 @@ type
     FExcelApp: TExcelApplication;
     FTemplateFile: string;
     FOutputFile: string;
+    FCommuniqueRaceId: Integer;
 
   protected
     FOnGetFieldValue: TFNFillerOnGetFieldValue;
-    FCommuniqueText: string;
     procedure FillTitle; virtual;
     procedure GenerateRankValue(const AFieldName: string; var AValue: string);
     function IsOutputField(const AFieldName: string): boolean;
     function GetGroupedFileName(const AClass: string): string;
     procedure FillDataRows(ADataSet: TDataSet; AGroupByClass: boolean; AAction: TExcelAction);
-    function GetRecordCountOfDataSet(ADataSet: TDataSet): Integer;
     function GetVisibleFieldCountOfDataSet(ADataSet: TDataSet): Integer;
 
   public
@@ -38,7 +37,8 @@ type
 
     property TemplateFile: string read FTemplateFile write FTemplateFile;
     property OnGetFieldValue: TFNFillerOnGetFieldValue read FOnGetFieldValue write FOnGetFieldValue;
-    property CommuniqueText: string read FCommuniqueText write FCommuniqueText;
+    (* Race id for Kommuniqué lookup; <0 disables. Per-class when GroupByClass. *)
+    property CommuniqueRaceId: Integer read FCommuniqueRaceId write FCommuniqueRaceId;
   end;
 
 implementation
@@ -51,6 +51,7 @@ constructor TExcelFiller.Create(AEvent: TEventDataObject; const ARaceTitle: stri
 begin
   FEvent := AEvent;
   FRaceTitle := ARaceTitle;
+  FCommuniqueRaceId := -1;
 
   FExcelApp := TExcelApplication.Create(nil);
   FExcelApp.Connect;
@@ -114,18 +115,6 @@ begin
 end;
 
 {==============================================================================}
-function TExcelFiller.GetRecordCountOfDataSet(ADataSet: TDataSet): Integer;
-begin
-  result := 0;
-  ADataSet.First;
-  while not ADataSet.Eof do
-  begin
-    Inc(result);
-    ADataSet.Next;
-  end;
-end;
-
-{==============================================================================}
 function TExcelFiller.GetVisibleFieldCountOfDataSet(ADataSet: TDataSet): Integer;
 var
   i: integer;
@@ -143,21 +132,57 @@ procedure TExcelFiller.FillDataRows(ADataSet: TDataSet; AGroupByClass: boolean; 
 var
   lExcelWorkbook: TExcelWorkbook;
   lExcelSheet: TExcelWorksheet;
-  lRowIndex: Integer;
-  lColumnIndex: integer;
-  lFieldName: string;
   lValue: string;
   lCurrentClass: string;
   lCenterHeaderBase: string;
-  lOutput: boolean;
-  lCellColIdx: Integer;
-  lRecordCount: integer;
   lVisibleFieldCount: integer;
   lCellRange: OleVariant;
   lStartCell: string;
   lEndCell: string;
+  lRows: TList<TArray<string>>;
+  lRowValues: TArray<string>;
+  lCommunique: string;
 const
   cDataRowStartIndex = 2; // Start from the second row assuming the first row is for headers
+
+  procedure GetRangeCellNames(AStartField: Char; AStartRow, AFieldCount, ARecordCount: Integer; out AStartCell, AEndCell: string);
+  var
+    lByte: Byte;
+  begin
+    AStartCell := AStartField + IntToStr(AStartRow);
+    lByte := Ord(AStartField) + AFieldCount - 1;
+    AEndCell := Char(lByte) + IntToStr(AStartRow + ARecordCount - 1);
+  end;
+
+  procedure CloseWorkbook;
+  begin
+    if lExcelSheet <> nil then
+    begin
+      FreeAndNil(lExcelSheet);
+    end;
+    if lExcelWorkbook <> nil then
+    begin
+      lExcelWorkbook.Close(false, '', EmptyParam, 0);
+      FreeAndNil(lExcelWorkbook);
+    end;
+  end;
+
+  procedure OpenTemplate;
+  begin
+    CloseWorkbook;
+    lExcelWorkbook := TExcelWorkbook.Create(nil);
+    lExcelWorkbook.ConnectTo(
+      FExcelApp.Workbooks.Open(FTemplateFile, EmptyParam, EmptyParam,
+        EmptyParam, EmptyParam, EmptyParam,
+        EmptyParam, EmptyParam, EmptyParam,
+        EmptyParam, EmptyParam, EmptyParam,
+        EmptyParam, EmptyParam, EmptyParam, 0)
+      );
+    lExcelWorkbook.Author[0] := cSmartTimingAppName + ' ' + cCopyright;
+    lExcelSheet := TExcelWorksheet.Create(nil);
+    lExcelSheet.ConnectTo(lExcelWorkbook.Sheets[1] as _Worksheet);
+    lCenterHeaderBase := lExcelSheet.PageSetup.CenterHeader;
+  end;
 
   procedure DoAction;
   var
@@ -179,118 +204,132 @@ const
     eaPrint:
       begin
         FExcelApp.Visible[0] := true;
-        lExcelSheet.PrintPreview; // PrintOut(EmptyParam, EmptyParam, EmptyParam, True, EmptyParam, EmptyParam, EmptyParam, EmptyParam, EmptyParam, 0);
+        lExcelSheet.PrintPreview;
         FExcelApp.Visible[0] := false;
       end;
     end;
   end;
 
-  procedure GetRangeCellNames(AStartField: Char; AStartRow, AFieldCount, ARecordCount: Integer; out AStartCell, AEndCell: string);
-  var
-    lByte: Byte;
+  function ResolveCommunique: string;
   begin
-    AStartCell := AStartField + IntToStr(AStartRow);
-
-    lByte := Ord(AStartField) + AFieldCount - 1;
-    AEndCell := Char(lByte) + IntToStr(AStartRow + ARecordCount - 1);
+    Result := '';
+    if FCommuniqueRaceId < 0 then
+      Exit;
+    if AGroupByClass then
+      Result := MainDataModule.GetPenaltyCommuniqueText(FCommuniqueRaceId, lCurrentClass)
+    else
+      Result := MainDataModule.GetPenaltyCommuniqueText(FCommuniqueRaceId);
   end;
+
+  procedure EmitBufferedClass;
+  var
+    r, c: Integer;
+  begin
+    if (lRows = nil) or (lRows.Count = 0) then
+      Exit;
+
+    OpenTemplate;
+    try
+      if AGroupByClass then
+        lExcelSheet.PageSetup.CenterHeader :=
+          lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lCurrentClass
+      else
+        lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle;
+
+      lCellRange := VarArrayCreate([0, lRows.Count - 1, 0, lVisibleFieldCount - 1], varVariant);
+      for r := 0 to lRows.Count - 1 do
+      begin
+        lRowValues := lRows[r];
+        for c := 0 to High(lRowValues) do
+          lCellRange[r, c] := lRowValues[c];
+      end;
+
+      GetRangeCellNames('A', cDataRowStartIndex, lVisibleFieldCount, lRows.Count, lStartCell, lEndCell);
+      lExcelSheet.Cells.Range[lStartCell, lEndCell].Value[xlRangeValueDefault] := lCellRange;
+
+      lCommunique := ResolveCommunique;
+      if Trim(lCommunique) <> '' then
+        lExcelSheet.Cells.Item[cDataRowStartIndex + lRows.Count + 1, 1].Value2 := lCommunique;
+
+      DoAction;
+    finally
+      CloseWorkbook;
+    end;
+    lRows.Clear;
+  end;
+
+  procedure AppendCurrentDataRow;
+  var
+    lCol: Integer;
+    lColumnIndex: Integer;
+    lFieldName: string;
+    lCellValue: string;
+    lOutput: Boolean;
+  begin
+    SetLength(lRowValues, lVisibleFieldCount);
+    lCol := 0;
+    for lColumnIndex := 0 to ADataSet.FieldCount - 1 do
+    begin
+      lFieldName := ADataSet.FieldList[lColumnIndex].FieldName;
+      lCellValue := ADataSet.FieldList[lColumnIndex].AsString;
+      lOutput := IsOutputField(lFieldName);
+
+      if Assigned(FOnGetFieldValue) then
+      begin
+        if not lOutput then
+          Continue;
+        FOnGetFieldValue(lColumnIndex, ADataSet, lCellValue);
+      end;
+
+      if not ADataSet.FieldList[lColumnIndex].Visible then
+        Continue;
+      if not lOutput then
+        Continue;
+
+      lRowValues[lCol] := lCellValue;
+      Inc(lCol);
+    end;
+    lRows.Add(Copy(lRowValues));
+  end;
+
 begin
   ADataSet.First;
   if ADataSet.Eof then
     Exit;
 
+  lExcelWorkbook := nil;
+  lExcelSheet := nil;
+  lCurrentClass := '';
+  lVisibleFieldCount := GetVisibleFieldCountOfDataSet(ADataSet);
+  if lVisibleFieldCount <= 0 then
+    Exit;
+
+  lRows := TList<TArray<string>>.Create;
   try
-    lExcelWorkbook := TExcelWorkbook.Create(nil);
     try
-      lExcelWorkbook.ConnectTo(
-        FExcelApp.Workbooks.Open(FTemplateFile, EmptyParam, EmptyParam,
-          EmptyParam, EmptyParam, EmptyParam,
-          EmptyParam, EmptyParam, EmptyParam,
-          EmptyParam, EmptyParam, EmptyParam,
-          EmptyParam, EmptyParam, EmptyParam, 0)
-        );
-
-      try
-        lExcelWorkbook.Author[0] := cSmartTimingAppName + ' ' + cCopyright;
-
-        lExcelSheet := TExcelWorksheet.Create(nil);
-        lExcelSheet.ConnectTo(lExcelWorkbook.Sheets[1] as _Worksheet);
-        lCenterHeaderBase := lExcelSheet.PageSetup.CenterHeader;
-        lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle;
-        lCurrentClass := '';
-        lRowIndex := 0;
-
-        lRecordCount := GetRecordCountOfDataSet(ADataSet);
-        lVisibleFieldCount := GetVisibleFieldCountOfDataSet(ADataSet);
-
-        lCellRange := VarArrayCreate([0, lRecordCount - 1, 0, lVisibleFieldCount - 1], varVariant);
-
-        ADataSet.First;
-        while not ADataSet.Eof do
+      ADataSet.First;
+      while not ADataSet.Eof do
+      begin
+        if AGroupByClass then
         begin
-          lCellColIdx := 0;
-
-          if AGroupByClass then
-          begin
-            lValue := ADataSet.FindField('CLASS').AsString;
-             if not lCurrentClass.IsEmpty and (lValue <> lCurrentClass) then
-             begin
-               lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lValue;
-
-               // Save the file so far and clear it a new one
-               DoAction;
-               lExcelSheet.Cells.Clear;
-               lRowIndex := cDataRowStartIndex;
-             end;
-            lCurrentClass := lValue;
-          end;
-
-          for lColumnIndex := 0 to ADataSet.FieldCount - 1 do
-          begin
-            lFieldName := ADataSet.FieldList[lColumnIndex].FieldName;
-            lValue := ADataSet.FieldList[lColumnIndex].AsString;
-            lOutput := IsOutputField(lFieldName);
-
-            if Assigned(FOnGetFieldValue) then
-            begin
-              if not lOutput then
-                Continue;
-              FOnGetFieldValue(lColumnIndex, ADataSet, lValue);
-            end;
-
-            if not ADataSet.FieldList[lColumnIndex].Visible then
-              Continue;
-            if not lOutput then
-              Continue;
-
-            lCellRange[lRowIndex, lCellColIdx] := lValue;
-            Inc(lCellColIdx);
-          end;
-
-          Inc(lRowIndex);
-          ADataSet.Next;
+          lValue := ADataSet.FindField('CLASS').AsString;
+          if (lRows.Count > 0) and (lValue <> lCurrentClass) then
+            EmitBufferedClass;
+          lCurrentClass := lValue;
         end;
 
-        GetRangeCellNames('A', 2, lVisibleFieldCount, lRecordCount, lStartCell, lEndCell);
-        lExcelSheet.Cells.Range[lStartCell, lEndCell].Value[xlRangeValueDefault] := lCellRange;
-
-        if Trim(FCommuniqueText) <> '' then
-          lExcelSheet.Cells.Item[cDataRowStartIndex + lRecordCount + 1, 1].Value2 :=
-            FCommuniqueText;
-
-        if AGroupByClass then
-          lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lCurrentClass;
-
-        DoAction;
-      finally
-        lExcelWorkbook.Close(false, '', EmptyParam, 0);
+        AppendCurrentDataRow;
+        ADataSet.Next;
       end;
-    finally
-      FreeAndNil(lExcelWorkbook);
+
+      EmitBufferedClass;
+    except
+      on E: Exception do
+        ShowMessage(E.Message);
     end;
-  except
-    on E: Exception do
-      ShowMessage(E.Message);
+  finally
+    CloseWorkbook;
+    FreeAndNil(lRows);
   end;
 end;
 

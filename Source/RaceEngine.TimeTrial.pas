@@ -424,7 +424,7 @@ begin
   try
     lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListTT.xlsx';
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
-    lExcelFiller.CommuniqueText := MainDataModule.GetPenaltyCommuniqueText(FRaceItem.Id);
+    lExcelFiller.CommuniqueRaceId := FRaceItem.Id;
     lResultSet := nil;
     if AGroupByClass then
       lGroupByClassString := FRankingSQLClassGrouping
@@ -434,7 +434,7 @@ begin
       Format(FResultSQLFormat, [FRaceItem.Id.ToString, lGroupByClassString]),
       lResultSet);
 
-    lExcelFiller.FillDataRowsAndPrint(lResultSet, FRankingGroupedByClass);
+    lExcelFiller.FillDataRowsAndPrint(lResultSet, AGroupByClass);
   finally
     FreeAndNil(lExcelFiller);
     FreeAndNil(lResultSet);
@@ -454,7 +454,7 @@ begin
   try
     lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListTT.xlsx';
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
-    lExcelFiller.CommuniqueText := MainDataModule.GetPenaltyCommuniqueText(FRaceItem.Id);
+    lExcelFiller.CommuniqueRaceId := FRaceItem.Id;
     lResultSet := nil;
     if AGroupByClass then
     begin
@@ -471,7 +471,7 @@ begin
 
     lExcelFiller.FillDataRowsAndSave(gStdDataPath + Format('Results-%s.xlsx', [FRaceItem.Title]),
                                      lResultSet,
-                                     FRankingGroupedByClass);
+                                     AGroupByClass);
   finally
     FreeAndNil(lExcelFiller);
     FreeAndNil(lResultSet);
