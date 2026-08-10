@@ -55,7 +55,8 @@ implementation
 {$R *.dfm}
 
 uses
-  SmartTiming.Controller, SmartTiming.Tools, FormMain, RaceEngine.Custom;
+  SmartTiming.Controller, SmartTiming.Tools, SmartTiming.PassingValidator,
+  SmartTiming.TransponderAssignment, SmartTiming.Cache, FormMain, RaceEngine.Custom;
 
 {==============================================================================}
 procedure TFormManuallyAddPassing.FormActivate(Sender: TObject);
@@ -310,6 +311,10 @@ var
   lRaceId: Integer;
   lCompetitorId: Integer;
   lName, lTeam, lClass, lChipId: string;
+  lAssignment: TTransponderAssignment;
+  lAssignResult: TAssignmentOperationResult;
+  lAddResult: TManualPassingResult;
+  lPassingTime: TDateTime;
 begin
   Result := False;
   lRaceId := GetSelectedRaceId;
@@ -336,17 +341,49 @@ begin
     Exit;
   end;
 
+  lPassingTime := GetTime + Trunc(Now);
+
+  (* Resolve only sees assignments — open one from COMPETITORS.CHIPID when missing. *)
+  if not TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
+       lRaceId, lCompetitorId, lAssignment) then
+  begin
+    if not TTransponderAssignmentService.Assign(lRaceId, lCompetitorId, lChipId,
+         lAssignResult, lPassingTime) then
+    begin
+      SmartTimingTools.ShowDialog(
+        Format(cMessagesManualPassingAssignFailed, [lChipId, lAssignResult.Message]),
+        '', [tcbOk], tcbOk);
+      Exit;
+    end;
+  end
+  else
+    lChipId := lAssignment.ChipId;
+
   lPassing.PassingNumber := 0; (* overwritten in AddManualPassing: synthetic negative id *)
   lPassing.ChipId := lChipId;
-  lPassing.PassingTime := GetTime + Trunc(Now);
+  lPassing.PassingTime := lPassingTime;
   lPassing.SignalStrength := 100;
   lPassing.Hits := 90;
   lPassing.Flags := 0;
   lPassing.Sport := sSportsIdCycling;
   lPassing.DecoderId := 'MANUAL';
   lPassing.RaceId := lRaceId;
-  GSmartTimingController.AddManualPassing(lPassing);
-  Result := True;
+  lPassing.PassingStatus := Ord(psInvalid);
+  lPassing.LapIndex := -1;
+  lPassing.CompetitorId := lCompetitorId;
+
+  lAddResult := GSmartTimingController.AddManualPassing(lPassing);
+  if lAddResult.Scored then
+    Result := True
+  else if lAddResult.NeedsConfirmation then
+  begin
+    SmartTimingTools.ShowDialog(
+      Format(cMessagesManualPassingPending, [lAddResult.Message]), '', [tcbOk], tcbOk);
+    Result := True; (* recorded; plausibility dialog follows *)
+  end
+  else
+    SmartTimingTools.ShowDialog(
+      Format(cMessagesManualPassingRejected, [lAddResult.Message]), '', [tcbOk], tcbOk);
 end;
 
 {==============================================================================}
@@ -357,7 +394,8 @@ begin
   lFormatSettings.TimeSeparator := ':';
   lFormatSettings.DecimalSeparator := '.';
   lFormatSettings.LongTimeFormat := 'HH:mm:ss.zzz';
-  Result := StrToTime(EditTime.Text, lFormatSettings);
+  if not TryStrToTime(EditTime.Text, Result, lFormatSettings) then
+    Result := Frac(Now);
 end;
 
 {==============================================================================}
@@ -392,6 +430,7 @@ begin
   if TryAddPassingForBib(lBib) then
   begin
     SetTime(Now);
+    EditBIB.Clear;
     UpdatePreview;
   end;
 end;

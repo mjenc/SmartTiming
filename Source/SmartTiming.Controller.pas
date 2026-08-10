@@ -26,10 +26,13 @@ type
     FAlwaysAcceptChips: TDictionary<string, Boolean>;
     FPlausibilityStats: TPlausibilitySessionStats;
     FPlausibilityLock: TCriticalSection;
+    FLastManualPassingResult: TManualPassingResult;
 
     procedure OnDecoderFound(ADecoder: TDecoder);
     procedure OnStatusReceived(AStatus: TDecoderStatus);
     procedure OnPassingReceived(APassing: TPassing);
+    procedure CaptureManualPassingResult(const AValidation: TPassingValidationResult;
+      AIsManual: Boolean);
     function GetMinLapDurationForRace(ARaceId: Integer): Integer;
     function IsAlwaysAcceptChip(const AChipId: string): Boolean;
     function IsMinLapOnlyAsk(const AValidation: TPassingValidationResult): Boolean;
@@ -49,7 +52,7 @@ type
     procedure RestorePassings;
     procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
     procedure RemovePassing(APassingNumber: Integer);
-    procedure AddManualPassing(APassing: TPassing);
+    function AddManualPassing(var APassing: TPassing): TManualPassingResult;
     procedure ResetRacesDataSet;
     procedure ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
     procedure RetryDecoderSearch;
@@ -508,6 +511,7 @@ begin
     GFormMain.AddPassingForRaceId(lRaceId, APassing);
 
     RecordPlausibilityOutcome(APassing, lRaceId, lValidation, lAlwaysAccepted);
+    CaptureManualPassingResult(lValidation, lIsManual);
 
     if lAskOperator and Assigned(FOnPlausibilityDecision) then
     begin
@@ -534,12 +538,30 @@ begin
 end;
 
 {==============================================================================}
-procedure TSmartTimingController.AddManualPassing(APassing: TPassing);
+procedure TSmartTimingController.CaptureManualPassingResult(
+  const AValidation: TPassingValidationResult; AIsManual: Boolean);
+begin
+  if not AIsManual then
+    Exit;
+  FLastManualPassingResult.Disposition := AValidation.Disposition;
+  FLastManualPassingResult.Scored := AValidation.Disposition in [pdAccept, pdAcceptMarked];
+  FLastManualPassingResult.NeedsConfirmation := AValidation.Disposition = pdAskOperator;
+  FLastManualPassingResult.Message := AValidation.FormatFindings;
+end;
+
+{==============================================================================}
+function TSmartTimingController.AddManualPassing(var APassing: TPassing): TManualPassingResult;
 begin
   try
     LogOnDebug(cLogger, ['AddManualPassing']);
+    FLastManualPassingResult.Disposition := pdReject;
+    FLastManualPassingResult.Scored := False;
+    FLastManualPassingResult.NeedsConfirmation := False;
+    FLastManualPassingResult.Message := '';
+
     APassing.PassingNumber := MainDataModule.AllocateSyntheticPassingNumber;
     TDecoderEngine.GetSingleton.SendSimulatedPassing(APassing);
+    Result := FLastManualPassingResult;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['AddManualPassing']);
   end;

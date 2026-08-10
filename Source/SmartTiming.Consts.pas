@@ -188,6 +188,12 @@ resourcestring
   cMessagesManualPassingNoChip =
     'Für Startnummer %d (%s) ist kein Chip zugeordnet.'#13#10 +
     'Bitte zuerst eine Chip-Zuordnung vornehmen.';
+  cMessagesManualPassingRejected =
+    'Manuelle Passage wurde nicht gewertet:'#13#10'%s';
+  cMessagesManualPassingPending =
+    'Manuelle Passage erfasst — bitte Bestätigung im Plausibilitätsdialog:'#13#10'%s';
+  cMessagesManualPassingAssignFailed =
+    'Chip %s konnte für den Nachtrag nicht zugeordnet werden:'#13#10'%s';
   cMessagesChipUnassignConfirm = 'Chip-Zuordnung für %d Teilnehmer wirklich beenden?';
   cMessagesAssignmentHistoryEmpty = 'Keine Chip-Zuordnungen für dieses Rennen.';
   cMessagesWarmUpChipConflictsTitle = 'Chip-Konflikte vor Vorbereitung';

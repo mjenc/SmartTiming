@@ -37,6 +37,13 @@
 6. Nach Erfolg: gleiche Display-/Ranking-Aktualisierung wie bei Live-Passagen. — **erledigt**
    (Pipeline `AddPassingForRaceId` → Display/Participation/Ranking; synthetische IDs in `UpdateParticipationTable`)
 
+### Review-Nachzüge (nach Schritt 6)
+
+- `FLastConsideredPassingId := 0` im Recalc (kein negativer Decoder-Cursor → keine Doppelwertung)
+- `AddManualPassing` liefert `TManualPassingResult`; UI meldet Reject / Pending
+- Legacy-`COMPETITORS.CHIPID` → Auto-Assign vor Resolve
+- Manual: kein Timing-Bias; ParallelConflict → `pdAcceptMarked`
+
 ## Abhängigkeiten
 
 - [Plan 2](02-chip-zuordnung.md), [Plan 3](03-rundenprotokoll.md), [Plan 4](04-plausibilitaet.md).

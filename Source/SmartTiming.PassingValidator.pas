@@ -20,6 +20,7 @@
     Unknown / NotAssigned / RaceNotAccepting / DoubleHit → Reject
     MinLapDuration / Ambiguous / ParallelConflict       → AskOperator
     MinLapDuration + IsManual                           → AcceptMarked
+    ParallelChipConflict + IsManual                     → AcceptMarked
 ==============================================================================}
 
 interface
@@ -135,6 +136,14 @@ type
   end;
 
   TPlausibilityStatsEvent = procedure(const AStats: TPlausibilitySessionStats) of object;
+
+  (* Plan 5: result of AddManualPassing for operator feedback. *)
+  TManualPassingResult = record
+    Disposition: TPassingDisposition;
+    Scored: Boolean;
+    NeedsConfirmation: Boolean;
+    Message: string;
+  end;
 
   function DispositionDisplayName(ADisposition: TPassingDisposition): string;
   function FormatTriggeredRules(ARules: TPassingValidationRules): string;
@@ -274,8 +283,13 @@ begin
         Result := pdAcceptMarked
       else
         Result := pdAskOperator;
-    pvrAmbiguousAssignment,
     pvrParallelChipConflict:
+      (* Manual targets a preferred race; mark but do not block the Nachtrag. *)
+      if AIsManual then
+        Result := pdAcceptMarked
+      else
+        Result := pdAskOperator;
+    pvrAmbiguousAssignment:
       Result := pdAskOperator;
   else
     Result := pdReject;
@@ -563,6 +577,11 @@ begin
     lCtx := TPassingValidationContext.MakeCleanLiveHit('CL-11540', lT0, 1, 10, 20, 0);
     lCtx.ParallelChipConflict := True;
     Expect('parallel chip conflict', lCtx, pdAskOperator, [pvrParallelChipConflict]);
+
+    lCtx := TPassingValidationContext.MakeCleanLiveHit('CL-11540', lT0, 1, 10, 20, 0);
+    lCtx.ParallelChipConflict := True;
+    lCtx.IsManual := True;
+    Expect('manual parallel conflict → marked', lCtx, pdAcceptMarked, [pvrParallelChipConflict]);
 
     Result := lFailed = 0;
     if Result then

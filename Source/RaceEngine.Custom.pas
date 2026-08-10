@@ -620,7 +620,9 @@ begin
     lTransaction := MainDataModule.SQLConnection.BeginTransaction;
     try
       MainDataModule.ResetRaceParticitipations(FRaceItem.Id);
-      FLastConsideredPassingId := MainDataModule.GetMinPassingNumber - 1;
+      (* Decoder-sequence cursor only — synthetic MANUAL/SYSTEM ids must not pull
+         FillPassingListFrom into the negative range (double-count after Recalc). *)
+      FLastConsideredPassingId := 0;
 
       TPassingStore.GetSingleton.FillPassingListForRaceId(FRaceItem.Id, lPassingList, true, true);
       lTimeArray := lPassingList.Keys.ToArray;

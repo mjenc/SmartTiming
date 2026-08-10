@@ -175,7 +175,9 @@ begin
   try
     LogOnDebug(cLoggerPassing, ['OnPassingReceived']);
     APassing.TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(APassing.ChipId);
-    APassing.PassingTime.AddSecond(FTimingBias);
+    (* Operator-entered wall time must not get decoder timing bias. *)
+    if not SameText(APassing.DecoderId, 'MANUAL') then
+      APassing.PassingTime.AddSecond(FTimingBias);
     APassing.LapIndex := -1;
     APassing.CompetitorId := -1;
     TPassingStore.GetSingleton.AddPassing(APassing);
