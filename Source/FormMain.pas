@@ -806,7 +806,7 @@ begin
       if not GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) then
         Continue;
 
-      lText := FormatDatetime('hh:mm', lRaceItem.StartTime) + ' - ' + lRaceItem.Title;
+      lText := FormatDatetime('hh:nn', lRaceItem.StartTime) + ' - ' + lRaceItem.Title;
       ListBoxRaces.AddItem(lText, lRaceItem);
     end;
 

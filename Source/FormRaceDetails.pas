@@ -76,13 +76,13 @@ begin
   if FIsInsert or FDataSource.DataSet.FieldByName('STARTTIME').IsNull then
   begin
     EditDate.Text := DateToStr(FEventDate);
-    EditTime.Text := FormatDatetime('hh:mm:00', Now);
+    EditTime.Text := FormatDatetime('hh:nn:00', Now);
   end
   else
   begin
     lDateTime := SmartTimingTools.GetFieldAsDatetime(FDataSource.DataSet.FieldByName('STARTTIME'), FEventDate);
     EditDate.Text := DateToStr(lDateTime);
-    EditTime.Text := FormatDatetime('hh:mm:ss', lDateTime);
+    EditTime.Text := FormatDatetime('hh:nn:ss', lDateTime);
   end;
 
   if FIsInsert then

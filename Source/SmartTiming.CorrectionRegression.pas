@@ -4,14 +4,15 @@
   Plan 6 step 6 — Correction / ITT regression smoke hooks.
 
   Pure policy checks always run. When MainDataModule has an open database,
-  participation PENALTIES round-trip and synthetic PassingNumber allocation
-  are exercised (values restored after the test).
+  read-only checks run (synthetic PassingNumber, communique lookup).
+  PENALTIES are not written: freitext does not affect ranking/times, and
+  mutating the live event DB in a smoke test is unnecessary risk.
 ==============================================================================}
 
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Variants, Data.DB,
+  System.SysUtils, System.Classes, Data.DB,
   SmartTiming.Consts, SmartTiming.PassingValidator, DataModule;
 
 type
@@ -30,11 +31,9 @@ var
   lCtx: TPassingValidationContext;
   lResult: TPassingValidationResult;
   lSynth: Integer;
-  lPartId, lRaceId: Integer;
-  lOldPenalties, lCommunique, lMarker: string;
+  lRaceId: Integer;
+  lCommunique: string;
   lResultSet: TDataSet;
-  lFields: TArray<string>;
-  lValues: TArray<Variant>;
   lDbOk: Boolean;
 
   procedure Pass(const AName: string);
@@ -95,7 +94,12 @@ begin
     else
       Fail('no-selection message constant', 'empty');
 
-    (* --- DB-backed smoke (optional) --- *)
+    if Trim(cMessagesPassingIsSystemMarker) <> '' then
+      Pass('system-marker message constant')
+    else
+      Fail('system-marker message constant', 'empty');
+
+    (* --- DB-backed smoke (read-only) --- *)
     lDbOk := (MainDataModule <> nil) and MainDataModule.SQLConnection.Connected;
     if not lDbOk then
     begin
@@ -119,57 +123,29 @@ begin
       else
         Fail('communique empty for invalid race', 'non-empty');
 
-      lPartId := 0;
+      (* Read-only: if any race already has penalties, communique must carry header. *)
       lRaceId := -1;
-      lOldPenalties := '';
       MainDataModule.SQLConnection.Execute(
-        'SELECT PARTICIPATIONID, RACEID, IFNULL(PENALTIES, '''') FROM PARTICIPATION ' +
-        'ORDER BY PARTICIPATIONID LIMIT 1',
+        'SELECT P.RACEID FROM PARTICIPATION P ' +
+        'WHERE IFNULL(TRIM(P.PENALTIES), '''') <> '''' ' +
+        'ORDER BY P.PARTICIPATIONID LIMIT 1',
         nil, lResultSet);
       try
         if (lResultSet <> nil) and not lResultSet.IsEmpty then
-        begin
-          lPartId := lResultSet.Fields[0].AsInteger;
-          lRaceId := lResultSet.Fields[1].AsInteger;
-          lOldPenalties := lResultSet.Fields[2].AsString;
-        end;
+          lRaceId := lResultSet.Fields[0].AsInteger;
       finally
         FreeAndNil(lResultSet);
       end;
 
-      if lPartId <= 0 then
-        lLines.Add('SKIP PENALTIES round-trip (no PARTICIPATION row)')
+      if lRaceId < 0 then
+        lLines.Add('SKIP communique content check (no PENALTIES in DB)')
       else
       begin
-        lMarker := Format('ST-CORR-REG %s', [FormatDateTime('yyyymmddhhnnss', Now)]);
-        SetLength(lFields, 1);
-        SetLength(lValues, 1);
-        lFields[0] := 'PENALTIES';
-        lValues[0] := lMarker;
-        try
-          MainDataModule.UpdateParticipationValues(lPartId, lFields, lValues);
-          if SameText(Trim(MainDataModule.GetParticipationStringField(lPartId, 'PENALTIES')),
-            lMarker) then
-            Pass('PENALTIES persist via UpdateParticipationValues')
-          else
-            Fail('PENALTIES persist', 'read-back mismatch');
-
-          lCommunique := MainDataModule.GetPenaltyCommuniqueText(lRaceId);
-          if (Pos(cMessagesCommuniqueHeader, lCommunique) > 0) and
-             (Pos(lMarker, lCommunique) > 0) then
-            Pass('GetPenaltyCommuniqueText includes header + freitext')
-          else
-            Fail('GetPenaltyCommuniqueText', 'missing header or freitext');
-        finally
-          lValues[0] := lOldPenalties;
-          MainDataModule.UpdateParticipationValues(lPartId, lFields, lValues);
-        end;
-
-        if SameText(Trim(MainDataModule.GetParticipationStringField(lPartId, 'PENALTIES')),
-          Trim(lOldPenalties)) then
-          Pass('PENALTIES restored after smoke')
+        lCommunique := MainDataModule.GetPenaltyCommuniqueText(lRaceId);
+        if Pos(cMessagesCommuniqueHeader, lCommunique) > 0 then
+          Pass('GetPenaltyCommuniqueText includes header for existing freitext')
         else
-          Fail('PENALTIES restore', 'original value not restored');
+          Fail('GetPenaltyCommuniqueText', 'missing header for race with PENALTIES');
       end;
     end;
 

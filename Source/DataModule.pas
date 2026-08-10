@@ -1132,7 +1132,7 @@ begin
   varNull, varEmpty:
     result := 'NULL';
   varDate:
-    result := FormatDatetime('yyyy-mm-dd hh:mm:ss.zzz', AValue).QuotedString;
+    result := FormatDatetime('yyyy-mm-dd hh:nn:ss.zzz', AValue).QuotedString;
   else
     result := VarToStr(AValue).QuotedString;
   end;
@@ -1474,7 +1474,7 @@ begin
   end;
 
   lStatus := APassing.PassingStatus;
-  lTimeStr := FormatDatetime('yyyy-mm-dd hh:mm:ss.zzz', APassing.PassingTime).QuotedString;
+  lTimeStr := FormatDatetime('yyyy-mm-dd hh:nn:ss.zzz', APassing.PassingTime).QuotedString;
   lCmd :=
     Format('INSERT INTO PASSINGS ' +
            '(PASSINGNUMBER, CHIPID, PASSINGTIME, SIGNALSTRENGTH, HITS, FLAGS, SPORT, DECODERID, RACEID, PASSINGSTATUS) VALUES ' +
@@ -1491,7 +1491,7 @@ var
   lCmd: string;
   lTimeStr: string;
 begin
-  lTimeStr := FormatDatetime('yyyy-mm-dd hh:mm:ss.zzz', APassingTime).QuotedString;
+  lTimeStr := FormatDatetime('yyyy-mm-dd hh:nn:ss.zzz', APassingTime).QuotedString;
   lCmd :=
     Format('UPDATE PASSINGS SET PASSINGTIME = %s, PASSINGSTATUS = %d WHERE PASSINGNUMBER = %d',
            [lTimeStr, Ord(APassingState), APassingNumber]);

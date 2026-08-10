@@ -1070,6 +1070,7 @@ var
   lCurrentItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
+  lPassing: TPassing;
 begin
   lListView := TListView(FPassingDisplay);
   lCurrentItem := lListView.Selected;
@@ -1077,6 +1078,12 @@ begin
     Exit;
 
   lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+  if lPassing.IsSystemMarker then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesPassingIsSystemMarker, '', [tcbOk], tcbOk);
+    Exit;
+  end;
   SetPassingStatusAndRecalc(lPassingNumber, psInvalid);
 end;
 
@@ -1086,6 +1093,7 @@ var
   lCurrentItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
+  lPassing: TPassing;
 begin
   lListView := TListView(FPassingDisplay);
   lCurrentItem := lListView.Selected;
@@ -1093,6 +1101,12 @@ begin
     Exit;
 
   lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
+  lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+  if lPassing.IsSystemMarker then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesPassingIsSystemMarker, '', [tcbOk], tcbOk);
+    Exit;
+  end;
   SetPassingStatusAndRecalc(lPassingNumber, psValid);
 end;
 
@@ -1103,6 +1117,11 @@ var
   lPassing: TPassing;
 begin
   lPassing := TPassingStore.GetSingleton.GetPassing(APassingNumber);
+  if lPassing.IsSystemMarker then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesPassingIsSystemMarker, '', [tcbOk], tcbOk);
+    Exit;
+  end;
   GSmartTimingController.UpdatePassing(APassingNumber, lPassing.PassingTime, AStatus);
   AfterPassingCorrection;
 end;

@@ -119,7 +119,7 @@ begin
         Continue;
       if not (lRaceItem.Status in cActiveRaceStatusesForChipConflict) then
         Continue;
-      lText := FormatDatetime('hh:mm', lRaceItem.StartTime) + ' - ' + lRaceItem.Title +
+      lText := FormatDatetime('hh:nn', lRaceItem.StartTime) + ' - ' + lRaceItem.Title +
         ' (' + SmartTimingTools.GetRaceStatusStringFromEnum(lRaceItem.Status) + ')';
       ComboBoxRace.Items.AddObject(lText, TObject(lRaceId));
     end;

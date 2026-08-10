@@ -198,4 +198,5 @@ Voraussetzung: ITT-Lauf mit ≥2 Teilnehmern, Chip-Zuordnung, einige Passagen; p
 | 9 | Parallel: gleicher Chip in Lauf B | Zuweisung/Live blockiert bzw. AskOperator | — |
 | 10 | Korrektur nur in Lauf B | Lauf A Ranking unverändert | ja |
 
-Automatisiert (mit geöffnetem Event): Decoder-Simulator → **Korrektur-Regression** (Parallel-Policy, synthetische IDs, PENALTIES-Roundtrip + Kommuniqué-Text).
+Automatisiert (mit geöffnetem Event): Decoder-Simulator → **Korrektur-Regression**
+(Parallel-Policy, synthetische IDs, read-only Kommuniqué-Check — kein Schreiben von `PENALTIES`).
