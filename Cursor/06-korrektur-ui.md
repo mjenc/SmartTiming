@@ -48,7 +48,7 @@ Neue Disziplinen würden diese Lücken multiplizieren.
 |--------|--------|------------|-------|--------|-----|
 | Passagen gültig/ungültig | — | PASSINGS | PassingStore | ja | Protokoll+Ranking |
 | Durchfahrtszeit ändern | FormEditTime | PASSINGS | PassingStore | ja | Protokoll+Ranking |
-| Fahrer ändern | FormAssign | Assignments | PassingStore CompId | ja | Protokoll+Ranking |
+| Fahrer ändern | FormAssign | Assignments + **PASSINGS.RACEID** | PassingStore CompId/RaceId | ja | Protokoll+Ranking |
 | Passage entfernen | Confirm | PASSINGS DELETE | Store | ja | Protokoll+Ranking |
 | Drag&Drop Zeit | — | PASSINGS | Store | ja | Protokoll+Ranking |
 | DNS/DNF/DSQ/Aktiv | — | PARTICIPATION | — | — | Ranking |

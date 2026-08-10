@@ -1239,6 +1239,7 @@ begin
     Exit;
   end;
 
+  MainDataModule.UpdatePassingRaceIdInDatabase(lPassingNumber, FRaceItem.Id);
   TPassingStore.GetSingleton.UpdatePassingRaceId(lPassingNumber, FRaceItem.Id);
   TPassingStore.GetSingleton.UpdatePassingDomainFields(lPassingNumber, lPassing.LapIndex,
     lCompetitorId);
