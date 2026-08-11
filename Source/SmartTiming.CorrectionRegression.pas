@@ -13,7 +13,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, Data.DB,
-  SmartTiming.Consts, SmartTiming.PassingValidator, DataModule;
+  SmartTiming.Consts, SmartTiming.PassingValidator, DecoderInterface, DataModule;
 
 type
   TCorrectionRegression = class
@@ -35,6 +35,7 @@ var
   lCommunique: string;
   lResultSet: TDataSet;
   lDbOk: Boolean;
+  lPassing: TPassing;
 
   procedure Pass(const AName: string);
   begin
@@ -103,6 +104,46 @@ begin
       Pass('warm-up flag time-fixed message constant')
     else
       Fail('warm-up flag time-fixed message constant', 'empty');
+
+    if Trim(cMessagesNewLeaderHint) <> '' then
+      Pass('new-leader hint constant')
+    else
+      Fail('new-leader hint constant', 'empty');
+
+    if Trim(cMessagesPointsSprintFinalLapHint) <> '' then
+      Pass('points-sprint final-lap hint constant')
+    else
+      Fail('points-sprint final-lap hint constant', 'empty');
+
+    (* --- Circuit/Criterium SYSTEM Hits contract (CreateSchema HITS=-2 etc.) --- *)
+    if (cSystemHitsStarted = -Ord(rsStarted)) and
+       (cSystemHitsWarmUp = -Ord(rsWarmUp)) and
+       (cSystemHitsNewLeader = -Ord(rsNewLeader)) and
+       (cSystemHitsPointsSprint = -Ord(rsPointsSprint)) then
+      Pass('cSystemHits* match -Ord(TRaceStatus)')
+    else
+      Fail('cSystemHits* match -Ord(TRaceStatus)', 'enum/const drift');
+
+    if (rsNewLeader in cRaceEventMarkers) and (rsPointsSprint in cRaceEventMarkers) and
+       not (rsStarted in cRaceEventMarkers) then
+      Pass('cRaceEventMarkers = Neue Spitze + Punkte only')
+    else
+      Fail('cRaceEventMarkers', 'unexpected membership');
+
+    lPassing := Default(TPassing);
+    lPassing.Flags := 2;
+    lPassing.DecoderId := 'SYSTEM';
+    lPassing.Hits := cSystemHitsWarmUp;
+    if lPassing.IsWarmUpFlag and lPassing.IsSystemMarker then
+      Pass('IsWarmUpFlag for SYSTEM Hits=-1')
+    else
+      Fail('IsWarmUpFlag', 'warm-up marker not detected');
+
+    lPassing.Hits := cSystemHitsStarted;
+    if (not lPassing.IsWarmUpFlag) and lPassing.IsSystemMarker then
+      Pass('IsWarmUpFlag false for green start')
+    else
+      Fail('IsWarmUpFlag false for green start', 'misclassified');
 
     (* --- DB-backed smoke (read-only) --- *)
     lDbOk := (MainDataModule <> nil) and MainDataModule.SQLConnection.Connected;

@@ -37,13 +37,18 @@ Die Basisklasse `TCustomRaceEngine` und die Factory `TRaceEngineFactory` sind de
      gemeinsamer Start = grüne Flagge (SYSTEM/`rsStarted`, F5, einmal pro Rennen);
      Flaggenzeiten verschiebbar (Korrektur-UI / Drag&Drop) außer Warm-Up (aktiviert Erfassung);
      nicht COMPETITOR/PARTICIPATION.STARTTIME; erster Fahrer mit Soll-Runden beendet Wertung;
-     Ranking nach Runden (Überrundete zurück), dann Zeit; Platzierung klassenspezifisch (`_BYCLASS`).
+     Ranking nach Runden (Überrundete zurück), dann Zeit.
+     **Gesamtranking**; `_BYCLASS` filtert nur nach Klasse und nummeriert Plätze neu
+     (keine eigene Wertung/Punkte pro Klasse).
    - **Criterium:** Scoring + `RANKING_CRITERIUM` / `_BYCLASS` (WB Straße § 11.2.3):
      feste Soll-Runden; Sieger = meiste Runden, bei Gleichstand Punkte.
-     Überrunder (Neue Spitze/Holdout) werden **nicht** bei Soll-Runden gestoppt
-     (Hauptfeld fährt Soll, Überrunder enden mit Soll+N). Zählung endet erst, wenn
-     das Hauptfeld (Peak ohne Holdouts) Soll erreicht. PK → 5/3/2/1 (Schlussrunde
-     doppelt bei Peak ≥ Soll−1). Ranking: Runden, Punkte, späterer Punktgewinn.
+     **Rundengewinn nur per Neue Spitze** (Spitzengruppe = Holdouts, nur wenn jemand
+     zurückliegt — sonst NS ohne Holdout-Effekt). Hauptfeld fährt Soll, Überrunder
+     enden mit Soll+N. **Verlustrunde:** zurückgefallene/überrundete Einzelne oder
+     kleine Gruppen enden mit weniger Runden (wie Circuit), sobald das Hauptfeld Soll
+     erreicht. PK → 5/3/2/1 race-weit (Schlussrunde doppelt bei Peak ≥ Soll−1).
+     **Gesamtranking**; `_BYCLASS` = Filter der Gesamtordnung nach Klasse (keine neue
+     Punktevergabe). Ranking: Runden, Punkte, späterer Punktgewinn.
    - TTT: weiterhin Skeleton (Schritt 4 Rest).
 5. Controller und WebService: Ranking nur noch über Engine-API, nicht über hardcodierte View-Namen.
    (teilweise durch Plan 7 abgedeckt — bei neuen Engines prüfen)

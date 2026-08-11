@@ -170,8 +170,8 @@ P.FINISHTIME, P.STARTTIME, P.DNS, P.DNF, P.DSQ, P.PENALTIES, P.PARTICIPATIONID, 
 FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID;
 
 (* Circuit: more laps beat fewer (lapped riders behind), then finish time.
-   Positions within class when using _BYCLASS.
-   STARTTIME is the green-flag SYSTEM passing (FLAGS=2, HITS=-Ord(rsStarted)=-2). *)
+   _BYCLASS = same order filtered by CLASS (renumbered places), not a separate race.
+   STARTTIME = green-flag SYSTEM passing (FLAGS=2, HITS=cSystemHitsStarted=-2). *)
 CREATE VIEW RANKING_CIRCUIT AS
 SELECT ROW_NUMBER() OVER (
   PARTITION BY P.RACEID
@@ -210,7 +210,8 @@ LEFT JOIN (
 
 (* Criterium (WB Straße § 11.2.3): most laps win; equal laps → points; later
    points break remaining ties (CRITRANKINGVALUE). Lap-gainers may exceed
-   RACES.LAPS. STARTTIME = green-flag SYSTEM passing. *)
+   RACES.LAPS. Points are race-wide. _BYCLASS filters the overall order by CLASS
+   (renumbered places) — no separate points. STARTTIME = green-flag SYSTEM passing. *)
 CREATE VIEW RANKING_CRITERIUM AS
 SELECT ROW_NUMBER() OVER (
   PARTITION BY P.RACEID

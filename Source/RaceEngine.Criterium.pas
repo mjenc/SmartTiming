@@ -3,24 +3,27 @@
 {==============================================================================
   Plan 1 — Kriterium (WB Straße § 11.2.3).
 
-  Laps (Rundengewinn)
+  Laps
   - Organizer sets a fixed race distance (RACES.LAPS), e.g. 30.
   - Winner = most laps completed; equal laps → points decide.
-  - A rider who gains a lap (Neue Spitze / holdout) is NOT finished at 30:
-    the main field rides the full advertised distance; the lap-gainer ends with
-    more laps (e.g. 31). Individual LAPS are never capped at TargetLaps.
-  - Lap counting stops only after the main field (non-holdout peak) first
-    reaches TargetLaps — then the race distance is complete for everyone.
+  - Rundengewinn is triggered only by Flagge Neue Spitze (rsNewLeader): the
+    current Spitzengruppe (max laps, and only if someone is behind) becomes
+    holdouts. They are not finished at Soll — the Hauptfeld rides the full
+    advertised distance; gainers end with Soll+N (e.g. 31).
+  - Verlustrunde: individuals / small groups who fall back and are lapped end
+    with fewer laps (e.g. 29), same idea as Circuit — physical crossings when
+    the Hauptfeld completes Soll; no artificial cap at Soll for anyone.
+  - Lap counting stops after the Hauptfeld (non-holdout peak) first reaches
+    TargetLaps.
 
   Points
-  - Operator sets Flagge Punkte (rsPointsSprint). The next up to four peak
-    rider passings after that flag award 5 / 3 / 2 / 1.
-  - Schlussrunde: if at flag time the field peak is already TargetLaps-1
-    (or TargetLaps when TargetLaps=1), points are doubled (10 / 6 / 4 / 2).
-  - Peak = highest lap count among riders not in the lap-gain holdout set.
-  - Neue Spitze (rsNewLeader): current peak riders become holdouts (no points
-    until the field catches their lap count again).
-  - CRITRANKINGVALUE stores last points time (later award ranks ahead on ties).
+  - Flagge Punkte (rsPointsSprint): next up to four peak passings get 5/3/2/1.
+  - Schlussrunde: double if at flag time field peak >= TargetLaps-1.
+  - Peak = max laps among non-holdouts. Holdouts score again only after the
+    field catches their lap count.
+  - CRITRANKINGVALUE = last points time (later award ranks ahead on ties).
+  - One overall ranking; points are race-wide. Class results (_BYCLASS) filter
+    that order by CLASS and renumber places — no new points per class.
 
   Start: mass start = green flag (same as Circuit).
 ==============================================================================}
@@ -48,13 +51,14 @@ type
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject;
       ARaceItem: TRaceItem); override;
     procedure AddPassingToDisplay(APassing: TPassing; AAutoScroll: boolean); override;
+    procedure RecalcCountingLaps; override;
     procedure ReassignLapsForRace; override;
   end;
 
 implementation
 
 uses
-  SmartTiming.TransponderAssignment, System.Generics.Defaults;
+  SmartTiming.TransponderAssignment, System.Generics.Defaults, Data.DBXCommon;
 
 const
   cSprintPoints: array[0..3] of Integer = (5, 3, 2, 1);
@@ -121,29 +125,29 @@ end;
 {==============================================================================}
 function TCriteriumRaceEngine.IsStartMarker(const APassing: TPassing): Boolean;
 begin
-  Result := APassing.IsSystemMarker and (APassing.Hits = -Ord(rsStarted));
+  Result := APassing.IsSystemMarker and (APassing.Hits = cSystemHitsStarted);
 end;
 
 {==============================================================================}
 function TCriteriumRaceEngine.IsBreakMarker(const APassing: TPassing): Boolean;
 begin
   Result := APassing.IsSystemMarker and
-    ((APassing.Hits = -Ord(rsNotStarted)) or
-     (APassing.Hits = -Ord(rsNeutralized)) or
-     (APassing.Hits = -Ord(rsFinished)) or
-     (APassing.Hits = -Ord(rsStopped)));
+    ((APassing.Hits = cSystemHitsNotStarted) or
+     (APassing.Hits = cSystemHitsNeutralized) or
+     (APassing.Hits = cSystemHitsFinished) or
+     (APassing.Hits = cSystemHitsStopped));
 end;
 
 {==============================================================================}
 function TCriteriumRaceEngine.IsNewLeaderMarker(const APassing: TPassing): Boolean;
 begin
-  Result := APassing.IsSystemMarker and (APassing.Hits = -Ord(rsNewLeader));
+  Result := APassing.IsSystemMarker and (APassing.Hits = cSystemHitsNewLeader);
 end;
 
 {==============================================================================}
 function TCriteriumRaceEngine.IsPointsSprintMarker(const APassing: TPassing): Boolean;
 begin
-  Result := APassing.IsSystemMarker and (APassing.Hits = -Ord(rsPointsSprint));
+  Result := APassing.IsSystemMarker and (APassing.Hits = cSystemHitsPointsSprint);
 end;
 
 {==============================================================================}
@@ -214,12 +218,24 @@ var
   procedure MarkCurrentPeakAsHoldouts;
   var
     lId, lLap, lMax: Integer;
+    lHasFieldBehind: Boolean;
   begin
     lMax := -1;
     for lLap in lLapsByCompetitor.Values do
       if lLap > lMax then
         lMax := lLap;
     if lMax < 0 then
+      Exit;
+    (* Rundengewinn only when Spitze is ahead of the field. If everyone shares
+       the same lap count, Neue Spitze must not hold out the entire peloton. *)
+    lHasFieldBehind := False;
+    for lLap in lLapsByCompetitor.Values do
+      if lLap < lMax then
+      begin
+        lHasFieldBehind := True;
+        Break;
+      end;
+    if not lHasFieldBehind then
       Exit;
     for lId in lLapsByCompetitor.Keys do
       if lLapsByCompetitor[lId] = lMax then
@@ -415,7 +431,7 @@ end;
 {==============================================================================}
 procedure TCriteriumRaceEngine.UpdateParticipationTable(ACurrentPassingId: integer);
 begin
-  (* Full replay: laps (uncapped for lap-gainers) + points. *)
+  (* One full replay per live update (not per Recalc step — see RecalcCountingLaps). *)
   if ACurrentPassingId >= 0 then
   begin
     if FLastConsideredPassingId >= ACurrentPassingId then
@@ -423,6 +439,45 @@ begin
     FLastConsideredPassingId := ACurrentPassingId;
   end;
   ApplyCriteriumScoring;
+end;
+
+{==============================================================================}
+procedure TCriteriumRaceEngine.RecalcCountingLaps;
+var
+  lTransaction: TDBXTransaction;
+  lList: TList<TPassing>;
+  lPassing: TPassing;
+  i: Integer;
+  lMaxDecoderId: Integer;
+begin
+  lTransaction := MainDataModule.SQLConnection.BeginTransaction;
+  try
+    MainDataModule.ResetRaceParticitipations(FRaceItem.Id);
+    FLastConsideredPassingId := 0;
+    ApplyCriteriumScoring;
+
+    (* Advance cursor past decoder passings so live scoring does not re-walk them. *)
+    lMaxDecoderId := 0;
+    lList := TList<TPassing>.Create;
+    try
+      TPassingStore.GetSingleton.FillPassingsForRace(FRaceItem.Id, lList);
+      for i := 0 to lList.Count - 1 do
+      begin
+        lPassing := lList[i];
+        if (lPassing.PassingNumber > lMaxDecoderId) and (lPassing.PassingNumber >= 0) then
+          lMaxDecoderId := lPassing.PassingNumber;
+      end;
+    finally
+      FreeAndNil(lList);
+    end;
+    FLastConsideredPassingId := lMaxDecoderId;
+
+    MainDataModule.SQLConnection.CommitFreeAndNil(lTransaction);
+  except
+    MainDataModule.SQLConnection.RollbackFreeAndNil(lTransaction);
+    raise;
+  end;
+  RefreshRankingDisplay;
 end;
 
 {==============================================================================}
@@ -436,8 +491,9 @@ end;
 {==============================================================================}
 procedure TCriteriumRaceEngine.ReassignLapsForRace;
 begin
+  (* Protocol LapIndex only — scoring is ApplyCriteriumScoring via Recalc /
+     UpdateParticipationTable / flag AddPassingToDisplay. *)
   inherited;
-  ApplyCriteriumScoring;
 end;
 
 end.

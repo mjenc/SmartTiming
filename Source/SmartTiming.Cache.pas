@@ -38,6 +38,9 @@ type
     procedure UpdatePassingDomainFields(APassingNumber: Integer; ALapIndex, ACompetitorId: Integer);
     procedure RemovePassing(APassingNumber: Integer);
     procedure FillPassingListFrom(AStartPassingNumber: integer; AList: TDictionary<integer,TPassing>; AFilterOnTransponderIDs: TList<integer> = nil);
+    (* Inclusive range [AStart .. AEnd]; empty if AEnd < AStart. *)
+    procedure FillPassingListRange(AStartPassingNumber, AEndPassingNumber: integer;
+      AList: TDictionary<integer, TPassing>);
     procedure FillPassingListForRaceId(ARaceId: integer; AList: TDictionary<TDatetime, TPassing>; AOnlyActivePassings, ATimeFractionOnly: Boolean);
     procedure FillPassingsForRace(ARaceId: Integer; AList: TList<TPassing>);
     function GetLastValidPassingTime(ARaceId: Integer; const AChipId: string;
@@ -360,6 +363,26 @@ begin
     end;
   finally
     Synchronizer.EndWrite;
+  end;
+end;
+
+{==============================================================================}
+procedure TPassingStore.FillPassingListRange(AStartPassingNumber, AEndPassingNumber: integer;
+  AList: TDictionary<integer, TPassing>);
+var
+  lPassingNumber: integer;
+  lPassing: TPassing;
+begin
+  if (AList = nil) or (AEndPassingNumber < AStartPassingNumber) then
+    Exit;
+
+  Synchronizer.BeginRead;
+  try
+    for lPassingNumber := AStartPassingNumber to AEndPassingNumber do
+      if FPassingList.TryGetValue(lPassingNumber, lPassing) then
+        AList.AddOrSetValue(lPassingNumber, lPassing);
+  finally
+    Synchronizer.EndRead;
   end;
 end;
 

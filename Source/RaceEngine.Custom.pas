@@ -144,7 +144,7 @@ type
     property RankingGroupedByClass: boolean read FRankingGroupedByClass write SetRankingGroupedByClass;
 
     // corrections
-    procedure RecalcCountingLaps;
+    procedure RecalcCountingLaps; virtual;
     procedure RefreshPassingListStatus; virtual;
     procedure ReassignLapsForRace; virtual;
     procedure ShowCompetitorPassings(ACompetitorId: Integer); virtual;
@@ -663,7 +663,7 @@ var
     result :=
       (lPassing.Flags = 2)
       and
-      (lPassing.Hits = 0 - Ord(rsStarted));
+      (lPassing.Hits = cSystemHitsStarted);
     if result then
       lInActiveRaceSection := true;
   end;
@@ -674,13 +674,13 @@ var
     result :=
       (lPassing.Flags = 2)
       and
-      ((lPassing.Hits = -Ord(rsNotStarted))
+      ((lPassing.Hits = cSystemHitsNotStarted)
        or
-       (lPassing.Hits = -Ord(rsNeutralized))
+       (lPassing.Hits = cSystemHitsNeutralized)
        or
-       (lPassing.Hits = -Ord(rsFinished))
+       (lPassing.Hits = cSystemHitsFinished)
        or
-       (lPassing.Hits = -Ord(rsStopped)));
+       (lPassing.Hits = cSystemHitsStopped));
     if result then
       lInActiveRaceSection := false;
   end;

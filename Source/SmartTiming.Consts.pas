@@ -207,6 +207,13 @@ resourcestring
     'System-Markierungen können nicht gelöscht oder ungültig gesetzt werden.';
   cMessagesWarmUpFlagTimeFixed =
     'Die Vorbereitungs-Flagge kann nicht verschoben werden, weil sie die Erfassung aktiviert.';
+  cMessagesNewLeaderHint =
+    'Neue Spitze erst setzen, wenn die gesamte Spitzengruppe die Linie passiert hat.'#13#10 +
+    'Nur Fahrer mit der höchsten Rundenzahl (bereits durch) erhalten die Gewinnrunde.';
+  cMessagesPointsSprintHint =
+    'Nächste Passagen der Spitze erhalten 5 / 3 / 2 / 1 Punkte.';
+  cMessagesPointsSprintFinalLapHint =
+    'Hauptfeld auf Schlussrunde — Punkte werden doppelt gewertet (10 / 6 / 4 / 2).';
   cMessagesPassingDragSingleOnly =
     'Zeitkorrektur per Drag&Drop ist nur mit einer ausgewählten Passage möglich.';
   cMessagesChangeCompetitorNoChip = 'Diese Passage hat keinen Chip — Fahrer kann nicht geändert werden.';
@@ -241,6 +248,17 @@ type
   TRaceStates = set of TRaceStatus;
 
 const
+  (* SYSTEM marker Hits = -Ord(TRaceStatus). Keep CreateSchema.sql HITS filters in sync. *)
+  cSystemHitsNotStarted = 0;
+  cSystemHitsWarmUp = -1;
+  cSystemHitsStarted = -2;
+  cSystemHitsNeutralized = -3;
+  cSystemHitsFinished = -4;
+  cSystemHitsAborted = -5;
+  cSystemHitsStopped = -6;
+  cSystemHitsNewLeader = -7;
+  cSystemHitsPointsSprint = -8;
+
   (* SYSTEM markers that do not change RACES.STATUS (in-race operator events). *)
   cRaceEventMarkers: TRaceStates = [rsNewLeader, rsPointsSprint];
   cPassingImageValid = 0;

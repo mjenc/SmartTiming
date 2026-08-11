@@ -5,7 +5,7 @@ interface
 uses
   Classes, SysUtils, StrUtils,
   IdTCPConnection, IdTCPClient, IdBaseComponent, IdComponent, IdCustomTCPServer, IdTCPServer, IdUdpServer,
-  IdGlobal, IdSocketHandle;
+  IdGlobal, IdSocketHandle, SmartTiming.Consts;
 
 const
   cDecoderManufacturerMyLaps = 'MyLaps';
@@ -122,8 +122,7 @@ end;
 {==============================================================================}
 function TPassing.IsWarmUpFlag: Boolean;
 begin
-  (* Hits = -Ord(rsWarmUp); Ord(rsWarmUp)=1 — keep in sync with TRaceStatus. *)
-  Result := IsSystemMarker and (Hits = -1);
+  Result := IsSystemMarker and (Hits = cSystemHitsWarmUp);
 end;
 
 {==============================================================================}

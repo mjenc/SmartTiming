@@ -1083,12 +1083,44 @@ end;
 {==============================================================================}
 procedure TFormMain.ButtonNewLeaderClick(Sender: TObject);
 begin
+  SmartTimingTools.ShowDialog(cMessagesNewLeaderHint, '', [tcbOk], tcbOk);
   RaceButtonStatusChange(rsNewLeader);
 end;
 
 {==============================================================================}
 procedure TFormMain.ButtonPointsSprintClick(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
+  lMaxLaps: Integer;
+  lResultSet: TDataSet;
 begin
+  lMaxLaps := 0;
+  if ListBoxRaces.ItemIndex >= 0 then
+  begin
+    lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+    if (lRaceItem <> nil) and (lRaceItem.Laps > 0) then
+    begin
+      MainDataModule.SQLConnection.Execute(
+        Format('SELECT MAX(IFNULL(LAPS, 0)) FROM PARTICIPATION WHERE RACEID = %d',
+          [lRaceItem.Id]), nil, lResultSet);
+      try
+        if (lResultSet <> nil) and not lResultSet.IsEmpty and
+           not lResultSet.Fields[0].IsNull then
+          lMaxLaps := lResultSet.Fields[0].AsInteger;
+      finally
+        FreeAndNil(lResultSet);
+      end;
+      if lMaxLaps >= lRaceItem.Laps - 1 then
+        SmartTimingTools.ShowDialog(cMessagesPointsSprintFinalLapHint, '', [tcbOk], tcbOk)
+      else
+        SmartTimingTools.ShowDialog(cMessagesPointsSprintHint, '', [tcbOk], tcbOk);
+    end
+    else
+      SmartTimingTools.ShowDialog(cMessagesPointsSprintHint, '', [tcbOk], tcbOk);
+  end
+  else
+    SmartTimingTools.ShowDialog(cMessagesPointsSprintHint, '', [tcbOk], tcbOk);
+
   RaceButtonStatusChange(rsPointsSprint);
 end;
 

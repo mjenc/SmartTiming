@@ -300,6 +300,8 @@ var
   lStartTime: TDatetime;
   lFinishTime: TDatetime;
   lRankingTime: TDatetime;
+  lSorted: TList<TPassing>;
+  i: Integer;
 
   procedure ApplyPassingToParticipation(const APassing: TPassing);
   begin
@@ -372,13 +374,25 @@ begin
     Exit;
 
   lPassingList := TDictionary<integer, TPassing>.Create;
+  lSorted := TList<TPassing>.Create;
   try
-    TPassingStore.GetSingleton.FillPassingListFrom(FLastConsideredPassingId + 1, lPassingList);
-
+    TPassingStore.GetSingleton.FillPassingListRange(
+      FLastConsideredPassingId + 1, ACurrentPassingId, lPassingList);
     for lPassing in lPassingList.Values do
-      ApplyPassingToParticipation(lPassing);
+      lSorted.Add(lPassing);
+    lSorted.Sort(
+      TComparer<TPassing>.Construct(
+        function(const Left, Right: TPassing): Integer
+        begin
+          Result := CompareDateTime(Left.PassingTime, Right.PassingTime);
+          if Result = 0 then
+            Result := Left.PassingNumber - Right.PassingNumber;
+        end));
+    for i := 0 to lSorted.Count - 1 do
+      ApplyPassingToParticipation(lSorted[i]);
     FLastConsideredPassingId := ACurrentPassingId;
   finally
+    FreeAndNil(lSorted);
     FreeAndNil(lPassingList);
   end;
 end;

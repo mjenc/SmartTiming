@@ -13,7 +13,8 @@
   - When the first rider in the race reaches that count, scoring stops for
     everyone after that finish time (race closed).
   - Ranking prefers more laps (lapped riders behind), then finish time.
-  - Official places are independent per class (_BYCLASS view).
+  - One overall ranking for the race. Class results (_BYCLASS) only filter that
+    order by CLASS and renumber places — no separate scoring per class.
 ==============================================================================}
 
 interface
@@ -138,7 +139,7 @@ begin
       lPassing := lList[i];
       if not lPassing.IsSystemMarker then
         Continue;
-      if lPassing.Hits <> -Ord(rsStarted) then
+      if lPassing.Hits <> cSystemHitsStarted then
         Continue;
       if (not Result) or (CompareDateTime(lPassing.PassingTime, AStartTime) < 0) then
       begin
@@ -359,6 +360,8 @@ var
   lTargetLaps: Integer;
   lGreenFlagStart: TDateTime;
   lHasGreenFlag: Boolean;
+  lSorted: TList<TPassing>;
+  i: Integer;
 
   procedure ApplyPassingToParticipation(const APassing: TPassing);
   begin
@@ -443,12 +446,25 @@ begin
     Exit;
 
   lPassingList := TDictionary<integer, TPassing>.Create;
+  lSorted := TList<TPassing>.Create;
   try
-    TPassingStore.GetSingleton.FillPassingListFrom(FLastConsideredPassingId + 1, lPassingList);
+    TPassingStore.GetSingleton.FillPassingListRange(
+      FLastConsideredPassingId + 1, ACurrentPassingId, lPassingList);
     for lPassing in lPassingList.Values do
-      ApplyPassingToParticipation(lPassing);
+      lSorted.Add(lPassing);
+    lSorted.Sort(
+      TComparer<TPassing>.Construct(
+        function(const Left, Right: TPassing): Integer
+        begin
+          Result := CompareDateTime(Left.PassingTime, Right.PassingTime);
+          if Result = 0 then
+            Result := Left.PassingNumber - Right.PassingNumber;
+        end));
+    for i := 0 to lSorted.Count - 1 do
+      ApplyPassingToParticipation(lSorted[i]);
     FLastConsideredPassingId := ACurrentPassingId;
   finally
+    FreeAndNil(lSorted);
     FreeAndNil(lPassingList);
   end;
 end;
