@@ -126,9 +126,6 @@ CREATE INDEX IDX_PASSINGS_2 ON PASSINGS (PASSINGTIME, CHIPID);
 
 CREATE INDEX IDX_PASSINGS_3 ON PASSINGS (RACEID, PASSINGTIME);
 
--- Time-bounded, race-scoped chip ownership (Plan 2).
--- VALIDTO NULL = currently active assignment.
--- At most one active assignment per chip (no parallel double issue).
 CREATE TABLE TRANSPONDERASSIGNMENTS
 (
         ASSIGNMENTID INTEGER PRIMARY KEY,
@@ -169,9 +166,6 @@ OVER (PARTITION BY C.CLASS, 1 ORDER BY C.CLASS, P.LAPS DESC, P.RANKINGTIME IS NU
 P.FINISHTIME, P.STARTTIME, P.DNS, P.DNF, P.DSQ, P.PENALTIES, P.PARTICIPATIONID, P.COMPETITORID, C.UCIID
 FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID;
 
-(* Circuit: more laps beat fewer (lapped riders behind), then finish time.
-   _BYCLASS = same order filtered by CLASS (renumbered places), not a separate race.
-   STARTTIME = green-flag SYSTEM passing (FLAGS=2, HITS=cSystemHitsStarted=-2). *)
 CREATE VIEW RANKING_CIRCUIT AS
 SELECT ROW_NUMBER() OVER (
   PARTITION BY P.RACEID
@@ -208,10 +202,6 @@ LEFT JOIN (
   GROUP BY RACEID
 ) GS ON GS.RACEID = P.RACEID;
 
-(* Criterium (WB Straße § 11.2.3): most laps win; equal laps → points; later
-   points break remaining ties (CRITRANKINGVALUE). Lap-gainers may exceed
-   RACES.LAPS. Points are race-wide. _BYCLASS filters the overall order by CLASS
-   (renumbered places) — no separate points. STARTTIME = green-flag SYSTEM passing. *)
 CREATE VIEW RANKING_CRITERIUM AS
 SELECT ROW_NUMBER() OVER (
   PARTITION BY P.RACEID

@@ -419,7 +419,7 @@ begin
   ARaceItem.StartTime := FieldAsDatetime(ADataSet.FieldByName('STARTTIME'));
   ARaceItem.Title := ADataSet.FieldByName('TITLE').AsString;
   ARaceItem.Laps := ADataSet.FieldByName('LAPS').AsInteger;
-  ARaceItem.Distance := ADataSet.FieldByName('DISTANCE').AsFloat;
+  ARaceItem.Distance := StrToFloatDef(ADataSet.FieldByName('DISTANCE').AsString, 0);
   ARaceItem.FirstPassingIsLap := ADataSet.FieldByName('FIRSTPASSINGISLAP').AsInteger <> 0;
   ARaceItem.MinLapDuration := ADataSet.FieldByName('MINLAPDURATION').AsInteger;
   ARaceItem.Status := TRaceStatus(ADataSet.FieldByName('STATUS').AsInteger);

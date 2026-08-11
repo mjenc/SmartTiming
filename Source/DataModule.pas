@@ -1282,7 +1282,7 @@ begin
     lResultSet.First;
     while not lResultSet.Eof do
     begin
-      if SameText(lResultSet.FieldByName('name').AsString, 'FINISHTIMEOVERRIDE') then
+      if SameText(lResultSet.Fields[1].AsString, 'FINISHTIMEOVERRIDE') then
       begin
         lHasColumn := True;
         Break;
