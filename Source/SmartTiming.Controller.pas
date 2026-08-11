@@ -36,6 +36,7 @@ type
     function GetMinLapDurationForRace(ARaceId: Integer): Integer;
     function IsAlwaysAcceptChip(const AChipId: string): Boolean;
     function IsMinLapOnlyAsk(const AValidation: TPassingValidationResult): Boolean;
+    function TryGetContextRaceIdForOrphanPassing: Integer;
     procedure NotifyPlausibilityStatsChanged;
     procedure RecordPlausibilityOutcome(const APassing: TPassing; ARaceId: Integer;
       const AValidation: TPassingValidationResult; AAlwaysAccepted: Boolean);
@@ -62,6 +63,9 @@ type
     procedure ResetPlausibilityStats;
     procedure ApplyPlausibilityAccept(APassingNumber, ARaceId: Integer);
     procedure ApplyPlausibilityReject(APassingNumber, ARaceId: Integer);
+    (* After chip Assign/Transfer: reattach orphans + rebuild race protocol/ranking. *)
+    function AfterChipAssignedToCompetitor(ARaceId, ACompetitorId: Integer;
+      const AChipId: string): Integer;
     property Event: TEventDataObject read FEventDataObject;
     property RaceList: TDictionary<integer, TRaceItem> read FRaceList;
     property PlausibilityStats: TPlausibilitySessionStats read GetPlausibilityStatsSnapshot;
@@ -409,6 +413,7 @@ end;
 procedure TSmartTimingController.OnPassingReceived(APassing: TPassing);
 var
   lRaceId: integer;
+  lContextRaceId: Integer;
   lResolution: TPassingAssignmentResolution;
   lContext: TPassingValidationContext;
   lValidation: TPassingValidationResult;
@@ -499,11 +504,30 @@ begin
         lRaceId := -1;
     end;
 
+    (* Unknown chip (no assignment): still show in the selected active race protocol. *)
+    if (lRaceId < 0) and (lResolution.MatchCount = 0) then
+    begin
+      lContextRaceId := TryGetContextRaceIdForOrphanPassing;
+      if lContextRaceId >= 0 then
+      begin
+        lRaceId := lContextRaceId;
+        APassing.PassingStatus := Ord(psInvalid);
+        APassing.CompetitorId := -1;
+      end;
+    end;
+
     APassing.RaceId := lRaceId;
+    if (lRaceId >= 0) and lResolution.IsUnique then
+      APassing.CompetitorId := lResolution.CompetitorId
+    else if lRaceId >= 0 then
+      APassing.CompetitorId := -1;
+
     MainDataModule.AddPassingToDatabase(APassing, lRaceId, True);
     APassing.RaceId := lRaceId;
     TPassingStore.GetSingleton.UpdatePassingRaceId(APassing.PassingNumber, lRaceId);
     TPassingStore.GetSingleton.UpdatePassingStatus(APassing.PassingNumber, APassing.PassingStatus);
+    TPassingStore.GetSingleton.UpdatePassingDomainFields(APassing.PassingNumber,
+      APassing.LapIndex, APassing.CompetitorId);
 
     if (lRaceId < 0) and ((APassing.Flags and 2) <> 2) then
     begin
@@ -652,6 +676,51 @@ function TSmartTimingController.IsMinLapOnlyAsk(
 begin
   Result := (AValidation.Disposition = pdAskOperator) and
     (AValidation.TriggeredRules = [pvrMinLapDuration]);
+end;
+
+{==============================================================================}
+function TSmartTimingController.TryGetContextRaceIdForOrphanPassing: Integer;
+var
+  lRaceId: Integer;
+  lRaceItem: TRaceItem;
+  lStatus: TRaceStatus;
+begin
+  Result := -1;
+  if GFormMain = nil then
+    Exit;
+  lRaceId := GFormMain.GetSelectedRaceId;
+  if lRaceId < 0 then
+    Exit;
+  if not FRaceList.TryGetValue(lRaceId, lRaceItem) then
+    Exit;
+  lStatus := lRaceItem.Status;
+  if lStatus = rsNotStarted then
+    lStatus := MainDataModule.GetRaceStatus(lRaceId);
+  if TTransponderAssignmentService.IsRaceStatusActiveForChipConflict(lStatus) then
+    Result := lRaceId;
+end;
+
+{==============================================================================}
+function TSmartTimingController.AfterChipAssignedToCompetitor(ARaceId, ACompetitorId: Integer;
+  const AChipId: string): Integer;
+var
+  lRaceItem: TRaceItem;
+begin
+  Result := 0;
+  if (ARaceId >= 0) and FRaceList.TryGetValue(ARaceId, lRaceItem) and
+     (lRaceItem.RaceEngine <> nil) then
+    lRaceItem.RaceEngine.CancelPassingListDrag;
+
+  Result := TTransponderAssignmentService.ReattachOrphanPassingsForChip(
+    ARaceId, ACompetitorId, AChipId);
+  if (ARaceId < 0) or not FRaceList.TryGetValue(ARaceId, lRaceItem) then
+    Exit;
+  if lRaceItem.RaceEngine = nil then
+    Exit;
+  lRaceItem.RaceEngine.RecalcCountingLaps;
+  lRaceItem.RaceEngine.ReassignLapsForRace;
+  lRaceItem.RaceEngine.RebuildProtocolDisplay;
+  lRaceItem.RaceEngine.RefreshRankingDisplay;
 end;
 
 {==============================================================================}

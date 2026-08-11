@@ -58,6 +58,7 @@ type
     function GetMaxTransponderAssignmentId: integer;
     function InsertOpenTransponderAssignment(ARaceId, ACompetitorId: Integer;
       const AChipId: string; AValidFrom: TDateTime): Integer;
+    procedure UpdateTransponderAssignmentValidFrom(AAssignmentId: Integer; AValidFrom: TDateTime);
     procedure CreateTransponderAssignmentFromCompetitorChip(ARaceId, ACompetitorId: Integer);
     procedure CloseTransponderAssignmentsForCompetitors(ARaceId: Integer; const ACompetitorIDs: TArray<integer>);
     procedure CloseAllOpenTransponderAssignmentsForRace(ARaceId: Integer);
@@ -115,6 +116,7 @@ type
     procedure AddPassingToDatabase(APassing: TPassing; var ARaceId: integer;
       ASkipResolve: Boolean = False);
     procedure UpdatePassingInDatabase(APassingNumber: Integer; APassingTime: TDatetime; APassingState: TPassingState);
+    procedure UpdatePassingStatusInDatabase(APassingNumber: Integer; APassingState: TPassingState);
     procedure UpdatePassingRaceIdInDatabase(APassingNumber: Integer; ARaceId: Integer);
     procedure RemovePassingFromDatabase(APassingNumber: Integer);
 
@@ -473,6 +475,16 @@ begin
     '(%d, %s, %d, %s, NULL, %d)',
     [Result, QuotedStr(AChipId), ACompetitorId, lValidFrom, ARaceId]);
   SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+procedure TMainDataModule.UpdateTransponderAssignmentValidFrom(AAssignmentId: Integer;
+  AValidFrom: TDateTime);
+begin
+  SQLConnection.Execute(
+    Format('UPDATE TRANSPONDERASSIGNMENTS SET VALIDFROM = %s WHERE ASSIGNMENTID = %d',
+      [FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AValidFrom).QuotedString, AAssignmentId]),
+    nil);
 end;
 
 {==============================================================================}
@@ -1072,8 +1084,8 @@ var
   lCompetitorId: Integer;
 begin
   ABIB := 0;
-  AName := '?';
-  AClubTeam := '?';
+  AName := cMessagesUnassignedPassingName;
+  AClubTeam := '';
 
   if not TTransponderAssignmentService.TryGetCompetitorForRaceChipAtTime(
        APassing.RaceId, APassing.ChipId, APassing.PassingTime, lCompetitorId) then
@@ -1568,6 +1580,15 @@ begin
     Format('UPDATE PASSINGS SET PASSINGTIME = %s, PASSINGSTATUS = %d WHERE PASSINGNUMBER = %d',
            [lTimeStr, Ord(APassingState), APassingNumber]);
   SQLConnection.Execute(lCmd, nil);
+end;
+
+{==============================================================================}
+procedure TMainDataModule.UpdatePassingStatusInDatabase(APassingNumber: Integer;
+  APassingState: TPassingState);
+begin
+  SQLConnection.Execute(
+    Format('UPDATE PASSINGS SET PASSINGSTATUS = %d WHERE PASSINGNUMBER = %d',
+      [Ord(APassingState), APassingNumber]), nil);
 end;
 
 {==============================================================================}

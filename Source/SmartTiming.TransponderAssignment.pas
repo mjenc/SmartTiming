@@ -11,7 +11,7 @@ interface
 
 uses
   System.SysUtils, System.Generics.Collections,
-  SmartTiming.Consts, SmartTiming.Cache;
+  DecoderInterface, SmartTiming.Consts, SmartTiming.Cache;
 
 type
   TAssignmentConflict = record
@@ -90,12 +90,21 @@ type
     (* Close current open assignment for race+competitor (if any), then Assign new chip. *)
     class function Transfer(ARaceId, ACompetitorId: Integer; const ANewChipId: string;
       out AResult: TAssignmentOperationResult; AValidFrom: TDateTime = 0): Boolean; static;
+
+    (* Earliest orphan hit for chip (unassigned store / RaceId hint). *)
+    class function TryEarliestOrphanPassingTime(const AChipId: string; ARaceIdHint: Integer;
+      out ATime: TDateTime): Boolean; static;
+
+    (* After Assign/Transfer: attach orphan passings of AChipId to race+competitor,
+       mark valid, backdate assignment ValidFrom if needed. Returns count. *)
+    class function ReattachOrphanPassingsForChip(ARaceId, ACompetitorId: Integer;
+      const AChipId: string): Integer; static;
   end;
 
 implementation
 
 uses
-  DataModule, SmartTiming.Tools;
+  DataModule, SmartTiming.Tools, System.DateUtils;
 
 {==============================================================================}
 function TAssignmentConflict.IsInActiveRace: Boolean;
@@ -535,6 +544,91 @@ begin
   AResult.Success := True;
   AResult.Message := Format(cMessagesChipTransferOk, [lChipId]);
   Result := True;
+end;
+
+{==============================================================================}
+class function TTransponderAssignmentService.TryEarliestOrphanPassingTime(const AChipId: string;
+  ARaceIdHint: Integer; out ATime: TDateTime): Boolean;
+var
+  lList: TList<TPassing>;
+  lPassing: TPassing;
+  i: Integer;
+begin
+  Result := False;
+  ATime := 0;
+  lList := TList<TPassing>.Create;
+  try
+    TPassingStore.GetSingleton.FillOrphanPassingsForChip(AChipId, ARaceIdHint, lList);
+    for i := 0 to lList.Count - 1 do
+    begin
+      lPassing := lList[i];
+      if (not Result) or (CompareDateTime(lPassing.PassingTime, ATime) < 0) then
+      begin
+        ATime := lPassing.PassingTime;
+        Result := True;
+      end;
+    end;
+  finally
+    FreeAndNil(lList);
+  end;
+end;
+
+{==============================================================================}
+class function TTransponderAssignmentService.ReattachOrphanPassingsForChip(ARaceId,
+  ACompetitorId: Integer; const AChipId: string): Integer;
+var
+  lChipId: string;
+  lList: TList<TPassing>;
+  lPassing: TPassing;
+  lAssignment: TTransponderAssignment;
+  lEarliest: TDateTime;
+  i: Integer;
+begin
+  Result := 0;
+  lChipId := NormalizeChipId(AChipId);
+  if (ARaceId < 0) or (ACompetitorId < 0) or (lChipId = '') then
+    Exit;
+
+  lList := TList<TPassing>.Create;
+  try
+    TPassingStore.GetSingleton.FillOrphanPassingsForChip(lChipId, ARaceId, lList);
+    if lList.Count = 0 then
+      Exit;
+
+    lEarliest := lList[0].PassingTime;
+    for i := 1 to lList.Count - 1 do
+      if CompareDateTime(lList[i].PassingTime, lEarliest) < 0 then
+        lEarliest := lList[i].PassingTime;
+
+    (* Assignment window must cover historical orphan times. *)
+    if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
+         ARaceId, ACompetitorId, lAssignment) and
+       (NormalizeChipId(lAssignment.ChipId) = lChipId) and
+       (CompareDateTime(lAssignment.ValidFrom, lEarliest) > 0) then
+    begin
+      lAssignment.ValidFrom := lEarliest;
+      MainDataModule.UpdateTransponderAssignmentValidFrom(lAssignment.AssignmentId, lEarliest);
+      TTransponderAssignmentStore.GetSingleton.Upsert(lAssignment);
+    end;
+
+    for i := 0 to lList.Count - 1 do
+    begin
+      lPassing := lList[i];
+      if lPassing.IsSystemMarker then
+        Continue;
+      MainDataModule.UpdatePassingRaceIdInDatabase(lPassing.PassingNumber, ARaceId);
+      (* Never rewrite PASSINGTIME here — only race link + status. *)
+      MainDataModule.UpdatePassingStatusInDatabase(lPassing.PassingNumber, psValid);
+      TPassingStore.GetSingleton.UpdatePassingRaceId(lPassing.PassingNumber, ARaceId);
+      TPassingStore.GetSingleton.UpdatePassingStatus(lPassing.PassingNumber, Ord(psValid));
+      TPassingStore.GetSingleton.UpdatePassingDomainFields(lPassing.PassingNumber,
+        lPassing.LapIndex, ACompetitorId);
+      TUnassignedPassingStore.GetSingleton.RemovePassing(lPassing.PassingNumber);
+      Inc(Result);
+    end;
+  finally
+    FreeAndNil(lList);
+  end;
 end;
 
 end.

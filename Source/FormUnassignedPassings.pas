@@ -148,7 +148,7 @@ var
   lRaceId: Integer;
   lCompetitorId: Integer;
   lResult: TAssignmentOperationResult;
-  lRaceItem: TRaceItem;
+  lValidFrom: TDateTime;
 begin
   if not HasSelection then
     Exit;
@@ -164,24 +164,19 @@ begin
   if not TFormAssignCompetitor.Execute(Self, lRaceId, lCompetitorId) then
     Exit;
 
-  (* ValidFrom must cover the historical passing time for Resolve/name/laps. *)
+  (* ValidFrom must cover historical orphan times for Resolve/name/laps. *)
+  if not TTransponderAssignmentService.TryEarliestOrphanPassingTime(lPassing.ChipId, lRaceId,
+       lValidFrom) then
+    lValidFrom := lPassing.PassingTime;
+
   if not TTransponderAssignmentService.Assign(lRaceId, lCompetitorId, lPassing.ChipId,
-       lResult, lPassing.PassingTime) then
+       lResult, lValidFrom) then
   begin
     SmartTimingTools.ShowDialog(lResult.Message, '', [tcbOk], tcbOk);
     Exit;
   end;
 
-  MainDataModule.UpdatePassingRaceIdInDatabase(lPassing.PassingNumber, lRaceId);
-  TPassingStore.GetSingleton.UpdatePassingRaceId(lPassing.PassingNumber, lRaceId);
-  TUnassignedPassingStore.GetSingleton.RemovePassing(lPassing.PassingNumber);
-  lPassing.RaceId := lRaceId;
-  GFormMain.AddPassingForRaceId(lRaceId, lPassing);
-
-  if GSmartTimingController.RaceList.TryGetValue(lRaceId, lRaceItem) and
-     (lRaceItem.RaceEngine <> nil) then
-    lRaceItem.RaceEngine.RecalcCountingLaps;
-
+  GSmartTimingController.AfterChipAssignedToCompetitor(lRaceId, lCompetitorId, lPassing.ChipId);
   ReloadList;
 end;
 

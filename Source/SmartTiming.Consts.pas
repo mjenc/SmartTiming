@@ -153,6 +153,7 @@ resourcestring
   cMessagesChipUnassignOk = 'Chip-Zuordnung wurde beendet.';
   cMessagesChipUnassignNone = 'Für diesen Teilnehmer gibt es keine offene Chip-Zuordnung.';
   cMessagesChipTransferOk = 'Chip %s wurde übertragen.';
+  cMessagesUnassignedPassingName = '(kein Fahrer)';
   cMessagesPassingAmbiguousAssignment =
     'Mehrdeutige Chip-Zuordnung für %s um %s (%d Treffer) — Passage nicht gewertet.';
   cMessagesCompetitorPassingsTitle = 'Rundenprotokoll — %s';

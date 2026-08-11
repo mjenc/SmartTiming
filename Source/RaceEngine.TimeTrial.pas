@@ -177,7 +177,10 @@ begin
   end;
 
   MainDataModule.GetCompetitorInfoForPassing(APassing, lBIB, lName, lTeamClub);
-  lListItem.Caption := lBIB.ToString;
+  if lBIB > 0 then
+    lListItem.Caption := lBIB.ToString
+  else
+    lListItem.Caption := '';
   lListItem.SubItems.Add(lName);
   lListItem.SubItems.Add(FormatDateTime('hh:nn:ss.zzz', APassing.PassingTime));
   lListItem.SubItems.Add(APassing.TxId.ToString);
@@ -185,7 +188,6 @@ begin
   lListItem.SubItems.Add(APassing.PassingNumber.ToString);
   TListView(FPassingDisplay).Items.AddItem(lListItem);
   lListItem.ImageIndex := PassingImageIndex(APassing);
-  TListView(FPassingDisplay).Refresh;
 
   if AAutoScroll then
     lListItem.MakeVisible(false);

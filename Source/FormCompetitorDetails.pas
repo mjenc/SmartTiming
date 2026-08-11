@@ -62,7 +62,8 @@ implementation
 {$R *.dfm}
 
 uses
-  SmartTiming.Consts, SmartTiming.Tools, SmartTiming.TransponderAssignment;
+  SmartTiming.Consts, SmartTiming.Tools, SmartTiming.TransponderAssignment,
+  SmartTiming.Controller;
 
 {==============================================================================}
 constructor TFormCompetitorDetails.Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean);
@@ -134,6 +135,7 @@ var
   lAssignment: TTransponderAssignment;
   lHasOpen: Boolean;
   lStatus: TRaceStatus;
+  lValidFrom: TDateTime;
   i: Integer;
 begin
   Result := True;
@@ -163,11 +165,18 @@ begin
        (not TTransponderAssignmentService.IsRaceStatusActiveForChipConflict(lStatus)) then
       Continue;
 
-    if not TTransponderAssignmentService.Assign(lRaceId, ACompetitorId, AChipId, lResult) then
+    if not TTransponderAssignmentService.TryEarliestOrphanPassingTime(AChipId, lRaceId, lValidFrom) then
+      lValidFrom := 0;
+
+    if not TTransponderAssignmentService.Assign(lRaceId, ACompetitorId, AChipId, lResult,
+         lValidFrom) then
     begin
       SmartTimingTools.ShowDialog(lResult.Message, '', [tcbOk], tcbOk);
       Exit(False);
     end;
+
+    if GSmartTimingController <> nil then
+      GSmartTimingController.AfterChipAssignedToCompetitor(lRaceId, ACompetitorId, AChipId);
   end;
 end;
 

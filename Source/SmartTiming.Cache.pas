@@ -43,6 +43,10 @@ type
       AList: TDictionary<integer, TPassing>);
     procedure FillPassingListForRaceId(ARaceId: integer; AList: TDictionary<TDatetime, TPassing>; AOnlyActivePassings, ATimeFractionOnly: Boolean);
     procedure FillPassingsForRace(ARaceId: Integer; AList: TList<TPassing>);
+    (* Orphan / unassigned-looking hits for a chip (RaceId<0 or CompetitorId<0).
+       ARaceIdHint >= 0 also includes that race's passings for the chip. *)
+    procedure FillOrphanPassingsForChip(const AChipId: string; ARaceIdHint: Integer;
+      AList: TList<TPassing>);
     function GetLastValidPassingTime(ARaceId: Integer; const AChipId: string;
       ABeforeTime: TDateTime): TDateTime;
     (* Last hit for MinLap/DoubleHit — includes invalid/pending so AskOperator blocks the timeline.
@@ -422,6 +426,43 @@ begin
       if lPassing.RaceId <> ARaceId then
         Continue;
       AList.Add(lPassing);
+    end;
+  finally
+    Synchronizer.EndRead;
+  end;
+end;
+
+{==============================================================================}
+procedure TPassingStore.FillOrphanPassingsForChip(const AChipId: string; ARaceIdHint: Integer;
+  AList: TList<TPassing>);
+var
+  lPassing: TPassing;
+  lChipKey: string;
+begin
+  if AList = nil then
+    Exit;
+  lChipKey := NormalizeChipId(AChipId);
+  if lChipKey = '' then
+    Exit;
+
+  Synchronizer.BeginRead;
+  try
+    for lPassing in FPassingList.Values do
+    begin
+      if lPassing.IsSystemMarker then
+        Continue;
+      if NormalizeChipId(lPassing.ChipId) <> lChipKey then
+        Continue;
+      (* Global unassigned *)
+      if lPassing.RaceId < 0 then
+      begin
+        AList.Add(lPassing);
+        Continue;
+      end;
+      (* Soft-attached to race but no competitor yet *)
+      if (ARaceIdHint >= 0) and (lPassing.RaceId = ARaceIdHint) and
+         (lPassing.CompetitorId < 0) then
+        AList.Add(lPassing);
     end;
   finally
     Synchronizer.EndRead;

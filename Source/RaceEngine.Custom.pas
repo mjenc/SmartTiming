@@ -69,6 +69,7 @@ type
     FLastChangeTimestamp: TDatetime;
     FLastRefreshTimestamp: TDatetime;
     FLastConsideredPassingId: integer;
+    FProtocolRebuildActive: Boolean;
     FExcelFiller: TExcelFiller;
 
     FRankingSQLFormat: string;
@@ -151,6 +152,7 @@ type
     procedure ShowCompetitorPassings(ACompetitorId: Integer); virtual;
     procedure SetPassingStatusAndRecalc(APassingNumber: Integer; AStatus: TPassingState);
     procedure RebuildProtocolDisplay; virtual;
+    procedure CancelPassingListDrag;
 
     // Reports
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual; abstract;
@@ -209,6 +211,7 @@ begin
   FFilterPanel := nil;
   FFilterCombo := nil;
   FProtocolFilter := ppfAll;
+  FProtocolRebuildActive := False;
   FOwner := AParent;
   FParent := AParent;
 
@@ -412,6 +415,7 @@ var
   lPassingNumber: Integer;
   lPassing: TPassing;
   lInvalid: Boolean;
+  lUnassigned: Boolean;
   lImages: TCustomImageList;
   lIconX: Integer;
   lColCount: Integer;
@@ -446,19 +450,27 @@ var
 begin
   lListView := TListView(ASender);
   lInvalid := False;
+  lUnassigned := False;
   if (AItem.SubItems.Count > cPassingItemSubItemIdxPassingNumber) and
      TryStrToInt(AItem.SubItems[cPassingItemSubItemIdxPassingNumber], lPassingNumber) then
   begin
     try
       lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
+      lUnassigned := (not lPassing.IsSystemMarker) and (lPassing.CompetitorId < 0);
       lInvalid := ((lPassing.Flags and 2) <> 2) and
         (lPassing.PassingStatus <> Ord(psValid));
     except
       lInvalid := False;
+      lUnassigned := False;
     end;
   end;
 
-  if lInvalid then
+  if lUnassigned then
+  begin
+    lBgColor := $00F0F0F0;
+    lFGColor := clGray;
+  end
+  else if lInvalid then
   begin
     lBgColor := $00E8E8E8;
     lFGColor := clGray;
@@ -468,7 +480,7 @@ begin
 
   lListView.Canvas.Brush.Color := lBgColor;
   lListView.Canvas.Font.Color := lFGColor;
-  if lInvalid then
+  if lInvalid and not lUnassigned then
     lListView.Canvas.Font.Style := [fsStrikeOut]
   else
     lListView.Canvas.Font.Style := [];
@@ -1286,18 +1298,40 @@ begin
 end;
 
 {==============================================================================}
+procedure TCustomRaceEngine.CancelPassingListDrag;
+var
+  lListView: TListView;
+begin
+  if (FPassingDisplay = nil) or not (FPassingDisplay is TListView) then
+    Exit;
+  lListView := TListView(FPassingDisplay);
+  if lListView.Dragging then
+    lListView.EndDrag(False);
+end;
+
+{==============================================================================}
 procedure TCustomRaceEngine.RebuildProtocolDisplay;
 var
   lList: TList<TPassing>;
   lPassing: TPassing;
   i: Integer;
+  lListView: TListView;
+  lSavedDragMode: TDragMode;
 begin
   if (FPassingDisplay = nil) or not (FPassingDisplay is TListView) then
     Exit;
 
-  TListView(FPassingDisplay).Items.BeginUpdate;
+  lListView := TListView(FPassingDisplay);
+  (* Cancel any in-progress dmAutomatic drag before Clear. Otherwise VCL/Win32 can
+     finish the drag as a drop onto the last row — green flag gets lastTime-1ms. *)
+  if lListView.Dragging then
+    lListView.EndDrag(False);
+  lSavedDragMode := lListView.DragMode;
+  lListView.DragMode := dmManual;
+  FProtocolRebuildActive := True;
+  lListView.Items.BeginUpdate;
   try
-    TListView(FPassingDisplay).Items.Clear;
+    lListView.Items.Clear;
     lList := TList<TPassing>.Create;
     try
       TPassingStore.GetSingleton.FillPassingsForRace(FRaceItem.Id, lList);
@@ -1320,7 +1354,9 @@ begin
       FreeAndNil(lList);
     end;
   finally
-    TListView(FPassingDisplay).Items.EndUpdate;
+    lListView.Items.EndUpdate;
+    FProtocolRebuildActive := False;
+    lListView.DragMode := lSavedDragMode;
   end;
   RefreshPassingListStatus;
 end;
@@ -1390,6 +1426,7 @@ var
   lPassing: TPassing;
   lCompetitorId: Integer;
   lResult: TAssignmentOperationResult;
+  lValidFrom: TDateTime;
 begin
   lListView := TListView(FPassingDisplay);
   lCurrentItem := lListView.Selected;
@@ -1412,18 +1449,21 @@ begin
   if not TFormAssignCompetitor.Execute(nil, FRaceItem.Id, lCompetitorId) then
     Exit;
 
+  if not TTransponderAssignmentService.TryEarliestOrphanPassingTime(lPassing.ChipId, FRaceItem.Id,
+       lValidFrom) then
+    lValidFrom := lPassing.PassingTime;
+
   if not TTransponderAssignmentService.Assign(FRaceItem.Id, lCompetitorId, lPassing.ChipId,
-       lResult, lPassing.PassingTime) then
+       lResult, lValidFrom) then
   begin
     SmartTimingTools.ShowDialog(lResult.Message, '', [tcbOk], tcbOk);
     Exit;
   end;
 
-  MainDataModule.UpdatePassingRaceIdInDatabase(lPassingNumber, FRaceItem.Id);
-  TPassingStore.GetSingleton.UpdatePassingRaceId(lPassingNumber, FRaceItem.Id);
-  TPassingStore.GetSingleton.UpdatePassingDomainFields(lPassingNumber, lPassing.LapIndex,
-    lCompetitorId);
-  AfterPassingCorrection;
+  if GSmartTimingController <> nil then
+    GSmartTimingController.AfterChipAssignedToCompetitor(FRaceItem.Id, lCompetitorId, lPassing.ChipId)
+  else
+    AfterPassingCorrection;
 end;
 
 {==============================================================================}
@@ -1578,6 +1618,8 @@ var
   lPassingTime: TDatetime;
   lPassing: TPassing;
 begin
+  if FProtocolRebuildActive then
+    Exit;
   if ASender <> ASource then
     Exit;
 
@@ -1613,7 +1655,8 @@ end;
 {==============================================================================}
 procedure TCustomRaceEngine.OnPassingItemDragOver(ASender, ASource: TObject; AX, AY: Integer; AState: TDragState; var AAccept: Boolean);
 begin
-  AAccept := (ASender = FPassingDisplay) and (ASender is TListView) and
+  AAccept := (not FProtocolRebuildActive) and
+    (ASender = FPassingDisplay) and (ASender is TListView) and
     (TListView(ASender).SelCount = 1);
 end;
 
