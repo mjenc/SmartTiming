@@ -258,10 +258,12 @@ procedure TFormMain.ClientDataSetCompetitorsAfterOpen(DataSet: TDataSet);
 var
   lField: TField;
 begin
-  lField := DataSet.FieldByName('COMPETITORID');
+  lField := DataSet.FindField('COMPETITORID');
   if lField = nil then
     Exit;
-  lField.ProviderFlags := [pfInKey];
+  (* Keep pfInUpdate/pfInWhere; only add key. Clearing them breaks INSERT/UPDATE
+     resolution with UpdateMode=upWhereKeyOnly ("kein Schlüssel angegeben"). *)
+  lField.ProviderFlags := lField.ProviderFlags + [pfInKey];
 end;
 
 {==============================================================================}
@@ -848,6 +850,8 @@ begin
   SQLDataSetCompetitors.Active := false;
   SQLDataSetCompetitors.CommandText := 'SELECT * FROM COMPETITORS ORDER BY CLASS, BIB';
   SQLDataSetCompetitors.Active := true;
+  (* Key must be on SQLDataSet before CDS fetches the packet (upWhereKeyOnly). *)
+  ClientDataSetCompetitorsAfterOpen(SQLDataSetCompetitors);
   ClientDataSetCompetitors.Active := True;
   TGridFormatProvider.LoadSettings(DBGridCompetitors, cDefaultListFormatCompetitors);
   for i := 0 to DBGridCompetitors.Columns.Count - 1 do

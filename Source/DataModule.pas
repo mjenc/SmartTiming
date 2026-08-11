@@ -23,6 +23,11 @@ type
     DataSourceResults: TDataSource;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
+    procedure EnsureProviderKeyField(DataSet: TDataSet; const AFieldName: string);
+    procedure ClientDataSetCompetitorsAfterOpen(DataSet: TDataSet);
+    procedure ClientDataSetRacesAfterOpen(DataSet: TDataSet);
+    procedure SQLDataSetCompetitorsAfterOpen(DataSet: TDataSet);
+    procedure SQLDataSetRacesAfterOpen(DataSet: TDataSet);
   private
     FEventHistory: TStringList;
     FDatabaseName: string;
@@ -137,6 +142,43 @@ begin
   FEventHistory.Sorted := false;
 
   SQLConnection.DriverName := 'Sqlite';
+end;
+
+{==============================================================================}
+procedure TMainDataModule.EnsureProviderKeyField(DataSet: TDataSet; const AFieldName: string);
+var
+  lField: TField;
+begin
+  if DataSet = nil then
+    Exit;
+  lField := DataSet.FindField(AFieldName);
+  if lField = nil then
+    Exit;
+  lField.ProviderFlags := lField.ProviderFlags + [pfInKey];
+end;
+
+{==============================================================================}
+procedure TMainDataModule.ClientDataSetCompetitorsAfterOpen(DataSet: TDataSet);
+begin
+  EnsureProviderKeyField(DataSet, 'COMPETITORID');
+end;
+
+{==============================================================================}
+procedure TMainDataModule.SQLDataSetCompetitorsAfterOpen(DataSet: TDataSet);
+begin
+  EnsureProviderKeyField(DataSet, 'COMPETITORID');
+end;
+
+{==============================================================================}
+procedure TMainDataModule.ClientDataSetRacesAfterOpen(DataSet: TDataSet);
+begin
+  EnsureProviderKeyField(DataSet, 'RACEID');
+end;
+
+{==============================================================================}
+procedure TMainDataModule.SQLDataSetRacesAfterOpen(DataSet: TDataSet);
+begin
+  EnsureProviderKeyField(DataSet, 'RACEID');
 end;
 
 {==============================================================================}
@@ -381,6 +423,8 @@ begin
   SQLDataSetRaces.Active := false;
   SQLDataSetRaces.CommandText := 'SELECT * FROM RACES WHERE EVENTID = ' + AEventId.ToString;
   SQLDataSetRaces.Active := true;
+  (* Key must be on SQLDataSet before CDS fetches the packet (upWhereKeyOnly). *)
+  EnsureProviderKeyField(SQLDataSetRaces, 'RACEID');
   ClientDataSetRaces.Active := True;
 end;
 

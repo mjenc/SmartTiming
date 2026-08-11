@@ -229,8 +229,7 @@ begin
 
   FDataSourceRankings := TDataSource.Create(FOwner);
   FDataSourceRankings.DataSet := FClientDataSetRankings;
-
-  FSQLDataSetRankings.DataSource := FDataSourceRankings;
+  (* Do not set FSQLDataSetRankings.DataSource — that creates a provider cycle. *)
 
   FLastChangeTimestamp := Now;
 end;

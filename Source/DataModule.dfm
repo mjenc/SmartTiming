@@ -20,6 +20,7 @@ object MainDataModule: TMainDataModule
     Top = 90
   end
   object SQLDataSetCompetitors: TSQLDataSet
+    AfterOpen = SQLDataSetCompetitorsAfterOpen
     CommandText = 'SELECT * FROM COMPETITORS WHERE 1=2'
     MaxBlobSize = 1
     Params = <>
@@ -33,6 +34,8 @@ object MainDataModule: TMainDataModule
   end
   object DataSetProviderCompetitors: TDataSetProvider
     DataSet = SQLDataSetCompetitors
+    Options = [poIncFieldProps, poUseQuoteChar]
+    UpdateMode = upWhereKeyOnly
     Left = 250
     Top = 128
   end
@@ -40,12 +43,13 @@ object MainDataModule: TMainDataModule
     Aggregates = <>
     Params = <>
     ProviderName = 'DataSetProviderCompetitors'
+    AfterOpen = ClientDataSetCompetitorsAfterOpen
     Left = 250
     Top = 192
   end
   object SQLDataSetRaces: TSQLDataSet
+    AfterOpen = SQLDataSetRacesAfterOpen
     CommandText = 'SELECT * FROM RACES'
-    DataSource = DataSourceRaces
     MaxBlobSize = -1
     Params = <>
     SQLConnection = SQLConnection
@@ -54,7 +58,8 @@ object MainDataModule: TMainDataModule
   end
   object DataSetProviderRaces: TDataSetProvider
     DataSet = SQLDataSetRaces
-    Options = [poAutoRefresh, poUseQuoteChar]
+    Options = [poIncFieldProps, poAutoRefresh, poUseQuoteChar]
+    UpdateMode = upWhereKeyOnly
     Left = 58
     Top = 302
   end
@@ -63,6 +68,7 @@ object MainDataModule: TMainDataModule
     DisableStringTrim = True
     Params = <>
     ProviderName = 'DataSetProviderRaces'
+    AfterOpen = ClientDataSetRacesAfterOpen
     Left = 56
     Top = 354
   end

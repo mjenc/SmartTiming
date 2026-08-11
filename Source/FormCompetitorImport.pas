@@ -335,7 +335,15 @@ begin
   ProgressBar.Max := FFileLines.Count;
   lCompetitorId := GetMaxCompetitorId;
   TTransponderMappingStore.GetSingleton;
+
+  MainDataModule.ClientDataSetCompetitors.Active := false;
+  MainDataModule.SQLDataSetCompetitors.Active := false;
+  MainDataModule.SQLDataSetCompetitors.CommandText :=
+    'SELECT * FROM COMPETITORS ORDER BY COMPETITORID';
+  MainDataModule.SQLDataSetCompetitors.Active := true;
+  MainDataModule.EnsureProviderKeyField(MainDataModule.SQLDataSetCompetitors, 'COMPETITORID');
   MainDataModule.ClientDataSetCompetitors.Active := true;
+  MainDataModule.EnsureProviderKeyField(MainDataModule.ClientDataSetCompetitors, 'COMPETITORID');
 
   for i := 1 to FFileLines.Count - 1 do
   begin
@@ -358,6 +366,7 @@ begin
     LabelProgress.Caption := Format('%d von %d importiert', [i, FFileLines.Count]);
     ProgressBar.StepIt;
   end;
+  MainDataModule.EnsureProviderKeyField(MainDataModule.ClientDataSetCompetitors, 'COMPETITORID');
   MainDataModule.ClientDataSetCompetitors.ApplyUpdates(0);
 end;
 

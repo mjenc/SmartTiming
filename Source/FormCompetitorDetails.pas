@@ -195,6 +195,10 @@ begin
   DBEditTxId.EditText := lTxId;
   FDataSource.DataSet.FieldByName('CHIPID').AsString := lTxId;
 
+  (* Ensure PK is marked for DataSetProvider (upWhereKeyOnly / poAutoRefresh). *)
+  with FDataSource.DataSet.FieldByName('COMPETITORID') do
+    ProviderFlags := ProviderFlags + [pfInKey];
+
   FDataSource.DataSet.Post;
   TClientDataSet(FDataSource.DataSet).ApplyUpdates(0);
 

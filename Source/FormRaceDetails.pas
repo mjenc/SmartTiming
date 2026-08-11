@@ -170,6 +170,10 @@ begin
   lDateTime := StrToTime('00:' + EditMinLapDuration.Text);
   FDataSource.DataSet.FieldByName('MINLAPDURATION').Value := SecondOfTheDay(lDatetime);
   FDataSource.DataSet.FieldByName('STATUS').Value := FStatus;
+
+  with FDataSource.DataSet.FieldByName('RACEID') do
+    ProviderFlags := ProviderFlags + [pfInKey];
+
   FDataSource.DataSet.Post;
   TClientDataSet(FDataSource.DataSet).ApplyUpdates(-1);
 

@@ -925,7 +925,6 @@ object FormMain: TFormMain
   object SQLDataSetCompetitors: TSQLDataSet
     AfterOpen = ClientDataSetCompetitorsAfterOpen
     CommandText = 'SELECT * FROM COMPETITORS'
-    DataSource = DataSourceCompetitors
     MaxBlobSize = -1
     Params = <>
     SQLConnection = MainDataModule.SQLConnection
