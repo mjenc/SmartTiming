@@ -314,16 +314,19 @@ var
     if APassing.IsSystemMarker then
       Exit;
 
-    lLaps := MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, APassing.ChipId,
+    (* LapIndex from AssignLap is authoritative (avoids stuck LAPS=0 when
+       FirstPassingIsLap=false). *)
+    lLaps := APassing.LapIndex;
+    if lLaps <= 0 then
+      Exit;
+
+    MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, APassing.ChipId,
       APassing.PassingTime, lParticipationId, lStartTime);
     if lParticipationId < 0 then
       Exit;
 
-    if lLaps + 1 > FRaceItem.Laps then
+    if lLaps > FRaceItem.Laps then
       Exit;
-
-    if (lLaps > 0) or (lLaps = 0) and FRaceItem.FirstPassingIsLap then
-      Inc(lLaps);
 
     if MainDataModule.IsParticipationFinishTimeOverridden(lParticipationId) then
     begin

@@ -563,6 +563,9 @@ begin
         GSmartTimingController.RememberAlwaysAcceptChip(lRequest.ChipId);
       if lAccepted then
         GSmartTimingController.ApplyPlausibilityAccept(
+          lRequest.PassingNumber, lRequest.RaceId)
+      else if lRequest.CanScore then
+        GSmartTimingController.ApplyPlausibilityReject(
           lRequest.PassingNumber, lRequest.RaceId);
     end;
   finally
@@ -1092,7 +1095,7 @@ procedure TFormMain.ButtonPointsSprintClick(Sender: TObject);
 var
   lRaceItem: TRaceItem;
   lMaxLaps: Integer;
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
   lMaxLaps := 0;
   if ListBoxRaces.ItemIndex >= 0 then
@@ -1100,15 +1103,15 @@ begin
     lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
     if (lRaceItem <> nil) and (lRaceItem.Laps > 0) then
     begin
-      MainDataModule.SQLConnection.Execute(
+      lDataSet := MainDataModule.OpenReadOnlyQuery(
         Format('SELECT MAX(IFNULL(LAPS, 0)) FROM PARTICIPATION WHERE RACEID = %d',
-          [lRaceItem.Id]), nil, lResultSet);
+          [lRaceItem.Id]));
       try
-        if (lResultSet <> nil) and not lResultSet.IsEmpty and
-           not lResultSet.Fields[0].IsNull then
-          lMaxLaps := lResultSet.Fields[0].AsInteger;
+        if (lDataSet <> nil) and lDataSet.Active and not lDataSet.IsEmpty and
+           not lDataSet.Fields[0].IsNull then
+          lMaxLaps := lDataSet.Fields[0].AsInteger;
       finally
-        FreeAndNil(lResultSet);
+        FreeAndNil(lDataSet);
       end;
       if lMaxLaps >= lRaceItem.Laps - 1 then
         SmartTimingTools.ShowDialog(cMessagesPointsSprintFinalLapHint, '', [tcbOk], tcbOk)

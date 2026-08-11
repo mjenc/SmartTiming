@@ -3,7 +3,7 @@
 interface
 
 uses
-  SysUtils, Data.DB;
+  SysUtils, Data.DB, Data.SqlExpr;
 
 
 type
@@ -33,7 +33,7 @@ type
 implementation
 
 uses
-  DataModule, DateUtils, Tools.Logger;
+  DataModule, DateUtils, Tools.Logger, SmartTiming.Tools;
 
 const
   cLogger = 'SmartTiming.Event';
@@ -41,17 +41,16 @@ const
 {==============================================================================}
 function TEventDataObject.Exists(AEventId: integer): boolean;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
   try
     LogOnDebug(cLogger, ['Exists', 'EventId = ' + AEventId.ToString]);
-    MainDataModule.SQLConnection.Execute('SELECT EVENTID FROM EVENTS WHERE EVENTID = ' + AEventId.ToString, nil, lResultSet);
-    if lResultSet = nil then
-      Exit(false);
+    lDataSet := MainDataModule.OpenReadOnlyQuery(
+      'SELECT EVENTID FROM EVENTS WHERE EVENTID = ' + AEventId.ToString);
     try
-      result := lResultSet.RecordCount > 0;
+      Result := (lDataSet <> nil) and lDataSet.Active and not lDataSet.IsEmpty;
     finally
-      FreeAndNil(lResultSet);
+      FreeAndNil(lDataSet);
     end;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['Exists', 'EventId = ' + AEventId.ToString]);
@@ -119,23 +118,26 @@ end;
 {==============================================================================}
 procedure TEventDataObject.RefreshFromDatabase;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
   try
     LogOnDebug(cLogger, ['RefreshFromDatabase', 'EventId = ' + FEventId.ToString]);
     if not Exists(FEventId) then
       Exit;
 
-    MainDataModule.SQLConnection.Execute('SELECT * FROM EVENTS WHERE EVENTID = ' + FEventId.ToString, nil, lResultSet);
-    if (lResultSet = nil) or (lResultSet.RecordCount = 0) then
-      Exit;
+    lDataSet := MainDataModule.OpenReadOnlyQuery(
+      'SELECT * FROM EVENTS WHERE EVENTID = ' + FEventId.ToString);
+    try
+      if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
+        Exit;
 
-    lResultSet.First;
-
-    FOrganizer := lResultSet.FieldByName('ORGANIZER').AsString;
-    FTitle := lResultSet.FieldByName('TITLE').AsString;
-    FDateFrom := lResultSet.FieldByName('DATEFROM').AsFloat;
-    FDateTo := lResultSet.FieldByName('DATETO').AsFloat;
+      FOrganizer := lDataSet.FieldByName('ORGANIZER').AsString;
+      FTitle := lDataSet.FieldByName('TITLE').AsString;
+      FDateFrom := SmartTimingTools.GetFieldAsDatetime(lDataSet.FieldByName('DATEFROM'), 0);
+      FDateTo := SmartTimingTools.GetFieldAsDatetime(lDataSet.FieldByName('DATETO'), 0);
+    finally
+      FreeAndNil(lDataSet);
+    end;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['RefreshFromDatabase', 'EventId = ' + FEventId.ToString]);
   end;

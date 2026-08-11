@@ -57,6 +57,14 @@ begin
       lForm.ButtonReject.Caption := cMessagesPlausibilityAcknowledge;
       lForm.ButtonReject.Default := True;
       lForm.ButtonReject.ModalResult := mrOk;
+    end
+    else
+    begin
+      (* Explicit choice: score vs keep invalid. *)
+      lForm.ButtonAccept.Default := True;
+      lForm.ButtonAccept.ModalResult := mrYes;
+      lForm.ButtonReject.Cancel := True;
+      lForm.ButtonReject.ModalResult := mrNo;
     end;
 
     if ACanScore then

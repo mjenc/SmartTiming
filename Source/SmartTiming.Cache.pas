@@ -45,9 +45,10 @@ type
     procedure FillPassingsForRace(ARaceId: Integer; AList: TList<TPassing>);
     function GetLastValidPassingTime(ARaceId: Integer; const AChipId: string;
       ABeforeTime: TDateTime): TDateTime;
-    (* Last hit for MinLap/DoubleHit — includes invalid/pending so AskOperator blocks the timeline. *)
+    (* Last hit for MinLap/DoubleHit — includes invalid/pending so AskOperator blocks the timeline.
+       AExcludePassingNumber skips the hit currently being validated (already in the store). *)
     function GetLastPassingTimeForChip(ARaceId: Integer; const AChipId: string;
-      ABeforeTime: TDateTime): TDateTime;
+      ABeforeTime: TDateTime; AExcludePassingNumber: Integer = -1): TDateTime;
     property MaxPassingNumber: integer read FMaxPassingNumber;
   end;
 
@@ -463,7 +464,7 @@ end;
 
 {==============================================================================}
 function TPassingStore.GetLastPassingTimeForChip(ARaceId: Integer; const AChipId: string;
-  ABeforeTime: TDateTime): TDateTime;
+  ABeforeTime: TDateTime; AExcludePassingNumber: Integer): TDateTime;
 var
   lPassing: TPassing;
   lChipKey: string;
@@ -477,6 +478,9 @@ begin
   try
     for lPassing in FPassingList.Values do
     begin
+      if (AExcludePassingNumber >= 0) and
+         (lPassing.PassingNumber = AExcludePassingNumber) then
+        Continue;
       if lPassing.RaceId <> ARaceId then
         Continue;
       if (lPassing.Flags and 2) = 2 then
@@ -485,7 +489,8 @@ begin
         Continue;
       if NormalizeChipId(lPassing.ChipId) <> lChipKey then
         Continue;
-      if (lPassing.PassingTime >= ABeforeTime) then
+      (* Include equal timestamps from earlier hits; exclude only strictly later. *)
+      if lPassing.PassingTime > ABeforeTime then
         Continue;
       if lPassing.PassingTime > Result then
         Result := lPassing.PassingTime;

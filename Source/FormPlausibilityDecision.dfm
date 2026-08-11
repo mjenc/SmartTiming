@@ -61,7 +61,7 @@ object FormPlausibilityDecision: TFormPlausibilityDecision
       Top = 8
       Width = 360
       Height = 17
-      Caption = 'F'#252'r diesen Chip immer annehmen (diese Sitzung)'
+      Caption = 'F'#252'r diesen Chip zu kurze Rundenzeiten immer werten'
       TabOrder = 0
     end
     object ButtonAccept: TButton
@@ -70,7 +70,7 @@ object FormPlausibilityDecision: TFormPlausibilityDecision
       Width = 120
       Height = 25
       Anchors = [akTop, akRight]
-      Caption = 'Annehmen'
+      Caption = 'Werten'
       Default = True
       ModalResult = 6
       TabOrder = 1
@@ -82,7 +82,7 @@ object FormPlausibilityDecision: TFormPlausibilityDecision
       Height = 25
       Anchors = [akTop, akRight]
       Cancel = True
-      Caption = 'Verwerfen'
+      Caption = 'Ung'#252'ltig'
       ModalResult = 2
       TabOrder = 2
     end

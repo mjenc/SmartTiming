@@ -322,8 +322,14 @@ begin
         Continue;
 
       if not lLapsByCompetitor.TryGetValue(lCompetitorId, lLaps) then
-        lLaps := 0;
-      if (lLaps > 0) or ((lLaps = 0) and FRaceItem.FirstPassingIsLap) then
+      begin
+        (* First crossing: count only when FirstPassingIsLap is set. *)
+        if FRaceItem.FirstPassingIsLap then
+          lLaps := 1
+        else
+          lLaps := 0;
+      end
+      else
         Inc(lLaps);
       (* WB: do not cap at TargetLaps — lap-gainers may finish with Target+N. *)
       lLapsByCompetitor.AddOrSetValue(lCompetitorId, lLaps);

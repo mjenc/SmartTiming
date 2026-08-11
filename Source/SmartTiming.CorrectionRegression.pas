@@ -12,7 +12,7 @@
 interface
 
 uses
-  System.SysUtils, System.Classes, Data.DB,
+  System.SysUtils, System.Classes, Data.DB, Data.SqlExpr,
   SmartTiming.Consts, SmartTiming.PassingValidator, DecoderInterface, DataModule;
 
 type
@@ -33,7 +33,7 @@ var
   lSynth: Integer;
   lRaceId: Integer;
   lCommunique: string;
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lDbOk: Boolean;
   lPassing: TPassing;
 
@@ -171,16 +171,15 @@ begin
 
       (* Read-only: if any race already has penalties, communique must carry header. *)
       lRaceId := -1;
-      MainDataModule.SQLConnection.Execute(
+      lDataSet := MainDataModule.OpenReadOnlyQuery(
         'SELECT P.RACEID FROM PARTICIPATION P ' +
         'WHERE IFNULL(TRIM(P.PENALTIES), '''') <> '''' ' +
-        'ORDER BY P.PARTICIPATIONID LIMIT 1',
-        nil, lResultSet);
+        'ORDER BY P.PARTICIPATIONID LIMIT 1');
       try
-        if (lResultSet <> nil) and not lResultSet.IsEmpty then
-          lRaceId := lResultSet.Fields[0].AsInteger;
+        if (lDataSet <> nil) and lDataSet.Active and not lDataSet.IsEmpty then
+          lRaceId := lDataSet.Fields[0].AsInteger;
       finally
-        FreeAndNil(lResultSet);
+        FreeAndNil(lDataSet);
       end;
 
       if lRaceId < 0 then

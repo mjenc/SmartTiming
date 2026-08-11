@@ -253,6 +253,8 @@ var
   lChipKey: string;
   lCompetitorId: Integer;
   lOrdinal: Integer;
+  lGreenFlagStart: TDateTime;
+  lHasGreenFlag: Boolean;
   i: Integer;
 begin
   APassing.LapIndex := -1;
@@ -274,6 +276,11 @@ begin
   if lChipKey = '' then
     Exit;
 
+  (* Mass start: only count passings at/after the green flag. *)
+  lHasGreenFlag := TryGetGreenFlagStartTime(lGreenFlagStart);
+  if lHasGreenFlag and (Frac(APassing.PassingTime) < lGreenFlagStart) then
+    Exit;
+
   lPriorValid := 0;
   lList := TList<TPassing>.Create;
   try
@@ -288,6 +295,8 @@ begin
       if lOther.PassingStatus <> Ord(psValid) then
         Continue;
       if NormalizeChipId(lOther.ChipId) <> lChipKey then
+        Continue;
+      if lHasGreenFlag and (Frac(lOther.PassingTime) < lGreenFlagStart) then
         Continue;
       if CompareDateTime(lOther.PassingTime, APassing.PassingTime) > 0 then
         Continue;
@@ -378,10 +387,16 @@ var
     if lTargetLaps <= 0 then
       Exit;
 
+    (* LapIndex from AssignLap is authoritative (avoids stuck LAPS=0 when
+       FirstPassingIsLap=false). LapIndex 0 = first approach, not yet a lap. *)
+    lLaps := APassing.LapIndex;
+    if lLaps <= 0 then
+      Exit;
+
     lRaceAlreadyFinished := MainDataModule.TryGetRaceFinishTimeByTargetLaps(
       FRaceItem.Id, lTargetLaps, lRaceFinishTime);
 
-    lLaps := MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, APassing.ChipId,
+    MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, APassing.ChipId,
       APassing.PassingTime, lParticipationId, lIgnoredStartTime);
     if lParticipationId < 0 then
       Exit;
@@ -390,11 +405,8 @@ var
     if lRaceAlreadyFinished and (Frac(APassing.PassingTime) > lRaceFinishTime) then
       Exit;
 
-    if lLaps + 1 > lTargetLaps then
-      Exit;
-
-    if (lLaps > 0) or ((lLaps = 0) and FRaceItem.FirstPassingIsLap) then
-      Inc(lLaps);
+    if lLaps > lTargetLaps then
+      lLaps := lTargetLaps;
 
     if MainDataModule.IsParticipationFinishTimeOverridden(lParticipationId) then
     begin

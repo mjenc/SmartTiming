@@ -44,6 +44,7 @@ type
     procedure RestoreDatabase(const AFrom: string; const ATo: string = '');
 
     procedure FillReadOnlyDataSetForSQL(const ASQL: string; var ADataSet: TSQLDataSet);
+    function OpenReadOnlyQuery(const ASQL: string): TSQLDataSet;
     procedure RefreshRacesDataSet(AEventId: integer);
 
     function GetMaxRaceId(AEventId: integer): integer;
@@ -367,6 +368,13 @@ begin
 end;
 
 {==============================================================================}
+function TMainDataModule.OpenReadOnlyQuery(const ASQL: string): TSQLDataSet;
+begin
+  Result := nil;
+  FillReadOnlyDataSetForSQL(ASQL, Result);
+end;
+
+{==============================================================================}
 procedure TMainDataModule.RefreshRacesDataSet(AEventId: integer);
 begin
   ClientDataSetRaces.Active := false;
@@ -379,20 +387,17 @@ end;
 {==============================================================================}
 function TMainDataModule.GetMaxRaceId(AEventId: integer): integer;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
-  SQLConnection.Execute('SELECT MAX(RACEID) FROM RACES WHERE EVENTID = ' + AEventId.ToString, nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery('SELECT MAX(RACEID) FROM RACES WHERE EVENTID = ' + AEventId.ToString);
   try
-    if lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit(1);
-
-    if lResultSet.RecordCount < 1 then
+    if lDataSet.Fields[0].IsNull then
       Exit(0);
-
-    lResultSet.First;
-    Exit(lResultSet.Fields[0].AsInteger);
+    Exit(lDataSet.Fields[0].AsInteger);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -435,69 +440,63 @@ end;
 {==============================================================================}
 function TMainDataModule.GetRaceStatus(ARaceId: Integer): TRaceStatus;
 var
-  lResultSet: TCustomSQLDataSet;
+  lDataSet: TSQLDataSet;
 begin
   Result := rsNotStarted;
-  SQLConnection.Execute(
-    Format('SELECT STATUS FROM RACES WHERE RACEID = %d', [ARaceId]),
-    nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery(Format('SELECT STATUS FROM RACES WHERE RACEID = %d', [ARaceId]));
   try
-    if (lResultSet <> nil) and not lResultSet.Eof then
-      Result := TRaceStatus(lResultSet.FieldByName('STATUS').AsInteger);
+    if (lDataSet <> nil) and lDataSet.Active and not lDataSet.IsEmpty then
+      Result := TRaceStatus(lDataSet.FieldByName('STATUS').AsInteger);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 function TMainDataModule.GetRaceTitle(ARaceId: Integer): string;
 var
-  lResultSet: TCustomSQLDataSet;
+  lDataSet: TSQLDataSet;
 begin
   Result := ARaceId.ToString;
-  SQLConnection.Execute(
-    Format('SELECT TITLE FROM RACES WHERE RACEID = %d', [ARaceId]),
-    nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery(Format('SELECT TITLE FROM RACES WHERE RACEID = %d', [ARaceId]));
   try
-    if (lResultSet <> nil) and not lResultSet.Eof then
-      Result := lResultSet.FieldByName('TITLE').AsString;
+    if (lDataSet <> nil) and lDataSet.Active and not lDataSet.IsEmpty then
+      Result := lDataSet.FieldByName('TITLE').AsString;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 function TMainDataModule.GetRaceMinLapDuration(ARaceId: Integer): Integer;
 var
-  lResultSet: TCustomSQLDataSet;
+  lDataSet: TSQLDataSet;
 begin
   Result := 0;
-  SQLConnection.Execute(
-    Format('SELECT MINLAPDURATION FROM RACES WHERE RACEID = %d', [ARaceId]),
-    nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery(
+    Format('SELECT MINLAPDURATION FROM RACES WHERE RACEID = %d', [ARaceId]));
   try
-    if (lResultSet <> nil) and not lResultSet.Eof and
-       not lResultSet.FieldByName('MINLAPDURATION').IsNull then
-      Result := lResultSet.FieldByName('MINLAPDURATION').AsInteger;
+    if (lDataSet <> nil) and lDataSet.Active and not lDataSet.IsEmpty and
+       not lDataSet.FieldByName('MINLAPDURATION').IsNull then
+      Result := lDataSet.FieldByName('MINLAPDURATION').AsInteger;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 function TMainDataModule.GetCompetitorChipId(ACompetitorId: Integer): string;
 var
-  lResultSet: TCustomSQLDataSet;
+  lDataSet: TSQLDataSet;
 begin
   Result := '';
-  SQLConnection.Execute(
-    Format('SELECT CHIPID FROM COMPETITORS WHERE COMPETITORID = %d', [ACompetitorId]),
-    nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery(
+    Format('SELECT CHIPID FROM COMPETITORS WHERE COMPETITORID = %d', [ACompetitorId]));
   try
-    if (lResultSet <> nil) and not lResultSet.Eof then
-      Result := Trim(lResultSet.FieldByName('CHIPID').AsString);
+    if (lDataSet <> nil) and lDataSet.Active and not lDataSet.IsEmpty then
+      Result := Trim(lDataSet.FieldByName('CHIPID').AsString);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -517,21 +516,20 @@ end;
 {==============================================================================}
 function TMainDataModule.GetCompetitorDisplayName(ACompetitorId: Integer): string;
 var
-  lResultSet: TCustomSQLDataSet;
+  lDataSet: TSQLDataSet;
   lBib: Integer;
   lName: string;
 begin
   Result := ACompetitorId.ToString;
-  SQLConnection.Execute(
+  lDataSet := OpenReadOnlyQuery(
     Format('SELECT BIB, LASTNAME, FIRSTNAME FROM COMPETITORS WHERE COMPETITORID = %d',
-      [ACompetitorId]),
-    nil, lResultSet);
+      [ACompetitorId]));
   try
-    if (lResultSet = nil) or lResultSet.Eof then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
-    lBib := lResultSet.FieldByName('BIB').AsInteger;
-    lName := Trim(lResultSet.FieldByName('LASTNAME').AsString + ', ' +
-      lResultSet.FieldByName('FIRSTNAME').AsString);
+    lBib := lDataSet.FieldByName('BIB').AsInteger;
+    lName := Trim(lDataSet.FieldByName('LASTNAME').AsString + ', ' +
+      lDataSet.FieldByName('FIRSTNAME').AsString);
     if lName = ',' then
       lName := '';
     if lName <> '' then
@@ -539,33 +537,33 @@ begin
     else
       Result := Format('#%d', [lBib]);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 function TMainDataModule.GetCompetitorIdsForRace(ARaceId: Integer): TArray<Integer>;
 var
-  lResultSet: TCustomSQLDataSet;
+  lDataSet: TSQLDataSet;
   lList: TList<Integer>;
 begin
   SetLength(Result, 0);
   lList := TList<Integer>.Create;
   try
-    SQLConnection.Execute(
+    lDataSet := OpenReadOnlyQuery(
       Format('SELECT COMPETITORID FROM PARTICIPATION WHERE RACEID = %d ORDER BY COMPETITORID',
-        [ARaceId]),
-      nil, lResultSet);
+        [ARaceId]));
     try
-      if lResultSet = nil then
+      if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
         Exit;
-      while not lResultSet.Eof do
+      lDataSet.First;
+      while not lDataSet.Eof do
       begin
-        lList.Add(lResultSet.FieldByName('COMPETITORID').AsInteger);
-        lResultSet.Next;
+        lList.Add(lDataSet.Fields[0].AsInteger);
+        lDataSet.Next;
       end;
     finally
-      FreeAndNil(lResultSet);
+      FreeAndNil(lDataSet);
     end;
     Result := lList.ToArray;
   finally
@@ -622,25 +620,25 @@ end;
 {==============================================================================}
 function TMainDataModule.GetRaceIdsForCompetitor(ACompetitorId: Integer): TArray<Integer>;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lList: TList<Integer>;
 begin
   lList := TList<Integer>.Create;
   try
-    SQLConnection.Execute(
+    lDataSet := OpenReadOnlyQuery(
       Format('SELECT RACEID FROM PARTICIPATION WHERE COMPETITORID = %d ORDER BY RACEID',
-        [ACompetitorId]),
-      nil, lResultSet);
+        [ACompetitorId]));
     try
-      if lResultSet = nil then
+      if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
         Exit(nil);
-      while not lResultSet.Eof do
+      lDataSet.First;
+      while not lDataSet.Eof do
       begin
-        lList.Add(lResultSet.FieldByName('RACEID').AsInteger);
-        lResultSet.Next;
+        lList.Add(lDataSet.Fields[0].AsInteger);
+        lDataSet.Next;
       end;
     finally
-      FreeAndNil(lResultSet);
+      FreeAndNil(lDataSet);
     end;
     Result := lList.ToArray;
   finally
@@ -678,56 +676,49 @@ end;
 {==============================================================================}
 function TMainDataModule.GetMinIdOf(const ATableName, AColumnName: string): Integer;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
-  SQLConnection.Execute('SELECT MIN(' + AColumnName + ') FROM ' + ATableName, nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery('SELECT MIN(' + AColumnName + ') FROM ' + ATableName);
   try
-    if lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit(1);
-
-    if lResultSet.RecordCount < 1 then
+    if lDataSet.Fields[0].IsNull then
       Exit(0);
-
-    lResultSet.First;
-    Exit(lResultSet.Fields[0].AsInteger);
+    Exit(lDataSet.Fields[0].AsInteger);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 function TMainDataModule.GetMaxIdOf(const ATableName, AColumnName: string): Integer;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
-  SQLConnection.Execute('SELECT MAX(' + AColumnName + ') FROM ' + ATableName, nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery('SELECT MAX(' + AColumnName + ') FROM ' + ATableName);
   try
-    if lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit(1);
-
-    if lResultSet.RecordCount < 1 then
+    if lDataSet.Fields[0].IsNull then
       Exit(0);
-
-    lResultSet.First;
-    Exit(lResultSet.Fields[0].AsInteger);
+    Exit(lDataSet.Fields[0].AsInteger);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 function TMainDataModule.IsCompetitorAssignedToRace(ARaceId, ACompetitorId: Integer): Boolean;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
-  SQLConnection.Execute(Format('SELECT PARTICIPATIONID FROM PARTICIPATION WHERE RACEID = %d AND COMPETITORID = %d', [ARaceId, ACompetitorId]), nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery(Format(
+    'SELECT PARTICIPATIONID FROM PARTICIPATION WHERE RACEID = %d AND COMPETITORID = %d',
+    [ARaceId, ACompetitorId]));
   try
-    if lResultSet.IsEmpty then
-        Exit(false);
-    lResultSet.First;
-    Exit(not lResultSet.Eof);
+    Exit((lDataSet <> nil) and lDataSet.Active and not lDataSet.IsEmpty);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -772,7 +763,7 @@ end;
 function TMainDataModule.GetActiveTransponderIdForBib(ABib: integer;
   APreferredRaceId: Integer): string;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lRaceId: Integer;
   lCompetitorId: Integer;
   lAssignment: TTransponderAssignment;
@@ -791,25 +782,25 @@ begin
     lStatusList := lStatusList + Ord(lStatus).ToString;
   end;
 
-  SQLConnection.Execute(Format(
+  lDataSet := OpenReadOnlyQuery(Format(
     'SELECT P.RACEID, P.COMPETITORID, C.CHIPID FROM ' +
     'COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
     'INNER JOIN RACES R ON P.RACEID = R.RACEID ' +
     'WHERE R.STATUS IN (%s) AND C.BIB = %d',
-    [lStatusList, ABib]), nil, lResultSet);
+    [lStatusList, ABib]));
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
-    lResultSet.First;
-    while not lResultSet.Eof do
+    lDataSet.First;
+    while not lDataSet.Eof do
     begin
-      lRaceId := lResultSet.FieldByName('RACEID').AsInteger;
-      lCompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
+      lRaceId := lDataSet.FieldByName('RACEID').AsInteger;
+      lCompetitorId := lDataSet.FieldByName('COMPETITORID').AsInteger;
       if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
            lRaceId, lCompetitorId, lAssignment) then
         lChipId := lAssignment.ChipId
       else
-        lChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
+        lChipId := Trim(lDataSet.FieldByName('CHIPID').AsString);
 
       if lChipId <> '' then
       begin
@@ -818,11 +809,11 @@ begin
         if lFallback = '' then
           lFallback := lChipId;
       end;
-      lResultSet.Next;
+      lDataSet.Next;
     end;
     Result := lFallback;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -830,7 +821,7 @@ end;
 function TMainDataModule.TryGetCompetitorInRaceByBib(ARaceId, ABib: Integer;
   out ACompetitorId: Integer; out AName, ATeam, AClass, AChipId: string): Boolean;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lAssignment: TTransponderAssignment;
 begin
   Result := False;
@@ -842,29 +833,29 @@ begin
   if (ARaceId < 0) or (ABib <= 0) then
     Exit;
 
-  SQLConnection.Execute(Format(
+  lDataSet := OpenReadOnlyQuery(Format(
     'SELECT C.COMPETITORID, C.LASTNAME, C.FIRSTNAME, C.TEAM, C.CLASS, C.CHIPID ' +
     'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
     'WHERE P.RACEID = %d AND C.BIB = %d',
-    [ARaceId, ABib]), nil, lResultSet);
+    [ARaceId, ABib]));
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
-    ACompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
-    AName := Trim(lResultSet.FieldByName('LASTNAME').AsString + ', ' +
-      lResultSet.FieldByName('FIRSTNAME').AsString);
+    ACompetitorId := lDataSet.FieldByName('COMPETITORID').AsInteger;
+    AName := Trim(lDataSet.FieldByName('LASTNAME').AsString + ', ' +
+      lDataSet.FieldByName('FIRSTNAME').AsString);
     if AName = ',' then
       AName := '';
-    ATeam := lResultSet.FieldByName('TEAM').AsString;
-    AClass := lResultSet.FieldByName('CLASS').AsString;
+    ATeam := lDataSet.FieldByName('TEAM').AsString;
+    AClass := lDataSet.FieldByName('CLASS').AsString;
     if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
          ARaceId, ACompetitorId, lAssignment) then
       AChipId := lAssignment.ChipId
     else
-      AChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
+      AChipId := Trim(lDataSet.FieldByName('CHIPID').AsString);
     Result := True;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -872,7 +863,7 @@ end;
 procedure TMainDataModule.FillCompetitorsInRace(ARaceId: Integer; AList: TListView;
   const ABibFilter: string);
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lItem: TListItem;
   lBib: Integer;
   lFilter: string;
@@ -890,46 +881,46 @@ begin
       Exit;
 
     lFilter := Trim(ABibFilter);
-    SQLConnection.Execute(Format(
+    lDataSet := OpenReadOnlyQuery(Format(
       'SELECT C.COMPETITORID, C.BIB, C.LASTNAME, C.FIRSTNAME, C.TEAM, C.CLASS, C.CHIPID ' +
       'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
       'WHERE P.RACEID = %d ORDER BY C.BIB',
-      [ARaceId]), nil, lResultSet);
+      [ARaceId]));
     try
-      if (lResultSet = nil) or lResultSet.IsEmpty then
+      if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
         Exit;
-      lResultSet.First;
-      while not lResultSet.Eof do
+      lDataSet.First;
+      while not lDataSet.Eof do
       begin
-        lBib := lResultSet.FieldByName('BIB').AsInteger;
+        lBib := lDataSet.FieldByName('BIB').AsInteger;
         if (lFilter <> '') and not lBib.ToString.StartsWith(lFilter) then
         begin
-          lResultSet.Next;
+          lDataSet.Next;
           Continue;
         end;
 
-        lCompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
+        lCompetitorId := lDataSet.FieldByName('COMPETITORID').AsInteger;
         if TTransponderAssignmentStore.GetSingleton.TryGetActiveByRaceAndCompetitor(
              ARaceId, lCompetitorId, lAssignment) then
           lChipId := lAssignment.ChipId
         else
-          lChipId := Trim(lResultSet.FieldByName('CHIPID').AsString);
+          lChipId := Trim(lDataSet.FieldByName('CHIPID').AsString);
 
-        lName := Trim(lResultSet.FieldByName('LASTNAME').AsString + ', ' +
-          lResultSet.FieldByName('FIRSTNAME').AsString);
+        lName := Trim(lDataSet.FieldByName('LASTNAME').AsString + ', ' +
+          lDataSet.FieldByName('FIRSTNAME').AsString);
         if lName = ',' then
           lName := '';
         lItem := AList.Items.Add;
         lItem.Caption := lBib.ToString;
         lItem.SubItems.Add(lName);
-        lItem.SubItems.Add(lResultSet.FieldByName('TEAM').AsString);
+        lItem.SubItems.Add(lDataSet.FieldByName('TEAM').AsString);
         lItem.SubItems.Add(lChipId);
-        lItem.SubItems.Add(lResultSet.FieldByName('CLASS').AsString);
+        lItem.SubItems.Add(lDataSet.FieldByName('CLASS').AsString);
         lItem.Data := Pointer(lCompetitorId);
-        lResultSet.Next;
+        lDataSet.Next;
       end;
     finally
-      FreeAndNil(lResultSet);
+      FreeAndNil(lDataSet);
     end;
   finally
     AList.Items.EndUpdate;
@@ -940,99 +931,99 @@ end;
 function TMainDataModule.GetAllPassingsForRaceId(ARaceId: Integer; AOnlyActive: boolean = false): TArray<TPassing>;
 var
   lOnlyActive: string;
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   i: integer;
 begin
+  lOnlyActive := '';
   if AOnlyActive then
     lOnlyActive := 'AND PASSINGSTATUS = ' + Ord(psValid).ToString;
 
-  SQLConnection.Execute(Format(
-    'SELECT * FROM PASSINGS WHERE RACEID = %d %s ORDER BY PASSINGTIME', [ARaceId, lOnlyActive]), nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery(Format(
+    'SELECT * FROM PASSINGS WHERE RACEID = %d %s ORDER BY PASSINGTIME', [ARaceId, lOnlyActive]));
   try
-    if lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit(nil);
 
-    SetLength(result, lResultSet.RecordCount);
+    SetLength(result, lDataSet.RecordCount);
     i := 0;
-    lResultSet.First;
-    while not lResultSet.Eof do
+    lDataSet.First;
+    while not lDataSet.Eof do
     begin
-      result[i].PassingNumber := lResultSet.FieldByName('PASSINGNUMBER').AsInteger;
-      result[i].ChipId := lResultSet.FieldByName('CHIPID').AsString;
-      result[i].PassingTime := SmartTimingTools.GetFieldAsDatetime(lResultSet.FieldByName('PASSINGTIME'), 0.0);
-      result[i].SignalStrength := lResultSet.FieldByName('SIGNALSTRENGTH').AsInteger;
-      result[i].Hits := lResultSet.FieldByName('HITS').AsInteger;
-      result[i].Flags := lResultSet.FieldByName('FLAGS').AsInteger;
-      result[i].Sport := lResultSet.FieldByName('SPORT').AsInteger;
+      result[i].PassingNumber := lDataSet.FieldByName('PASSINGNUMBER').AsInteger;
+      result[i].ChipId := lDataSet.FieldByName('CHIPID').AsString;
+      result[i].PassingTime := SmartTimingTools.GetFieldAsDatetime(lDataSet.FieldByName('PASSINGTIME'), 0.0);
+      result[i].SignalStrength := lDataSet.FieldByName('SIGNALSTRENGTH').AsInteger;
+      result[i].Hits := lDataSet.FieldByName('HITS').AsInteger;
+      result[i].Flags := lDataSet.FieldByName('FLAGS').AsInteger;
+      result[i].Sport := lDataSet.FieldByName('SPORT').AsInteger;
       result[i].Voltage := 0;
       result[i].Temperature := 0;
-      result[i].DecoderId := lResultSet.FieldByName('DECODERID').AsString;
+      result[i].DecoderId := lDataSet.FieldByName('DECODERID').AsString;
       result[i].TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(result[i].ChipId);
       result[i].RaceId := ARaceId;
-      if lResultSet.FindField('PASSINGSTATUS') <> nil then
-        result[i].PassingStatus := lResultSet.FieldByName('PASSINGSTATUS').AsInteger
+      if lDataSet.FindField('PASSINGSTATUS') <> nil then
+        result[i].PassingStatus := lDataSet.FieldByName('PASSINGSTATUS').AsInteger
       else
         result[i].PassingStatus := Ord(psValid);
       result[i].LapIndex := -1;
       result[i].CompetitorId := -1;
       Inc(i);
-      lResultSet.Next;
+      lDataSet.Next;
     end;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 function TMainDataModule.GetUnassignedPassings: TArray<TPassing>;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   i: Integer;
 begin
   SetLength(Result, 0);
-  SQLConnection.Execute(
+  lDataSet := OpenReadOnlyQuery(
     'SELECT * FROM PASSINGS WHERE RACEID < 0 AND IFNULL(FLAGS, 0) <> 2 ' +
-    'ORDER BY PASSINGTIME, PASSINGNUMBER',
-    nil, lResultSet);
+    'ORDER BY PASSINGTIME, PASSINGNUMBER');
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
 
-    SetLength(Result, lResultSet.RecordCount);
+    SetLength(Result, lDataSet.RecordCount);
     i := 0;
-    lResultSet.First;
-    while not lResultSet.Eof do
+    lDataSet.First;
+    while not lDataSet.Eof do
     begin
-      Result[i].PassingNumber := lResultSet.FieldByName('PASSINGNUMBER').AsInteger;
-      Result[i].ChipId := lResultSet.FieldByName('CHIPID').AsString;
-      Result[i].PassingTime := SmartTimingTools.GetFieldAsDatetime(lResultSet.FieldByName('PASSINGTIME'), 0.0);
-      Result[i].SignalStrength := lResultSet.FieldByName('SIGNALSTRENGTH').AsInteger;
-      Result[i].Hits := lResultSet.FieldByName('HITS').AsInteger;
-      Result[i].Flags := lResultSet.FieldByName('FLAGS').AsInteger;
-      Result[i].Sport := lResultSet.FieldByName('SPORT').AsInteger;
+      Result[i].PassingNumber := lDataSet.FieldByName('PASSINGNUMBER').AsInteger;
+      Result[i].ChipId := lDataSet.FieldByName('CHIPID').AsString;
+      Result[i].PassingTime := SmartTimingTools.GetFieldAsDatetime(lDataSet.FieldByName('PASSINGTIME'), 0.0);
+      Result[i].SignalStrength := lDataSet.FieldByName('SIGNALSTRENGTH').AsInteger;
+      Result[i].Hits := lDataSet.FieldByName('HITS').AsInteger;
+      Result[i].Flags := lDataSet.FieldByName('FLAGS').AsInteger;
+      Result[i].Sport := lDataSet.FieldByName('SPORT').AsInteger;
       Result[i].Voltage := 0;
       Result[i].Temperature := 0;
-      Result[i].DecoderId := lResultSet.FieldByName('DECODERID').AsString;
+      Result[i].DecoderId := lDataSet.FieldByName('DECODERID').AsString;
       Result[i].TxId := TTransponderMappingStore.GetSingleton.GetShortIdFromTransponderId(Result[i].ChipId);
-      Result[i].RaceId := lResultSet.FieldByName('RACEID').AsInteger;
-      if lResultSet.FindField('PASSINGSTATUS') <> nil then
-        Result[i].PassingStatus := lResultSet.FieldByName('PASSINGSTATUS').AsInteger
+      Result[i].RaceId := lDataSet.FieldByName('RACEID').AsInteger;
+      if lDataSet.FindField('PASSINGSTATUS') <> nil then
+        Result[i].PassingStatus := lDataSet.FieldByName('PASSINGSTATUS').AsInteger
       else
         Result[i].PassingStatus := Ord(psValid);
       Result[i].LapIndex := -1;
       Result[i].CompetitorId := -1;
       Inc(i);
-      lResultSet.Next;
+      lDataSet.Next;
     end;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 procedure TMainDataModule.GetCompetitorInfoForPassing(APassing: TPassing; var ABIB: integer; var AName, AClubTeam: string);
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lField: TField;
   lCompetitorId: Integer;
 begin
@@ -1044,37 +1035,34 @@ begin
        APassing.RaceId, APassing.ChipId, APassing.PassingTime, lCompetitorId) then
     Exit;
 
-  SQLConnection.Execute(
-    Format(
-      'SELECT C.BIB, C.LASTNAME, C.FIRSTNAME, C.CLUB, C.TEAM FROM COMPETITORS C ' +
-      'WHERE C.COMPETITORID = %d',
-      [lCompetitorId]),
-    nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery(Format(
+    'SELECT C.BIB, C.LASTNAME, C.FIRSTNAME, C.CLUB, C.TEAM FROM COMPETITORS C ' +
+    'WHERE C.COMPETITORID = %d',
+    [lCompetitorId]));
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
-    lResultSet.First;
-    ABIB := lResultSet.FieldByName('BIB').AsInteger;
-    lField := lResultSet.FieldByName('LASTNAME');
+    ABIB := lDataSet.FieldByName('BIB').AsInteger;
+    lField := lDataSet.FieldByName('LASTNAME');
     if not lField.IsNull then
       AName := lField.AsString;
     AName := AName + ', ';
-    lField := lResultSet.FieldByName('FIRSTNAME');
+    lField := lDataSet.FieldByName('FIRSTNAME');
     if lField.IsNull then
       AName := AName + '?'
     else
       AName := AName + lField.AsString;
-    lField := lResultSet.FieldByName('TEAM');
+    lField := lDataSet.FieldByName('TEAM');
     if lField.IsNull or lField.AsString.IsEmpty then
     begin
-      lField := lResultSet.FieldByName('CLUB');
+      lField := lDataSet.FieldByName('CLUB');
       if not lField.IsNull then
         AClubTeam := lField.AsString;
     end
     else
       AClubTeam := lField.AsString;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -1093,7 +1081,7 @@ end;
 function TMainDataModule.GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string;
   APassingTime: TDateTime; var AParticipationId: integer; var AStartTime: TDatetime): integer;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lCompetitorId: Integer;
 begin
   Result := 0;
@@ -1103,27 +1091,23 @@ begin
        ARaceId, AChipId, APassingTime, lCompetitorId) then
     Exit;
 
-  SQLConnection.Execute(Format(
+  lDataSet := OpenReadOnlyQuery(Format(
     'SELECT LAPS, PARTICIPATIONID, P.STARTTIME FROM PARTICIPATION P ' +
     'WHERE P.RACEID = %d AND P.COMPETITORID = %d',
-    [ARaceId, lCompetitorId]), nil, lResultSet);
+    [ARaceId, lCompetitorId]));
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
 
-    lResultSet.First;
-    if lResultSet.Eof then
-      Exit;
-
-    if lResultSet.Fields[0].IsNull then
+    if lDataSet.Fields[0].IsNull then
       Result := 0
     else
-      Result := lResultSet.Fields[0].AsInteger;
-    if not lResultSet.Fields[1].IsNull then
-      AParticipationId := lResultSet.Fields[1].AsInteger;
-    AStartTime := SmartTimingTools.FieldAsDatetime(lResultSet.Fields[2]);
+      Result := lDataSet.Fields[0].AsInteger;
+    if not lDataSet.Fields[1].IsNull then
+      AParticipationId := lDataSet.Fields[1].AsInteger;
+    AStartTime := SmartTimingTools.GetFieldAsDatetime(lDataSet.Fields[2], 0);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -1131,7 +1115,7 @@ end;
 function TMainDataModule.TryGetRaceFinishTimeByTargetLaps(ARaceId, ATargetLaps: Integer;
   out AFinishTime: TDateTime): Boolean;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lText: string;
   lFormatSettings: TFormatSettings;
 begin
@@ -1140,15 +1124,16 @@ begin
   if (ARaceId < 0) or (ATargetLaps <= 0) then
     Exit;
 
-  SQLConnection.Execute(Format(
+  lDataSet := OpenReadOnlyQuery(Format(
     'SELECT MIN(FINISHTIME) FROM PARTICIPATION ' +
     'WHERE RACEID = %d AND IFNULL(LAPS, 0) >= %d ' +
     'AND IFNULL(TRIM(FINISHTIME), '''') <> ''''',
-    [ARaceId, ATargetLaps]), nil, lResultSet);
+    [ARaceId, ATargetLaps]));
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty or lResultSet.Fields[0].IsNull then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty or
+       lDataSet.Fields[0].IsNull then
       Exit;
-    lText := Trim(lResultSet.Fields[0].AsString);
+    lText := Trim(lDataSet.Fields[0].AsString);
     if lText = '' then
       Exit;
     lFormatSettings := TFormatSettings.Create;
@@ -1163,7 +1148,7 @@ begin
     if Result then
       AFinishTime := Frac(AFinishTime);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -1205,22 +1190,22 @@ end;
 function TMainDataModule.TryGetParticipationId(ARaceId, ACompetitorId: Integer;
   out AParticipationId: Integer): Boolean;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
   Result := False;
   AParticipationId := -1;
   if (ARaceId < 0) or (ACompetitorId <= 0) then
     Exit;
-  SQLConnection.Execute(Format(
+  lDataSet := OpenReadOnlyQuery(Format(
     'SELECT PARTICIPATIONID FROM PARTICIPATION WHERE RACEID = %d AND COMPETITORID = %d',
-    [ARaceId, ACompetitorId]), nil, lResultSet);
+    [ARaceId, ACompetitorId]));
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
-    AParticipationId := lResultSet.Fields[0].AsInteger;
+    AParticipationId := lDataSet.Fields[0].AsInteger;
     Result := AParticipationId > 0;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -1228,20 +1213,20 @@ end;
 function TMainDataModule.GetParticipationStringField(AParticipationId: Integer;
   const AFieldName: string): string;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
   Result := '';
   if (AParticipationId <= 0) or (Trim(AFieldName) = '') then
     Exit;
-  SQLConnection.Execute(Format(
+  lDataSet := OpenReadOnlyQuery(Format(
     'SELECT %s FROM PARTICIPATION WHERE PARTICIPATIONID = %d',
-    [AFieldName, AParticipationId]), nil, lResultSet);
+    [AFieldName, AParticipationId]));
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
-    Result := lResultSet.Fields[0].AsString;
+    Result := lDataSet.Fields[0].AsString;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -1249,48 +1234,48 @@ end;
 function TMainDataModule.IsParticipationFinishTimeOverridden(
   AParticipationId: Integer): Boolean;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
   Result := False;
   if AParticipationId <= 0 then
     Exit;
-  SQLConnection.Execute(Format(
+  lDataSet := OpenReadOnlyQuery(Format(
     'SELECT IFNULL(FINISHTIMEOVERRIDE, 0) FROM PARTICIPATION WHERE PARTICIPATIONID = %d',
-    [AParticipationId]), nil, lResultSet);
+    [AParticipationId]));
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
-    Result := lResultSet.Fields[0].AsInteger <> 0;
+    Result := lDataSet.Fields[0].AsInteger <> 0;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 procedure TMainDataModule.EnsureFinishTimeOverrideColumn;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lHasColumn: Boolean;
 begin
   if not SQLConnection.Connected then
     Exit;
   lHasColumn := False;
-  SQLConnection.Execute('PRAGMA table_info(PARTICIPATION)', nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery('PRAGMA table_info(PARTICIPATION)');
   try
-    if lResultSet = nil then
+    if (lDataSet = nil) or not lDataSet.Active then
       Exit;
-    lResultSet.First;
-    while not lResultSet.Eof do
+    lDataSet.First;
+    while not lDataSet.Eof do
     begin
-      if SameText(lResultSet.Fields[1].AsString, 'FINISHTIMEOVERRIDE') then
+      if SameText(lDataSet.Fields[1].AsString, 'FINISHTIMEOVERRIDE') then
       begin
         lHasColumn := True;
         Break;
       end;
-      lResultSet.Next;
+      lDataSet.Next;
     end;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
   if not lHasColumn then
     SQLConnection.ExecuteDirect(
@@ -1301,7 +1286,7 @@ end;
 function TMainDataModule.BuildPenaltyCommuniqueText(ARaceId: Integer;
   AFilterByClass: Boolean; const AClass: string): string;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lLines: TStringList;
   lText: string;
   lSql: string;
@@ -1320,20 +1305,20 @@ begin
       lSql := lSql + ' AND IFNULL(C.CLASS, '''') = ' + AClass.QuotedString;
     lSql := lSql + ' ORDER BY C.BIB, P.PARTICIPATIONID';
 
-    SQLConnection.Execute(lSql, nil, lResultSet);
+    lDataSet := OpenReadOnlyQuery(lSql);
     try
-      if (lResultSet = nil) or lResultSet.IsEmpty then
+      if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
         Exit;
-      lResultSet.First;
-      while not lResultSet.Eof do
+      lDataSet.First;
+      while not lDataSet.Eof do
       begin
-        lText := Trim(lResultSet.Fields[0].AsString);
+        lText := Trim(lDataSet.Fields[0].AsString);
         if lText <> '' then
           lLines.Add(lText);
-        lResultSet.Next;
+        lDataSet.Next;
       end;
     finally
-      FreeAndNil(lResultSet);
+      FreeAndNil(lDataSet);
     end;
     if lLines.Count = 0 then
       Exit;
@@ -1359,24 +1344,25 @@ end;
 {==============================================================================}
 procedure TMainDataModule.FillWithDistinctValues(const ATableName, AFieldName: string; AStrings: TStrings);
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lValue: string;
 begin
   AStrings.Clear;
-  SQLConnection.Execute('SELECT DISTINCT ' + AFieldName + ' FROM ' + ATableName + ' ORDER BY 1', nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery(
+    'SELECT DISTINCT ' + AFieldName + ' FROM ' + ATableName + ' ORDER BY 1');
   try
-    if lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
 
-    lResultSet.First;
-    while not lResultSet.Eof do
+    lDataSet.First;
+    while not lDataSet.Eof do
     begin
-      lValue := lResultSet.Fields[0].AsString;
+      lValue := lDataSet.Fields[0].AsString;
       AStrings.Add(lValue);
-      lResultSet.Next;
+      lDataSet.Next;
     end;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
@@ -1592,7 +1578,7 @@ end;
 {==============================================================================}
 procedure TMainDataModule.ExportTxMapping(const AFileName: string);
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lLines: TStringList;
   lShortId: integer;
   lChipId: string;
@@ -1601,88 +1587,91 @@ begin
   try
     lLines.NameValueSeparator := #9;
 
-    SQLConnection.Execute('SELECT SHORTID, CHIPID FROM TRANSPONDERS ORDER BY SHORTID', nil, lResultSet);
-    if not lResultSet.IsEmpty then
-    begin
-      // Look for changes and deletions and remove them from the list
-      lResultSet.First;
-      while not lResultSet.Eof do
+    lDataSet := OpenReadOnlyQuery('SELECT SHORTID, CHIPID FROM TRANSPONDERS ORDER BY SHORTID');
+    try
+      if (lDataSet <> nil) and lDataSet.Active and not lDataSet.IsEmpty then
       begin
-        lShortId := lResultSet.FieldByName('SHORTID').AsInteger;
-        lChipId := lResultSet.FieldByName('CHIPID').AsString;
-        lLines.AddPair(lShortId.ToString, lChipId);
-        lResultSet.Next;
+        lDataSet.First;
+        while not lDataSet.Eof do
+        begin
+          lShortId := lDataSet.FieldByName('SHORTID').AsInteger;
+          lChipId := lDataSet.FieldByName('CHIPID').AsString;
+          lLines.AddPair(lShortId.ToString, lChipId);
+          lDataSet.Next;
+        end;
       end;
+    finally
+      FreeAndNil(lDataSet);
     end;
     lLines.SaveToFile(AFileName);
   finally
     FreeAndNil(lLines);
-    FreeAndNil(lResultSet);
   end;
 end;
 
 {==============================================================================}
 function TMainDataModule.FillTransponderMappingCache: Integer;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
   TTransponderMappingStore.GetSingleton.Clear;
   result := 0;
 
-  SQLConnection.Execute('SELECT SHORTID, CHIPID FROM TRANSPONDERS ORDER BY SHORTID', nil, lResultSet);
+  lDataSet := OpenReadOnlyQuery('SELECT SHORTID, CHIPID FROM TRANSPONDERS ORDER BY SHORTID');
   try
-    if lResultSet.IsEmpty or (lResultSet.RecordCount < 1) then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
 
-    result := lResultSet.RecordCount;
-    lResultSet.First;
-    while not lResultSet.Eof do
+    result := lDataSet.RecordCount;
+    lDataSet.First;
+    while not lDataSet.Eof do
     begin
-      TTransponderMappingStore.GetSingleton.AddTransponder(lResultSet.Fields[0].AsInteger, lResultSet.Fields[1].AsString);
-      lResultSet.Next;
+      TTransponderMappingStore.GetSingleton.AddTransponder(
+        lDataSet.Fields[0].AsInteger, lDataSet.Fields[1].AsString);
+      lDataSet.Next;
     end;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 
 {==============================================================================}
 function TMainDataModule.FillTransponderAssignmentCache: Integer;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lAssignment: TTransponderAssignment;
   lValidToField: TField;
 begin
   TTransponderAssignmentStore.GetSingleton.Clear;
   Result := 0;
 
-  SQLConnection.Execute(
+  lDataSet := OpenReadOnlyQuery(
     'SELECT ASSIGNMENTID, CHIPID, COMPETITORID, VALIDFROM, VALIDTO, RACEID ' +
-    'FROM TRANSPONDERASSIGNMENTS ORDER BY ASSIGNMENTID',
-    nil, lResultSet);
+    'FROM TRANSPONDERASSIGNMENTS ORDER BY ASSIGNMENTID');
   try
-    if (lResultSet = nil) or lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
 
-    Result := lResultSet.RecordCount;
-    lResultSet.First;
-    while not lResultSet.Eof do
+    Result := lDataSet.RecordCount;
+    lDataSet.First;
+    while not lDataSet.Eof do
     begin
-      lAssignment.AssignmentId := lResultSet.FieldByName('ASSIGNMENTID').AsInteger;
-      lAssignment.ChipId := NormalizeChipId(lResultSet.FieldByName('CHIPID').AsString);
-      lAssignment.CompetitorId := lResultSet.FieldByName('COMPETITORID').AsInteger;
-      lAssignment.RaceId := lResultSet.FieldByName('RACEID').AsInteger;
-      lAssignment.ValidFrom := lResultSet.FieldByName('VALIDFROM').AsDateTime;
-      lValidToField := lResultSet.FieldByName('VALIDTO');
+      lAssignment.AssignmentId := lDataSet.FieldByName('ASSIGNMENTID').AsInteger;
+      lAssignment.ChipId := NormalizeChipId(lDataSet.FieldByName('CHIPID').AsString);
+      lAssignment.CompetitorId := lDataSet.FieldByName('COMPETITORID').AsInteger;
+      lAssignment.RaceId := lDataSet.FieldByName('RACEID').AsInteger;
+      lAssignment.ValidFrom := SmartTimingTools.GetFieldAsDatetime(
+        lDataSet.FieldByName('VALIDFROM'), 0);
+      lValidToField := lDataSet.FieldByName('VALIDTO');
       if lValidToField.IsNull then
         lAssignment.ValidTo := 0
       else
-        lAssignment.ValidTo := lValidToField.AsDateTime;
+        lAssignment.ValidTo := SmartTimingTools.GetFieldAsDatetime(lValidToField, 0);
       TTransponderAssignmentStore.GetSingleton.Upsert(lAssignment);
-      lResultSet.Next;
+      lDataSet.Next;
     end;
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 

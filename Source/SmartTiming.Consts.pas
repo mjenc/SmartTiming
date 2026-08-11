@@ -172,9 +172,9 @@ resourcestring
   cMessagesPlausibilityHeader =
     'Chip %s um %s'#13#10#13#10'%s';
   cMessagesPlausibilityAlwaysAccept =
-    'Für Chip %s MinLap immer annehmen (diese Sitzung)';
-  cMessagesPlausibilityAccept = 'Annehmen';
-  cMessagesPlausibilityReject = 'Verwerfen';
+    'Für Chip %s zu kurze Rundenzeiten in dieser Sitzung immer werten';
+  cMessagesPlausibilityAccept = 'Werten';
+  cMessagesPlausibilityReject = 'Ungültig';
   cMessagesPlausibilityAcknowledge = 'OK';
   cMessagesPlausibilityStatsHint =
     'Plausibilität: %d verworfen · %d Dialog · %d markiert · %d angenommen · %d Auto';

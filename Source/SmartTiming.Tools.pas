@@ -401,14 +401,8 @@ end;
 {==============================================================================}
 class function SmartTimingTools.FieldAsDatetime(AField: TField): TDatetime;
 begin
-  if AField.IsNull then
-    Exit(0.0);
-  if AField.DataType = ftDatetime then
-    Exit(AField.AsDateTime);
-  if AField.DataType = ftWidememo then
-    Exit(StrToDatetime(AField.AsString));
-
-  result := StrToDatetime(AField.Text);
+  (* dbExpress/SQLite often exposes TIMESTAMP as string — never call AsDateTime raw. *)
+  Result := GetFieldAsDatetime(AField, 0.0);
 end;
 
 {==============================================================================}
@@ -520,22 +514,48 @@ class function SmartTimingTools.GetFieldAsDatetime(AField: TField; ADefaultIfNul
 var
   lStringValue: string;
 begin
-  if AField.IsNull then
-    Exit(ADefauLtIfNull);
+  if (AField = nil) or AField.IsNull then
+    Exit(ADefaultIfNull);
 
   case AField.DataType of
-  ftString, ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftFmtMemo, ftFixedChar, ftWideString, ftVariant, ftFixedWideChar, ftWideMemo:
+  ftString, ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftFmtMemo, ftFixedChar,
+  ftWideString, ftVariant, ftFixedWideChar, ftWideMemo:
     begin
-      lStringValue := VarToStr(AField.AsVariant);
-      if not TryStrToDateTime(lStringValue, result) then
-        result := ISOTimeStrToDateTime(lStringValue);
+      lStringValue := Trim(VarToStr(AField.AsVariant));
+      if lStringValue = '' then
+        Exit(ADefaultIfNull);
+      if not TryStrToDateTime(lStringValue, Result) then
+        Result := ISOTimeStrToDateTime(lStringValue);
     end;
-  ftSmallint, ftInteger, ftWord, ftFloat, ftCurrency, ftLargeint, ftLongWord, ftShortint, ftExtended, ftSingle:
+  ftSmallint, ftInteger, ftWord, ftFloat, ftCurrency, ftLargeint, ftLongWord,
+  ftShortint, ftExtended, ftSingle:
     Exit(AField.AsExtended);
   ftDate, ftTime, ftDateTime, ftTimeStamp:
-    Exit(AField.AsDateTime);
+    try
+      Exit(AField.AsDateTime);
+    except
+      on EDatabaseError do
+      begin
+        lStringValue := Trim(AField.AsString);
+        if lStringValue = '' then
+          Exit(ADefaultIfNull);
+        if not TryStrToDateTime(lStringValue, Result) then
+          Result := ISOTimeStrToDateTime(lStringValue);
+      end;
+    end;
   else
-    Exit(ADefauLtIfNull);
+    begin
+      (* Unknown/misreported types from SQLite dbExpress: parse as text. *)
+      lStringValue := Trim(AField.AsString);
+      if lStringValue = '' then
+        Exit(ADefaultIfNull);
+      if not TryStrToDateTime(lStringValue, Result) then
+      try
+        Result := ISOTimeStrToDateTime(lStringValue);
+      except
+        Result := ADefaultIfNull;
+      end;
+    end;
   end;
 end;
 

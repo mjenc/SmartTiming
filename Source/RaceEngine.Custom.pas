@@ -356,7 +356,6 @@ begin
   FPassingDisplay.Align := alClient;
 
   TListView(FPassingDisplay).SmallImages := GFormMain.ImageListPassingStates;
-  TListView(FPassingDisplay).StateImages := GFormMain.ImageListPassingStates;
   TListView(FPassingDisplay).PopupMenu := FPopupMenuPassings;
   TListView(FPassingDisplay).FullDrag := True;
   TListView(FPassingDisplay).HotTrack := True;
@@ -694,6 +693,7 @@ begin
       (* Decoder-sequence cursor only — synthetic MANUAL/SYSTEM ids must not pull
          FillPassingListFrom into the negative range (double-count after Recalc). *)
       FLastConsideredPassingId := 0;
+      ReassignLapsForRace;
 
       TPassingStore.GetSingleton.FillPassingListForRaceId(FRaceItem.Id, lPassingList, true, true);
       lTimeArray := lPassingList.Keys.ToArray;

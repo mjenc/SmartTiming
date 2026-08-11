@@ -61,6 +61,7 @@ type
     procedure ClearAlwaysAcceptChips;
     procedure ResetPlausibilityStats;
     procedure ApplyPlausibilityAccept(APassingNumber, ARaceId: Integer);
+    procedure ApplyPlausibilityReject(APassingNumber, ARaceId: Integer);
     property Event: TEventDataObject read FEventDataObject;
     property RaceList: TDictionary<integer, TRaceItem> read FRaceList;
     property PlausibilityStats: TPlausibilitySessionStats read GetPlausibilityStatsSnapshot;
@@ -798,6 +799,35 @@ begin
     NotifyPlausibilityStatsChanged;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['ApplyPlausibilityAccept']);
+  end;
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.ApplyPlausibilityReject(APassingNumber, ARaceId: Integer);
+var
+  lPassing: TPassing;
+  lRaceItem: TRaceItem;
+begin
+  try
+    LogOnDebug(cLogger, ['ApplyPlausibilityReject', APassingNumber.ToString, ARaceId.ToString]);
+    (* Already persisted as invalid when AskOperator was queued; keep invalid and refresh UI. *)
+    lPassing := TPassingStore.GetSingleton.GetPassing(APassingNumber);
+    UpdatePassing(APassingNumber, lPassing.PassingTime, psInvalid);
+
+    if (ARaceId >= 0) and FRaceList.TryGetValue(ARaceId, lRaceItem) and
+       (lRaceItem.RaceEngine <> nil) then
+    begin
+      lRaceItem.RaceEngine.RecalcCountingLaps;
+      lRaceItem.RaceEngine.ReassignLapsForRace;
+      lRaceItem.RaceEngine.RebuildProtocolDisplay;
+    end;
+
+    LogOnInfo(cLogger, [
+      Format('Plausibility OperatorRejected chip=%s race=%d passing=%d',
+        [lPassing.ChipId, ARaceId, APassingNumber])]);
+    NotifyPlausibilityStatsChanged;
+  except
+    LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['ApplyPlausibilityReject']);
   end;
 end;
 

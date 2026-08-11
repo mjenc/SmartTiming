@@ -413,14 +413,16 @@ begin
   begin
     lDeltaSec := SecondsBetweenPassings(AContext.LastValidPassingTime, AContext.PassingTime);
 
-    if lDeltaSec <= 0 then
-      AddFinding(Result, pvrDoubleHit,
-        Format('Doppelhit für Chip %s (Δt = %.3f s).', [AContext.ChipId, lDeltaSec]), lManual)
-    else if (AContext.MinLapDurationSeconds > 0) and
-            (lDeltaSec < AContext.MinLapDurationSeconds) then
+    if (AContext.MinLapDurationSeconds > 0) and
+       (lDeltaSec < AContext.MinLapDurationSeconds) then
+      (* Too short (incl. Δt≤0): ask operator — ungültig vs. werten. *)
       AddFinding(Result, pvrMinLapDuration,
-        Format('Rundenzeit %.1f s unter MinLapDuration %d s (Chip %s).',
-          [lDeltaSec, AContext.MinLapDurationSeconds, AContext.ChipId]), lManual);
+        Format('Rundenzeit %.1f s unter Mindestrundenzeit %d s (Chip %s).'#13#10 +
+          'Passage ungültig markieren oder trotzdem werten?',
+          [lDeltaSec, AContext.MinLapDurationSeconds, AContext.ChipId]), lManual)
+    else if lDeltaSec <= 0 then
+      AddFinding(Result, pvrDoubleHit,
+        Format('Doppelhit für Chip %s (Δt = %.3f s).', [AContext.ChipId, lDeltaSec]), lManual);
   end;
 end;
 
@@ -461,7 +463,7 @@ begin
       Result.RaceAcceptsPassings :=
         TTransponderAssignmentService.IsRaceStatusAcceptingPassings(Result.RaceStatus);
     Result.LastValidPassingTime := TPassingStore.GetSingleton.GetLastPassingTimeForChip(
-      AResolution.RaceId, APassing.ChipId, APassing.PassingTime);
+      AResolution.RaceId, APassing.ChipId, APassing.PassingTime, APassing.PassingNumber);
   end;
 
   if AResolution.IsUnique then
@@ -567,7 +569,12 @@ begin
       [pvrDoubleHit]);
 
     lCtx := TPassingValidationContext.MakeCleanLiveHit('CL-11540', lT0, 1, 10, 20, lT0);
-    Expect('double hit', lCtx, pdReject, [pvrDoubleHit], [pvrMinLapDuration]);
+    Expect('equal time with MinLap → ask', lCtx, pdAskOperator, [pvrMinLapDuration],
+      [pvrDoubleHit]);
+
+    lCtx := TPassingValidationContext.MakeCleanLiveHit('CL-11540', lT0, 1, 10, 0, lT0);
+    Expect('double hit without MinLap', lCtx, pdReject, [pvrDoubleHit],
+      [pvrMinLapDuration]);
 
     lCtx := TPassingValidationContext.MakeCleanLiveHit('CL-11540', lT0, -1, -1, 20, 0);
     lCtx.AssignmentMatchCount := 2;

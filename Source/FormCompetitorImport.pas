@@ -137,20 +137,16 @@ end;
 {==============================================================================}
 function TFormCompetitorImport.GetMaxCompetitorId: integer;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
 begin
-  MainDataModule.SQLConnection.Execute('SELECT MAX(COMPETITORID) FROM COMPETITORS', nil, lResultSet);
+  lDataSet := MainDataModule.OpenReadOnlyQuery('SELECT MAX(COMPETITORID) FROM COMPETITORS');
   try
-    if lResultSet.IsEmpty then
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty or
+       lDataSet.Fields[0].IsNull then
       Exit(1);
-
-    if lResultSet.RecordCount < 1 then
-      Exit(0);
-
-    lResultSet.First;
-    Exit(lResultSet.Fields[0].AsInteger);
+    Exit(lDataSet.Fields[0].AsInteger);
   finally
-    FreeAndNil(lResultSet);
+    FreeAndNil(lDataSet);
   end;
 end;
 

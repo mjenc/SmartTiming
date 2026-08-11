@@ -78,7 +78,7 @@ end;
 {==============================================================================}
 procedure TFormAssignCompetitor.LoadCompetitors;
 var
-  lResultSet: TDataSet;
+  lDataSet: TSQLDataSet;
   lItem: TListItem;
   lName: string;
   lTeam: string;
@@ -86,36 +86,34 @@ begin
   ListViewCompetitors.Items.BeginUpdate;
   try
     ListViewCompetitors.Items.Clear;
-    MainDataModule.SQLConnection.Execute(
-      Format(
-        'SELECT C.COMPETITORID, C.BIB, C.LASTNAME, C.FIRSTNAME, C.TEAM, C.CLUB, C.CLASS ' +
-        'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
-        'WHERE P.RACEID = %d ORDER BY C.BIB',
-        [FRaceId]),
-      nil, lResultSet);
+    lDataSet := MainDataModule.OpenReadOnlyQuery(Format(
+      'SELECT C.COMPETITORID, C.BIB, C.LASTNAME, C.FIRSTNAME, C.TEAM, C.CLUB, C.CLASS ' +
+      'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+      'WHERE P.RACEID = %d ORDER BY C.BIB',
+      [FRaceId]));
     try
-      if (lResultSet = nil) or lResultSet.IsEmpty then
+      if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
         Exit;
-      lResultSet.First;
-      while not lResultSet.Eof do
+      lDataSet.First;
+      while not lDataSet.Eof do
       begin
         lItem := ListViewCompetitors.Items.Add;
-        lItem.Caption := lResultSet.FieldByName('BIB').AsString;
-        lName := Trim(lResultSet.FieldByName('LASTNAME').AsString + ', ' +
-          lResultSet.FieldByName('FIRSTNAME').AsString);
+        lItem.Caption := lDataSet.FieldByName('BIB').AsString;
+        lName := Trim(lDataSet.FieldByName('LASTNAME').AsString + ', ' +
+          lDataSet.FieldByName('FIRSTNAME').AsString);
         if lName = ',' then
           lName := '';
         lItem.SubItems.Add(lName);
-        lTeam := Trim(lResultSet.FieldByName('TEAM').AsString);
+        lTeam := Trim(lDataSet.FieldByName('TEAM').AsString);
         if lTeam = '' then
-          lTeam := Trim(lResultSet.FieldByName('CLUB').AsString);
+          lTeam := Trim(lDataSet.FieldByName('CLUB').AsString);
         lItem.SubItems.Add(lTeam);
-        lItem.SubItems.Add(lResultSet.FieldByName('CLASS').AsString);
-        lItem.Data := Pointer(lResultSet.FieldByName('COMPETITORID').AsInteger);
-        lResultSet.Next;
+        lItem.SubItems.Add(lDataSet.FieldByName('CLASS').AsString);
+        lItem.Data := Pointer(lDataSet.FieldByName('COMPETITORID').AsInteger);
+        lDataSet.Next;
       end;
     finally
-      FreeAndNil(lResultSet);
+      FreeAndNil(lDataSet);
     end;
   finally
     ListViewCompetitors.Items.EndUpdate;

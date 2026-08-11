@@ -67,7 +67,7 @@ implementation
 
 uses
   DataModule, SmartTiming.Tools, SmartTiming.PassingValidator,
-  SmartTiming.CorrectionRegression;
+  SmartTiming.CorrectionRegression, System.DateUtils;
 
 {==============================================================================}
 procedure TFormPassingSimulator.FormCreate(Sender: TObject);
@@ -286,6 +286,7 @@ begin
   TDecoderEngine.GetSingleton.SendSimulatedPassing(lPassing);
   AppendLog(lPassing.PassingNumber, lShortId, lChipId, lPassing.PassingTime, lSignal);
   Inc(FNextPassingNumber);
+  SetTimeEdit(IncMilliSecond(lTime, 500));
 
   EditShortId.SelectAll;
   EditShortId.SetFocus;
