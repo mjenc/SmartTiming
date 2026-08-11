@@ -99,6 +99,11 @@ begin
     else
       Fail('system-marker message constant', 'empty');
 
+    if Trim(cMessagesWarmUpFlagTimeFixed) <> '' then
+      Pass('warm-up flag time-fixed message constant')
+    else
+      Fail('warm-up flag time-fixed message constant', 'empty');
+
     (* --- DB-backed smoke (read-only) --- *)
     lDbOk := (MainDataModule <> nil) and MainDataModule.SQLConnection.Connected;
     if not lDbOk then

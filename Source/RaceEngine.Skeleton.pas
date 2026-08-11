@@ -32,7 +32,7 @@ type
 implementation
 
 uses
-  SmartTiming.Tools;
+  Vcl.Dialogs, SmartTiming.Tools;
 
 {==============================================================================}
 procedure TSkeletonRaceEngine.ApplySkeletonFormats(const AFormatSuffix: string);

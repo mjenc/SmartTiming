@@ -102,6 +102,8 @@ resourcestring
   cRaceStatusFinished = 'Ziel';
   cRaceStatusStopped = 'Gestoppt';
   cRaceStatusAborted = 'Abgebrochen';
+  cRaceStatusNewLeader = 'Neue Spitze';
+  cRaceStatusPointsSprint = 'Punkte';
 
   cFlagNameWarmUp = 'Flagge Vorbereitung';
   cFlagNameStart  = 'Flagge Start';
@@ -109,6 +111,8 @@ resourcestring
   cFlagNameFinish = 'Flagge Ziel';
   cFlagNameAbort = 'Flagge Abbruch';
   cFlagNameStop = 'Flagge Stopp';
+  cFlagNameNewLeader = 'Flagge Neue Spitze';
+  cFlagNamePointsSprint = 'Flagge Punkte';
 
   cFieldTitleBib = 'Start#';
   cFieldTitleClass = 'Klasse';
@@ -199,7 +203,10 @@ resourcestring
     'Chip %s konnte für den Nachtrag nicht zugeordnet werden:'#13#10'%s';
   cMessagesCommuniqueHeader = 'Kommuniqué';
   cMessagesNoParticipantSelected = 'Bitte einen Teilnehmer im Ranking auswählen.';
-  cMessagesPassingIsSystemMarker = 'System-Markierungen können nicht gelöscht oder bearbeitet werden.';
+  cMessagesPassingIsSystemMarker =
+    'System-Markierungen können nicht gelöscht oder ungültig gesetzt werden.';
+  cMessagesWarmUpFlagTimeFixed =
+    'Die Vorbereitungs-Flagge kann nicht verschoben werden, weil sie die Erfassung aktiviert.';
   cMessagesPassingDragSingleOnly =
     'Zeitkorrektur per Drag&Drop ist nur mit einer ausgewählten Passage möglich.';
   cMessagesChangeCompetitorNoChip = 'Diese Passage hat keinen Chip — Fahrer kann nicht geändert werden.';
@@ -229,10 +236,13 @@ resourcestring
 type
   TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial, rtCircuit, rtCriterium);
   TRaceTypes = set of TRaceType;
-  TRaceStatus = (rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped);
+  TRaceStatus = (rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped,
+    rsNewLeader, rsPointsSprint);
   TRaceStates = set of TRaceStatus;
 
 const
+  (* SYSTEM markers that do not change RACES.STATUS (in-race operator events). *)
+  cRaceEventMarkers: TRaceStates = [rsNewLeader, rsPointsSprint];
   cPassingImageValid = 0;
   cPassingImageInvalid = 1;
   cPassingImageManual = 2;

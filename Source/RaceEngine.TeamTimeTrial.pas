@@ -26,8 +26,6 @@ constructor TTeamTimeTrialRaceEngine.Create(AParent: TWinControl;
 begin
   ApplySkeletonFormats('.TeamTimeTrial');
   inherited Create(AParent, AEvent, ARaceItem);
-  (* Align status set with ITT until TTT rules are defined. *)
-  FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsStopped];
 end;
 
 end.

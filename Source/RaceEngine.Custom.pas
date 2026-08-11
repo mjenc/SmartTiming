@@ -128,6 +128,10 @@ type
 
     property PassingDisplay: TWinControl read GetPassingDisplay;
     property AvailableRaceStates: TRaceStates read FAvailableRaceStates;
+    (* Criterium: judge marks lap gain / new peak without changing RACES.STATUS. *)
+    function SupportsNewLeaderFlag: Boolean; virtual;
+    (* Criterium: next peak passage scores sprint points (5/3/2/1). *)
+    function SupportsPointsSprintFlag: Boolean; virtual;
 
     // ranking
     procedure RefreshRankingDisplay;
@@ -229,6 +233,18 @@ begin
   FSQLDataSetRankings.DataSource := FDataSourceRankings;
 
   FLastChangeTimestamp := Now;
+end;
+
+{==============================================================================}
+function TCustomRaceEngine.SupportsNewLeaderFlag: Boolean;
+begin
+  Result := False;
+end;
+
+{==============================================================================}
+function TCustomRaceEngine.SupportsPointsSprintFlag: Boolean;
+begin
+  Result := False;
 end;
 
 {==============================================================================}
@@ -1389,9 +1405,10 @@ begin
 
   lPassingNumber := lCurrentItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
   lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
-  if lPassing.IsSystemMarker then
+  (* SYSTEM flags may be time-shifted except Warm-Up (activates capture). *)
+  if lPassing.IsWarmUpFlag then
   begin
-    SmartTimingTools.ShowDialog(cMessagesPassingIsSystemMarker, '', [tcbOk], tcbOk);
+    SmartTimingTools.ShowDialog(cMessagesWarmUpFlagTimeFixed, '', [tcbOk], tcbOk);
     Exit;
   end;
 
@@ -1544,9 +1561,9 @@ begin
 
   lPassingNumber := lDragItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
   lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
-  if lPassing.IsSystemMarker then
+  if lPassing.IsWarmUpFlag then
   begin
-    SmartTimingTools.ShowDialog(cMessagesPassingIsSystemMarker, '', [tcbOk], tcbOk);
+    SmartTimingTools.ShowDialog(cMessagesWarmUpFlagTimeFixed, '', [tcbOk], tcbOk);
     Exit;
   end;
 

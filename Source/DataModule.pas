@@ -90,6 +90,8 @@ type
     procedure ResetRaceParticitipations(ARaceId: Integer);
     function GetNumberOfLapsForParticipant(ARaceId: integer; const AChipId: string;
       APassingTime: TDateTime; var AParticipationId: integer; var AStartTime: TDatetime): integer;
+    function TryGetRaceFinishTimeByTargetLaps(ARaceId, ATargetLaps: Integer;
+      out AFinishTime: TDateTime): Boolean;
     procedure UpdateParticipationValues(AParticipationId: integer; const AFields: TArray<string>; const AValues: TArray<Variant>);
     function TryGetParticipationId(ARaceId, ACompetitorId: Integer; out AParticipationId: Integer): Boolean;
     function GetParticipationStringField(AParticipationId: Integer; const AFieldName: string): string;
@@ -1120,6 +1122,46 @@ begin
     if not lResultSet.Fields[1].IsNull then
       AParticipationId := lResultSet.Fields[1].AsInteger;
     AStartTime := SmartTimingTools.FieldAsDatetime(lResultSet.Fields[2]);
+  finally
+    FreeAndNil(lResultSet);
+  end;
+end;
+
+{==============================================================================}
+function TMainDataModule.TryGetRaceFinishTimeByTargetLaps(ARaceId, ATargetLaps: Integer;
+  out AFinishTime: TDateTime): Boolean;
+var
+  lResultSet: TDataSet;
+  lText: string;
+  lFormatSettings: TFormatSettings;
+begin
+  Result := False;
+  AFinishTime := 0;
+  if (ARaceId < 0) or (ATargetLaps <= 0) then
+    Exit;
+
+  SQLConnection.Execute(Format(
+    'SELECT MIN(FINISHTIME) FROM PARTICIPATION ' +
+    'WHERE RACEID = %d AND IFNULL(LAPS, 0) >= %d ' +
+    'AND IFNULL(TRIM(FINISHTIME), '''') <> ''''',
+    [ARaceId, ATargetLaps]), nil, lResultSet);
+  try
+    if (lResultSet = nil) or lResultSet.IsEmpty or lResultSet.Fields[0].IsNull then
+      Exit;
+    lText := Trim(lResultSet.Fields[0].AsString);
+    if lText = '' then
+      Exit;
+    lFormatSettings := TFormatSettings.Create;
+    lFormatSettings.TimeSeparator := ':';
+    lFormatSettings.DecimalSeparator := '.';
+    if TryStrToTime(lText, AFinishTime, lFormatSettings) then
+    begin
+      AFinishTime := Frac(AFinishTime);
+      Exit(True);
+    end;
+    Result := TryStrToDateTime(lText, AFinishTime, lFormatSettings);
+    if Result then
+      AFinishTime := Frac(AFinishTime);
   finally
     FreeAndNil(lResultSet);
   end;

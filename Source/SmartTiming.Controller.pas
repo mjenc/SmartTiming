@@ -323,17 +323,25 @@ procedure TSmartTimingController.ChangeRaceStatus(ARaceId: Integer; ARaceStatus:
 var
   lPassing: TPassing;
   lRaceItem: TRaceItem;
+  lUpdateRaceStatus: Boolean;
+  lDisplayStatus: TRaceStatus;
 begin
   try
     LogOnDebug(cLogger, ['ChangeRaceStatus']);
 
-    MainDataModule.SetRaceStatus(ARaceId, ARaceStatus);
-    if FRaceList.TryGetValue(ARaceId, lRaceItem) then
-      lRaceItem.Status := ARaceStatus;
+    (* Event markers (Neue Spitze, Punkte) do not change RACES.STATUS — race stays Started. *)
+    lUpdateRaceStatus := not (ARaceStatus in cRaceEventMarkers);
 
-    (* Terminal statuses free chips for reuse in later races. *)
-    if ARaceStatus in [rsFinished, rsAborted, rsStopped] then
-      MainDataModule.CloseAllOpenTransponderAssignmentsForRace(ARaceId);
+    if lUpdateRaceStatus then
+    begin
+      MainDataModule.SetRaceStatus(ARaceId, ARaceStatus);
+      if FRaceList.TryGetValue(ARaceId, lRaceItem) then
+        lRaceItem.Status := ARaceStatus;
+
+      (* Terminal statuses free chips for reuse in later races. *)
+      if ARaceStatus in [rsFinished, rsAborted, rsStopped] then
+        MainDataModule.CloseAllOpenTransponderAssignmentsForRace(ARaceId);
+    end;
 
     lPassing.PassingNumber := MainDataModule.AllocateSyntheticPassingNumber;
     lPassing.ChipId := '';
@@ -353,7 +361,14 @@ begin
     TPassingStore.GetSingleton.AddPassing(lPassing);
 
     GFormMain.AddPassingForRaceId(ARaceId, lPassing);
-    GFormMain.RefreshFlagButtonsActive(ARaceStatus);
+
+    if lUpdateRaceStatus then
+      lDisplayStatus := ARaceStatus
+    else if FRaceList.TryGetValue(ARaceId, lRaceItem) then
+      lDisplayStatus := lRaceItem.Status
+    else
+      lDisplayStatus := rsStarted;
+    GFormMain.RefreshFlagButtonsActive(lDisplayStatus);
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['ChangeRaceStatus']);
   end;

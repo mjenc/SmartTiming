@@ -31,7 +31,20 @@ Die Basisklasse `TCustomRaceEngine` und die Factory `TRaceEngineFactory` sind de
 2. ITT hinter der bestehenden Implementierung belassen (Referenzverhalten, keine Fachänderung). — **erledigt**
 3. Skelette anlegen: `RaceEngine.Circuit`, `RaceEngine.Criterium`, `RaceEngine.TeamTimeTrial` (TTT nicht mehr leere ITT-Ableitung). — **erledigt**
    (gemeinsame Basis `RaceEngine.Skeleton`; Platzhalter-Ranking ohne Scoring; Export/Druck Hinweis)
-4. Pro Engine definieren: `AvailableRaceStates`, `UpdateParticipationTable`, Ranking-SQL-Hook.
+4. Pro Engine definieren: `AvailableRaceStates`, `UpdateParticipationTable`, Ranking-SQL-Hook. — **teilweise**
+   - **AvailableRaceStates:** alle Engines erlauben den vollen Statussatz (ITT/TTT-Einschränkung entfernt).
+   - **Circuit:** Scoring + `RANKING_CIRCUIT` / `_BYCLASS` — gleiche Soll-Runden für alle Klassen;
+     gemeinsamer Start = grüne Flagge (SYSTEM/`rsStarted`, F5, einmal pro Rennen);
+     Flaggenzeiten verschiebbar (Korrektur-UI / Drag&Drop) außer Warm-Up (aktiviert Erfassung);
+     nicht COMPETITOR/PARTICIPATION.STARTTIME; erster Fahrer mit Soll-Runden beendet Wertung;
+     Ranking nach Runden (Überrundete zurück), dann Zeit; Platzierung klassenspezifisch (`_BYCLASS`).
+   - **Criterium:** Scoring + `RANKING_CRITERIUM` / `_BYCLASS` (WB Straße § 11.2.3):
+     feste Soll-Runden; Sieger = meiste Runden, bei Gleichstand Punkte.
+     Überrunder (Neue Spitze/Holdout) werden **nicht** bei Soll-Runden gestoppt
+     (Hauptfeld fährt Soll, Überrunder enden mit Soll+N). Zählung endet erst, wenn
+     das Hauptfeld (Peak ohne Holdouts) Soll erreicht. PK → 5/3/2/1 (Schlussrunde
+     doppelt bei Peak ≥ Soll−1). Ranking: Runden, Punkte, späterer Punktgewinn.
+   - TTT: weiterhin Skeleton (Schritt 4 Rest).
 5. Controller und WebService: Ranking nur noch über Engine-API, nicht über hardcodierte View-Namen.
    (teilweise durch Plan 7 abgedeckt — bei neuen Engines prüfen)
 6. UI/Factory für neue Typen verdrahten; unbekannte Typen ablehnen (keine DB-Migrationspfade).

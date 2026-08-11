@@ -72,6 +72,8 @@ type
     ButtonAbort: TBitBtn;
     ButtonFinish: TBitBtn;
     ButtonStop: TBitBtn;
+    ButtonNewLeader: TBitBtn;
+    ButtonPointsSprint: TBitBtn;
     MenuItemTools: TMenuItem;
     MenuItemFile: TMenuItem;
     MenuItemTxMapping: TMenuItem;
@@ -153,6 +155,8 @@ type
     procedure ButtonAbortClick(Sender: TObject);
     procedure ButtonFinishClick(Sender: TObject);
     procedure ButtonStopClick(Sender: TObject);
+    procedure ButtonNewLeaderClick(Sender: TObject);
+    procedure ButtonPointsSprintClick(Sender: TObject);
     procedure MenuItemSimulatePassingsClick(Sender: TObject);
     procedure MenuItemUnassignedPassingsClick(Sender: TObject);
     procedure ListBoxRacesDrawItem(Control: TWinControl; Index: Integer; Rect: TRect; State: TOwnerDrawState);
@@ -1077,6 +1081,18 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.ButtonNewLeaderClick(Sender: TObject);
+begin
+  RaceButtonStatusChange(rsNewLeader);
+end;
+
+{==============================================================================}
+procedure TFormMain.ButtonPointsSprintClick(Sender: TObject);
+begin
+  RaceButtonStatusChange(rsPointsSprint);
+end;
+
+{==============================================================================}
 procedure TFormMain.ButtonNeutralizeClick(Sender: TObject);
 begin
   RaceButtonStatusChange(rsNeutralized);
@@ -1192,6 +1208,24 @@ begin
     lButton.Left := lLeftPos;
     Inc(lLeftPos, lButton.Width + 6);
   end;
+
+  (* Criterium event flags — not part of the race-status FSM. *)
+  if ARaceItem.RaceEngine.SupportsNewLeaderFlag then
+  begin
+    ButtonNewLeader.Visible := True;
+    ButtonNewLeader.Left := lLeftPos;
+    Inc(lLeftPos, ButtonNewLeader.Width + 6);
+  end
+  else
+    ButtonNewLeader.Visible := False;
+
+  if ARaceItem.RaceEngine.SupportsPointsSprintFlag then
+  begin
+    ButtonPointsSprint.Visible := True;
+    ButtonPointsSprint.Left := lLeftPos;
+  end
+  else
+    ButtonPointsSprint.Visible := False;
 end;
 
 {==============================================================================}
@@ -1206,6 +1240,8 @@ begin
       ButtonAbort.Enabled := false;
       ButtonFinish.Enabled := false;
       ButtonStop.Enabled := false;
+      ButtonNewLeader.Enabled := false;
+      ButtonPointsSprint.Enabled := false;
     end;
   rsWarmUp:
     begin
@@ -1215,6 +1251,8 @@ begin
       ButtonAbort.Enabled := true;
       ButtonFinish.Enabled := false;
       ButtonStop.Enabled := true;
+      ButtonNewLeader.Enabled := false;
+      ButtonPointsSprint.Enabled := false;
     end;
   rsStarted:
     begin
@@ -1224,6 +1262,8 @@ begin
       ButtonAbort.Enabled := true;
       ButtonFinish.Enabled := true;
       ButtonStop.Enabled := true;
+      ButtonNewLeader.Enabled := true;
+      ButtonPointsSprint.Enabled := true;
     end;
   rsNeutralized:
     begin
@@ -1233,6 +1273,8 @@ begin
       ButtonAbort.Enabled := true;
       ButtonFinish.Enabled := true;
       ButtonStop.Enabled := true;
+      ButtonNewLeader.Enabled := false;
+      ButtonPointsSprint.Enabled := false;
     end;
   rsFinished:
     begin
@@ -1242,6 +1284,8 @@ begin
       ButtonAbort.Enabled := false;
       ButtonFinish.Enabled := false;
       ButtonStop.Enabled := true;
+      ButtonNewLeader.Enabled := false;
+      ButtonPointsSprint.Enabled := false;
     end;
   rsAborted:
     begin
@@ -1251,6 +1295,8 @@ begin
       ButtonAbort.Enabled := false;
       ButtonFinish.Enabled := false;
       ButtonStop.Enabled := true;
+      ButtonNewLeader.Enabled := false;
+      ButtonPointsSprint.Enabled := false;
     end;
   rsStopped:
     begin
@@ -1260,7 +1306,11 @@ begin
       ButtonAbort.Enabled := false;
       ButtonFinish.Enabled := false;
       ButtonStop.Enabled := false;
+      ButtonNewLeader.Enabled := false;
+      ButtonPointsSprint.Enabled := false;
     end;
+  else
+    (* Event markers (Neue Spitze, Punkte) do not drive the FSM. *)
   end;
 end;
 

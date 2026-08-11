@@ -272,6 +272,10 @@ begin
     Exit(rsStopped);
   if SameText(cRaceStatusAborted, AValue) then
     Exit(rsAborted);
+  if SameText(cRaceStatusNewLeader, AValue) then
+    Exit(rsNewLeader);
+  if SameText(cRaceStatusPointsSprint, AValue) then
+    Exit(rsPointsSprint);
 end;
 
 {==============================================================================}
@@ -293,6 +297,10 @@ begin
     Exit(cRaceStatusStopped);
   rsAborted:
     Exit(cRaceStatusAborted);
+  rsNewLeader:
+    Exit(cRaceStatusNewLeader);
+  rsPointsSprint:
+    Exit(cRaceStatusPointsSprint);
   end;
 end;
 
@@ -313,6 +321,10 @@ begin
     Exit(cFlagNameStop);
   rsAborted:
     Exit(cFlagNameAbort);
+  rsNewLeader:
+    Exit(cFlagNameNewLeader);
+  rsPointsSprint:
+    Exit(cFlagNamePointsSprint);
   end;
 end;
 

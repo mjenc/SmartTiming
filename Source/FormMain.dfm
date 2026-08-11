@@ -559,6 +559,28 @@ object FormMain: TFormMain
               TabOrder = 5
               OnClick = ButtonStopClick
             end
+            object ButtonNewLeader: TBitBtn
+              Left = 280
+              Top = 3
+              Width = 38
+              Height = 38
+              Hint = 'Neue Spitze'
+              Caption = 'NS'
+              TabOrder = 7
+              Visible = False
+              OnClick = ButtonNewLeaderClick
+            end
+            object ButtonPointsSprint: TBitBtn
+              Left = 324
+              Top = 3
+              Width = 38
+              Height = 38
+              Hint = 'Punkte — n'#228'chste Passage der Spitze'
+              Caption = 'PK'
+              TabOrder = 9
+              Visible = False
+              OnClick = ButtonPointsSprintClick
+            end
             object CheckBoxAutoScrollPassings: TCheckBox
               Left = 415
               Top = 13
@@ -572,12 +594,12 @@ object FormMain: TFormMain
               OnClick = ToggleAutoScrollClick
             end
             object ButtonPrintParticipantList: TButton
-              Left = 280
+              Left = 368
               Top = 10
               Width = 121
               Height = 25
               Caption = 'Startliste drucken'
-              TabOrder = 7
+              TabOrder = 8
               OnClick = ButtonPrintParticipantListClick
             end
           end

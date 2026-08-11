@@ -86,8 +86,6 @@ begin
 
   inherited Create(AParent, AEvent, ARaceItem);
 
-  FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsStopped];
-
   FRankingQuery := GetRankingSQL(False);
   FSQLDataSetRankings.CommandText := FRankingQuery;
 

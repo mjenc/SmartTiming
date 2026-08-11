@@ -33,6 +33,8 @@ type
     function ToString: string;
     function IsManual: Boolean;
     function IsSystemMarker: Boolean;
+    (* Warm-Up flag (F4 / rsWarmUp): activates capture — time must not be moved. *)
+    function IsWarmUpFlag: Boolean;
   end;
 
   TDecoderStatus = record
@@ -115,6 +117,13 @@ end;
 function TPassing.IsSystemMarker: Boolean;
 begin
   Result := ((Flags and 2) = 2) or SameText(DecoderId, 'SYSTEM');
+end;
+
+{==============================================================================}
+function TPassing.IsWarmUpFlag: Boolean;
+begin
+  (* Hits = -Ord(rsWarmUp); Ord(rsWarmUp)=1 — keep in sync with TRaceStatus. *)
+  Result := IsSystemMarker and (Hits = -1);
 end;
 
 {==============================================================================}
