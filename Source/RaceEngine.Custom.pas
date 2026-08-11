@@ -4,7 +4,8 @@ interface
 
 uses
   Controls, StdCtrls, ComCtrls, ExtCtrls, SysUtils, Graphics, Types, UITypes, Classes, Grids,
-  Menus, DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages, ImgList,
+  Menus, DB, SQLExpr, Provider, DBClient, DBGrids, Dialogs, Windows, Winapi.Messages,
+  Winapi.CommCtrl, ImgList,
   SmartTiming.Consts, DecoderInterface, SmartTiming.Event, Report.ExcelTemplateFiller,
   Generics.Collections;
 
@@ -80,7 +81,7 @@ type
 
     function GetPassingDisplay: TWinControl; virtual;
     procedure OnDrawListItem(ASender: TCustomListView; AItem: TListItem; AState: TCustomDrawState; var ADefaultDraw: Boolean);
-    procedure AddColumnToDisplay(const ACaption: string);
+    procedure AddColumnToDisplay(const ACaption: string; AWidth: Integer = 80);
     function GetRankingGrid: TCustomGrid; virtual;
     function GetRankingDataSet: TDataSet; virtual;
     procedure SetRankingGroupedByClass(AValue: boolean); virtual;
@@ -354,7 +355,6 @@ begin
   FPassingDisplay.Visible := true;
   FPassingDisplay.Align := alClient;
 
-  TListView(FPassingDisplay).SmallImages := GFormMain.ImageListPassingStates;
   TListView(FPassingDisplay).PopupMenu := FPopupMenuPassings;
   TListView(FPassingDisplay).FullDrag := True;
   TListView(FPassingDisplay).HotTrack := True;
@@ -367,13 +367,15 @@ begin
   TListView(FPassingDisplay).OnCustomDrawItem := OnDrawListItem;
   TListView(FPassingDisplay).ViewStyle := vsReport;
   TListView(FPassingDisplay).OnCompare := PassingCompare;
+  (* No SmallImages on the ListView: Windows would indent col0 text vs headers.
+     Icons are painted manually from GFormMain.ImageListPassingStates. *)
 
-  AddColumnToDisplay(cFieldTitleBib);
-  AddColumnToDisplay(cFieldTitleLastName + ', ' + cFieldTitleFirstName);
-  AddColumnToDisplay(cFieldTitlePassingTime);
-  AddColumnToDisplay(cFieldTitleTransponder);
-  AddColumnToDisplay(cFieldTitleChipID);
-  AddColumnToDisplay('PassingId');
+  AddColumnToDisplay(cFieldTitleBib, 56);
+  AddColumnToDisplay(cFieldTitleLastName + ', ' + cFieldTitleFirstName, 150);
+  AddColumnToDisplay(cFieldTitlePassingTime, 100);
+  AddColumnToDisplay(cFieldTitleTransponder, 72);
+  AddColumnToDisplay(cFieldTitleChipID, 100);
+  AddColumnToDisplay('PassingId', 72);
 
   result := FPassingDisplay;
 end;
@@ -385,37 +387,64 @@ begin
 end;
 
 {==============================================================================}
-procedure TCustomRaceEngine.AddColumnToDisplay(const ACaption: string);
+procedure TCustomRaceEngine.AddColumnToDisplay(const ACaption: string; AWidth: Integer);
 var
   lColumn: TListColumn;
 begin
   lColumn := TListView(FPassingDisplay).Columns.Add;
   lColumn.Caption := ACaption;
-  lColumn.AutoSize := true;
+  lColumn.AutoSize := False;
+  lColumn.Width := AWidth;
 end;
 
 {==============================================================================}
-procedure TCustomRaceEngine.OnDrawListItem(ASender: TCustomListView; AItem: TListItem; AState: TCustomDrawState; var ADefaultDraw: Boolean);
+procedure TCustomRaceEngine.OnDrawListItem(ASender: TCustomListView; AItem: TListItem;
+  AState: TCustomDrawState; var ADefaultDraw: Boolean);
 var
   lBgColor: TColor;
   lFGColor: TColor;
-  rt, r: TRect;
-  s: String;
+  lRowRect: TRect;
+  lColRect: TRect;
+  lTextRect: TRect;
+  lListView: TListView;
+  s: string;
   i: Integer;
   lPassingNumber: Integer;
   lPassing: TPassing;
   lInvalid: Boolean;
   lImages: TCustomImageList;
-  lIconLeft: Integer;
+  lIconX: Integer;
+  lColCount: Integer;
 
-  // Fit the rect used for TextRect
-  Procedure PrepareTextRect;
+  function ColumnBounds(AColumnIndex: Integer): TRect;
+  var
+    lHeader: HWND;
+    lItemRect: TRect;
   begin
-    rt := r;
-    rt.Left := rt.Left + 5;
-    rt.Top := rt.Top + 1;
+    FillChar(Result, SizeOf(Result), 0);
+    lItemRect := AItem.DisplayRect(drBounds);
+    (* Prefer header cell geometry so data columns match title columns
+       (incl. horizontal scroll / resized widths). *)
+    lHeader := ListView_GetHeader(lListView.Handle);
+    if (lHeader <> 0) and Header_GetItemRect(lHeader, AColumnIndex, @Result) then
+    begin
+      MapWindowPoints(lHeader, lListView.Handle, Result, 2);
+      Result.Top := lItemRect.Top;
+      Result.Bottom := lItemRect.Bottom;
+      Exit;
+    end;
+    if AColumnIndex <= 0 then
+    begin
+      Result := lItemRect;
+      if lListView.Columns.Count > 0 then
+        Result.Right := Result.Left + lListView.Columns[0].Width;
+    end
+    else
+      ListView_GetSubItemRect(lListView.Handle, AItem.Index, AColumnIndex, LVIR_BOUNDS, @Result);
   end;
+
 begin
+  lListView := TListView(ASender);
   lInvalid := False;
   if (AItem.SubItems.Count > cPassingItemSubItemIdxPassingNumber) and
      TryStrToInt(AItem.SubItems[cPassingItemSubItemIdxPassingNumber], lPassingNumber) then
@@ -437,42 +466,52 @@ begin
   else
     SmartTimingTools.GetColorsForRaceStatus(TRaceStatus(AItem.Data), true, lBgColor, lFgColor);
 
-  TListView(ASender).Canvas.Brush.Color := lBgColor;
-  TListView(ASender).Canvas.Font.Color := lFGColor;
+  lListView.Canvas.Brush.Color := lBgColor;
+  lListView.Canvas.Font.Color := lFGColor;
   if lInvalid then
-    TListView(ASender).Canvas.Font.Style := [fsStrikeOut]
+    lListView.Canvas.Font.Style := [fsStrikeOut]
   else
-    TListView(ASender).Canvas.Font.Style := [];
+    lListView.Canvas.Font.Style := [];
 
-  r := AItem.DisplayRect(drBounds);
-  ASender.Canvas.FillRect(r);
+  lRowRect := AItem.DisplayRect(drBounds);
+  lListView.Canvas.FillRect(lRowRect);
 
-  lIconLeft := r.Left + 2;
-  lImages := TListView(ASender).SmallImages;
+  lColCount := lListView.Columns.Count;
+  if lColCount < 1 then
+  begin
+    ADefaultDraw := False;
+    Exit;
+  end;
+
+  (* Column 0: optional status icon + caption (Start#). *)
+  lColRect := ColumnBounds(0);
+  lIconX := lColRect.Left + 2;
+  lImages := GFormMain.ImageListPassingStates;
   if (lImages <> nil) and (AItem.ImageIndex >= 0) and (AItem.ImageIndex < lImages.Count) then
   begin
-    lImages.Draw(TListView(ASender).Canvas, lIconLeft, r.Top + 1, AItem.ImageIndex);
-    lIconLeft := lIconLeft + lImages.Width + 2;
+    lImages.Draw(lListView.Canvas, lIconX, lColRect.Top + 1, AItem.ImageIndex);
+    lIconX := lIconX + lImages.Width + 2;
+  end;
+  lTextRect := lColRect;
+  lTextRect.Left := Max(lColRect.Left + 4, lIconX);
+  lTextRect.Top := lTextRect.Top + 1;
+  s := AItem.Caption;
+  lListView.Canvas.TextRect(lTextRect, s, [tfSingleLine, tfEndEllipsis]);
+
+  (* SubItems map to columns 1..n — use Windows subitem rects so headers align. *)
+  for i := 0 to AItem.SubItems.Count - 1 do
+  begin
+    if (i + 1) >= lColCount then
+      Break;
+    lColRect := ColumnBounds(i + 1);
+    lTextRect := lColRect;
+    lTextRect.Left := lTextRect.Left + 4;
+    lTextRect.Top := lTextRect.Top + 1;
+    s := AItem.SubItems[i];
+    lListView.Canvas.TextRect(lTextRect, s, [tfSingleLine, tfEndEllipsis]);
   end;
 
-  r.Right := r.Left + TListView(ASender).Columns[0].Width;
-  r.Left := Max(r.Left, lIconLeft);
-  s := AItem.Caption;
-  PrepareTextRect;
-  TListView(ASender).Canvas.TextRect(rt, s, [tfSingleLine, tfEndEllipsis]);
-  if TListView(ASender).ViewStyle = vsReport then
-  begin // Paint the Subitems if ViewStyle = vsReport
-    r.Left := AItem.DisplayRect(drBounds).Left;
-    for i := 0 to AItem.SubItems.Count - 1 do
-    begin
-      r.Left := r.Left + TListView(ASender).Columns.Items[i].Width;
-      r.Right := r.Left + TListView(ASender).Columns.Items[i + 1].Width;
-      PrepareTextRect;
-      s := AItem.SubItems[i];
-      TListView(ASender).Canvas.TextRect(rt, s, [tfSingleLine, tfEndEllipsis]);
-    end;
-  end;
-  ADefaultDraw := false;
+  ADefaultDraw := False;
 end;
 
 {==============================================================================}
