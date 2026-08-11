@@ -35,6 +35,7 @@ type
   private
     FFileLines: TStringList;
     FFileFields: TArray<string>;
+    FDelimiter: Char;
 
     procedure CMDialogKey(var msg: TCMDialogKey); message CM_DIALOGKEY;
     procedure LoadFile;
@@ -121,7 +122,11 @@ begin
     Close;
   end;
 
-  FFileFields := FFileLines[0].Split([';']);
+  if FFileLines[0].Contains(';') then
+    FDelimiter := ';'
+  else
+    FDelimiter := ',';
+  FFileFields := FFileLines[0].Split([FDelimiter]);
   for i := 0 to Length(FFileFields) - 1 do
   begin
     FFileFields[i] := FFileFields[i].Trim;
@@ -290,7 +295,7 @@ begin
       lFileFieldIndex := GetFileFieldIndex(lFileFieldName);
       if lFileFieldIndex < 0 then
         Continue;
-      lLine := FFileLines[lRow].Split([';']);;
+      lLine := FFileLines[lRow].Split([FDelimiter]);
       StringGridPreview.Cells[lCol, lRow] := lLine[lFileFieldIndex];
     end;
   end;
