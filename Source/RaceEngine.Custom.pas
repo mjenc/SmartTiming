@@ -70,6 +70,7 @@ type
     FLastRefreshTimestamp: TDatetime;
     FLastConsideredPassingId: integer;
     FProtocolRebuildActive: Boolean;
+    FRankingGridColumnsJSON: string;
     FExcelFiller: TExcelFiller;
 
     FRankingSQLFormat: string;
@@ -137,6 +138,7 @@ type
 
     // ranking
     procedure RefreshRankingDisplay;
+    procedure SaveRankingGridFormat;
     function GetRankingSQL(AGroupByClass: Boolean;
       const AExtraWhere: string = ''): string; virtual;
     function GetResultSQL(AGroupByClass: Boolean): string; virtual;
@@ -676,6 +678,9 @@ begin
   if FLastRefreshTimestamp >= FLastChangeTimestamp then
     Exit;
 
+  if (FRankingGrid <> nil) and (FRankingGrid.Columns.Count > 0) then
+    FRankingGridColumnsJSON := TGridFormatProvider.GridToJSON(FRankingGrid);
+
   FSQLDataSetRankings.Active := false;
   FSQLDataSetRankings.CommandText := FRankingQuery;
   FSQLDataSetRankings.Active := true;
@@ -695,6 +700,26 @@ begin
     SmartTimingTools.SetColumnProperties('RANKING', lColumn);
   end;
   AfterOpenRankingResultSet(FClientDataSetRankings);
+
+  (* Dataset reopen resets DBGrid column widths; restore the last layout. *)
+  if FRankingGridColumnsJSON <> '' then
+    TGridFormatProvider.ApplyJSON(FRankingGrid, FRankingGridColumnsJSON)
+  else
+    TGridFormatProvider.LoadSettings(FRankingGrid, FDefaultListFormatRanking, FFormatSuffix);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.SaveRankingGridFormat;
+begin
+  if FRankingGrid = nil then
+    Exit;
+  if FRankingGrid.Columns.Count > 0 then
+    FRankingGridColumnsJSON := TGridFormatProvider.GridToJSON(FRankingGrid);
+  if FRankingGrid.Tag <> cGridFormatApplied then
+    TGridFormatProvider.LoadSettings(FRankingGrid, FDefaultListFormatRanking, FFormatSuffix);
+  if FRankingGridColumnsJSON <> '' then
+    TGridFormatProvider.ApplyJSON(FRankingGrid, FRankingGridColumnsJSON);
+  TGridFormatProvider.SaveSettings(FRankingGrid, FFormatSuffix);
 end;
 
 {==============================================================================}

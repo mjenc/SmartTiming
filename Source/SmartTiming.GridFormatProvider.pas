@@ -19,6 +19,8 @@ type
 
     class function LoadSettings(AGrid: TDBGrid; const ADefaultFormat: string; const AFormatSuffix: string = ''): boolean;
     class procedure SaveSettings(AGrid: TDBGrid; const AFormatSuffix: string = '');
+    class function GridToJSON(AGrid: TDBGrid): string;
+    class procedure ApplyJSON(AGrid: TDBGrid; const AJSON: string);
     class procedure FillTitleList(const AFormatName: string; const ADefaultFormat: string; AList: TStrings);
   end;
 
@@ -99,12 +101,9 @@ end;
 {==============================================================================}
 class function TGridFormatProvider.LoadSettings(AGrid: TDBGrid; const ADefaultFormat: string; const AFormatSuffix: string = ''): boolean;
 var
-  i: Integer;
   lRegPath: string;
   lReg : TRegistry;
   lText: string;
-  lSO: ISuperObject;
-  lColumnsArray: ISuperArray;
 begin
   result := true;
   if AGrid = nil then
@@ -125,15 +124,7 @@ begin
     if lText.IsEmpty then
       lText := ADefaultFormat;
 
-    lSO := TSuperObject.Create(PChar(lText));
-    lColumnsArray := lSO.A['columns'];
-    if lColumnsArray = nil then
-      Exit;
-
-    for i := 0 to lColumnsArray.Length - 1 do
-      ApplyColumnSetting(AGrid.Columns, lColumnsArray.O[i]);
-
-    AGrid.Tag := cGridFormatApplied;
+    ApplyJSON(AGrid, lText);
   finally
     FreeAndNil(lReg);
   end;
@@ -167,12 +158,46 @@ begin
     if not lReg.OpenKey(lRegPath, true) then
       raise Exception('Registry is not writable.' + lRegPath);
 
-    lReg.WriteString('ColumnsJSON', GridColumnsToSO(AGrid).AsJSon);
+    lReg.WriteString('ColumnsJSON', GridToJSON(AGrid));
   finally
     FreeAndNil(lReg);
     FreeAndNil(lBinaryStream);
     FreeAndNil(lStringStream);
   end;
+end;
+
+{==============================================================================}
+class function TGridFormatProvider.GridToJSON(AGrid: TDBGrid): string;
+var
+  lSO: ISuperObject;
+begin
+  Result := '';
+  if (AGrid = nil) or (AGrid.Columns.Count = 0) then
+    Exit;
+  lSO := GridColumnsToSO(AGrid);
+  if lSO <> nil then
+    Result := lSO.AsJSon;
+end;
+
+{==============================================================================}
+class procedure TGridFormatProvider.ApplyJSON(AGrid: TDBGrid; const AJSON: string);
+var
+  i: Integer;
+  lSO: ISuperObject;
+  lColumnsArray: ISuperArray;
+begin
+  if (AGrid = nil) or AJSON.IsEmpty then
+    Exit;
+
+  lSO := TSuperObject.Create(PChar(AJSON));
+  lColumnsArray := lSO.A['columns'];
+  if lColumnsArray = nil then
+    Exit;
+
+  for i := 0 to lColumnsArray.Length - 1 do
+    ApplyColumnSetting(AGrid.Columns, lColumnsArray.O[i]);
+
+  AGrid.Tag := cGridFormatApplied;
 end;
 
 {==============================================================================}

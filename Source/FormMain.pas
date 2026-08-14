@@ -648,9 +648,17 @@ end;
 
 {==============================================================================}
 procedure TFormMain.FormClose(Sender: TObject; var Action: TCloseAction);
+var
+  lRaceItem: TRaceItem;
 begin
   TGridFormatProvider.SaveSettings(DBGridCompetitors);
   TGridFormatProvider.SaveSettings(DBGridRaces);
+  if GSmartTimingController <> nil then
+  begin
+    for lRaceItem in GSmartTimingController.RaceList.Values do
+      if (lRaceItem <> nil) and (lRaceItem.RaceEngine <> nil) then
+        lRaceItem.RaceEngine.SaveRankingGridFormat;
+  end;
   ClientDataSetRacesBeforeRefresh(MainDataModule.ClientDataSetRaces);
   MainDataModule.WriteEventHistory;
 end;
