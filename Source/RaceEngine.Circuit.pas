@@ -10,8 +10,9 @@
     flag times (except Warm-Up) may be moved via menu or drag&drop if the operator
     was late — place the start flag before the first rider who crossed the loop
     after the gun. Warm-Up stays fixed because it activates capture.
-  - When the first rider in the race reaches that count, scoring stops for
-    everyone after that finish time (race closed).
+  - When the first rider in the race reaches that count, remaining riders
+    still score one more crossing (their finish). After that closing
+    crossing, scoring stops for that rider (no cooldown laps).
   - Ranking prefers more laps (lapped riders behind), then finish time.
   - One overall ranking for the race. Class results (_BYCLASS) only filter that
     order by CLASS and renumber places — no separate scoring per class.
@@ -34,6 +35,7 @@ type
     FSQLSortingString: string;
   protected
     function TryGetGreenFlagStartTime(out AStartTime: TDateTime): Boolean;
+    function FinishFlagEndsLapCounting: Boolean; override;
     procedure UpdateParticipationTable(ACurrentPassingId: integer); override;
     procedure AfterOpenRankingResultSet(ADataSet: TDataSet); override;
     procedure SetRankingGroupedByClass(AValue: boolean); override;
@@ -152,6 +154,12 @@ begin
   end;
   if Result then
     AStartTime := Frac(AStartTime);
+end;
+
+{==============================================================================}
+function TCircuitRaceEngine.FinishFlagEndsLapCounting: Boolean;
+begin
+  Result := False;
 end;
 
 {==============================================================================}
@@ -369,10 +377,30 @@ var
   lRaceFinishTime: TDatetime;
   lRaceAlreadyFinished: Boolean;
   lTargetLaps: Integer;
+  lStoredLaps: Integer;
   lGreenFlagStart: TDateTime;
   lHasGreenFlag: Boolean;
   lSorted: TList<TPassing>;
   i: Integer;
+
+  function RiderAlreadyTookClosingLap(AParticipationId: Integer): Boolean;
+  var
+    lText: string;
+    lStoredFinish: TDateTime;
+    lFmt: TFormatSettings;
+  begin
+    Result := False;
+    lText := Trim(MainDataModule.GetParticipationStringField(AParticipationId, 'FINISHTIME'));
+    if lText = '' then
+      Exit;
+    lFmt := TFormatSettings.Create;
+    lFmt.TimeSeparator := ':';
+    lFmt.DecimalSeparator := '.';
+    if not TryStrToTime(lText, lStoredFinish, lFmt) then
+      if not TryStrToDateTime(lText, lStoredFinish, lFmt) then
+        Exit;
+    Result := Frac(lStoredFinish) > lRaceFinishTime;
+  end;
 
   procedure ApplyPassingToParticipation(const APassing: TPassing);
   begin
@@ -398,14 +426,19 @@ var
     lRaceAlreadyFinished := MainDataModule.TryGetRaceFinishTimeByTargetLaps(
       FRaceItem.Id, lTargetLaps, lRaceFinishTime);
 
-    MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, APassing.ChipId,
+    lStoredLaps := MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, APassing.ChipId,
       APassing.PassingTime, lParticipationId, lIgnoredStartTime);
     if lParticipationId < 0 then
       Exit;
 
-    (* After the race leader finished target laps, later passings do not score. *)
+    (* Leader reached Soll: others still get one closing crossing, then freeze. *)
     if lRaceAlreadyFinished and (Frac(APassing.PassingTime) > lRaceFinishTime) then
-      Exit;
+    begin
+      if lStoredLaps >= lTargetLaps then
+        Exit;
+      if RiderAlreadyTookClosingLap(lParticipationId) then
+        Exit;
+    end;
 
     if lLaps > lTargetLaps then
       lLaps := lTargetLaps;

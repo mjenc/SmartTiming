@@ -113,6 +113,9 @@ type
     procedure OnShowAssignmentHistory(ASender: TObject); virtual;
 
     procedure AssignLap(var APassing: TPassing); virtual;
+    (* ITT: Ziel-Flagge beendet die Wertung. Circuit/Criterium: weitere Fahrer
+       bekommen danach noch ihre Schlussrunde. *)
+    function FinishFlagEndsLapCounting: Boolean; virtual;
     function PassingImageIndex(const APassing: TPassing): Integer; virtual;
     function PassingMatchesFilter(const APassing: TPassing): Boolean; virtual;
     procedure AppendPassingListItem(const APassing: TPassing; AAutoScroll: Boolean); virtual;
@@ -253,6 +256,12 @@ end;
 function TCustomRaceEngine.SupportsPointsSprintFlag: Boolean;
 begin
   Result := False;
+end;
+
+{==============================================================================}
+function TCustomRaceEngine.FinishFlagEndsLapCounting: Boolean;
+begin
+  Result := True;
 end;
 
 {==============================================================================}
@@ -755,7 +764,7 @@ var
        or
        (lPassing.Hits = cSystemHitsNeutralized)
        or
-       (lPassing.Hits = cSystemHitsFinished)
+       ((lPassing.Hits = cSystemHitsFinished) and FinishFlagEndsLapCounting)
        or
        (lPassing.Hits = cSystemHitsStopped));
     if result then

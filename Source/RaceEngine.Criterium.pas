@@ -13,8 +13,10 @@
   - Verlustrunde: individuals / small groups who fall back and are lapped end
     with fewer laps (e.g. 29), same idea as Circuit — physical crossings when
     the Hauptfeld completes Soll; no artificial cap at Soll for anyone.
-  - Lap counting stops after the Hauptfeld (non-holdout peak) first reaches
-    TargetLaps.
+  - Lap counting: after the Hauptfeld (non-holdout peak) first reaches
+    TargetLaps, remaining riders with fewer than TargetLaps still score one
+    closing crossing, then stop. Holdouts already at/above Target keep
+    Soll+N and are not incremented again.
 
   Points
   - Flagge Punkte (rsPointsSprint): next up to four peak passings get 5/3/2/1.
@@ -134,7 +136,6 @@ begin
   Result := APassing.IsSystemMarker and
     ((APassing.Hits = cSystemHitsNotStarted) or
      (APassing.Hits = cSystemHitsNeutralized) or
-     (APassing.Hits = cSystemHitsFinished) or
      (APassing.Hits = cSystemHitsStopped));
 end;
 
@@ -161,6 +162,7 @@ var
   lLastPointsTime: TDictionary<Integer, string>;
   lHoldouts: TDictionary<Integer, Boolean>;
   lAwardedThisSprint: TDictionary<Integer, Boolean>;
+  lClosingDone: TDictionary<Integer, Boolean>;
   lInActive: Boolean;
   lSprintArmed: Boolean;
   lSprintDouble: Boolean;
@@ -255,6 +257,7 @@ begin
   lLastPointsTime := TDictionary<Integer, string>.Create;
   lHoldouts := TDictionary<Integer, Boolean>.Create;
   lAwardedThisSprint := TDictionary<Integer, Boolean>.Create;
+  lClosingDone := TDictionary<Integer, Boolean>.Create;
   try
     TPassingStore.GetSingleton.FillPassingsForRace(FRaceItem.Id, lList);
     lList.Sort(
@@ -313,13 +316,22 @@ begin
         Continue;
       if lPassing.PassingStatus <> Ord(psValid) then
         Continue;
-      (* After Hauptfeld completes TargetLaps, no further lap increments. *)
-      if lFieldDistanceDone then
-        Continue;
 
       if not TTransponderAssignmentService.TryGetCompetitorForRaceChipAtTime(
            FRaceItem.Id, lPassing.ChipId, lPassing.PassingTime, lCompetitorId) then
         Continue;
+
+      (* After Hauptfeld completes TargetLaps: one closing crossing for riders
+         still below Soll, then freeze. Leader/holdouts already at/above Soll
+         do not get another lap. *)
+      if lFieldDistanceDone then
+      begin
+        if lClosingDone.ContainsKey(lCompetitorId) then
+          Continue;
+        if lLapsByCompetitor.TryGetValue(lCompetitorId, lLaps) and
+           (lLaps >= lTargetLaps) then
+          Continue;
+      end;
 
       if not lLapsByCompetitor.TryGetValue(lCompetitorId, lLaps) then
       begin
@@ -334,10 +346,15 @@ begin
       (* WB: do not cap at TargetLaps — lap-gainers may finish with Target+N. *)
       lLapsByCompetitor.AddOrSetValue(lCompetitorId, lLaps);
       lFinishByCompetitor.AddOrSetValue(lCompetitorId, Frac(lPassing.PassingTime));
+      if lFieldDistanceDone then
+        lClosingDone.AddOrSetValue(lCompetitorId, True);
 
       ClearHoldoutsCaughtByField;
       if MaxEligiblePeakLap >= lTargetLaps then
+      begin
         lFieldDistanceDone := True;
+        lClosingDone.AddOrSetValue(lCompetitorId, True);
+      end;
 
       if not lSprintArmed or (lSlotsLeft <= 0) then
         Continue;
@@ -424,6 +441,7 @@ begin
       end;
     end;
   finally
+    FreeAndNil(lClosingDone);
     FreeAndNil(lAwardedThisSprint);
     FreeAndNil(lHoldouts);
     FreeAndNil(lLastPointsTime);
