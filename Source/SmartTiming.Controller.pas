@@ -707,20 +707,25 @@ var
   lRaceItem: TRaceItem;
 begin
   Result := 0;
+  lRaceItem := nil;
   if (ARaceId >= 0) and FRaceList.TryGetValue(ARaceId, lRaceItem) and
      (lRaceItem.RaceEngine <> nil) then
     lRaceItem.RaceEngine.CancelPassingListDrag;
-
-  Result := TTransponderAssignmentService.ReattachOrphanPassingsForChip(
-    ARaceId, ACompetitorId, AChipId);
-  if (ARaceId < 0) or not FRaceList.TryGetValue(ARaceId, lRaceItem) then
-    Exit;
-  if lRaceItem.RaceEngine = nil then
-    Exit;
-  lRaceItem.RaceEngine.RecalcCountingLaps;
-  lRaceItem.RaceEngine.ReassignLapsForRace;
-  lRaceItem.RaceEngine.RebuildProtocolDisplay;
-  lRaceItem.RaceEngine.RefreshRankingDisplay;
+  try
+    Result := TTransponderAssignmentService.ReattachOrphanPassingsForChip(
+      ARaceId, ACompetitorId, AChipId);
+    if (ARaceId < 0) or not FRaceList.TryGetValue(ARaceId, lRaceItem) then
+      Exit;
+    if lRaceItem.RaceEngine = nil then
+      Exit;
+    lRaceItem.RaceEngine.RecalcCountingLaps;
+    lRaceItem.RaceEngine.ReassignLapsForRace;
+    lRaceItem.RaceEngine.RebuildProtocolDisplay;
+    lRaceItem.RaceEngine.RefreshRankingDisplay;
+  finally
+    if (lRaceItem <> nil) and (lRaceItem.RaceEngine <> nil) then
+      lRaceItem.RaceEngine.RestorePassingListDrag;
+  end;
 end;
 
 {==============================================================================}

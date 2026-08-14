@@ -70,6 +70,7 @@ type
     FLastRefreshTimestamp: TDatetime;
     FLastConsideredPassingId: integer;
     FProtocolRebuildActive: Boolean;
+    FPassingListDragLock: Integer;
     FRankingGridColumnsJSON: string;
     FExcelFiller: TExcelFiller;
 
@@ -155,6 +156,7 @@ type
     procedure SetPassingStatusAndRecalc(APassingNumber: Integer; AStatus: TPassingState);
     procedure RebuildProtocolDisplay; virtual;
     procedure CancelPassingListDrag;
+    procedure RestorePassingListDrag;
 
     // Reports
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual; abstract;
@@ -214,6 +216,7 @@ begin
   FFilterCombo := nil;
   FProtocolFilter := ppfAll;
   FProtocolRebuildActive := False;
+  FPassingListDragLock := 0;
   FOwner := AParent;
   FParent := AParent;
 
@@ -1327,11 +1330,40 @@ procedure TCustomRaceEngine.CancelPassingListDrag;
 var
   lListView: TListView;
 begin
+  Inc(FPassingListDragLock);
+  FProtocolRebuildActive := True;
   if (FPassingDisplay = nil) or not (FPassingDisplay is TListView) then
     Exit;
   lListView := TListView(FPassingDisplay);
+  (* Block OnDragDrop before EndDrag: VCL can still fire the drop from EndDrag(False)
+     or from mouse-up after a modal dialog. The previous guard ran too late. *)
+  if FPassingListDragLock = 1 then
+  begin
+    lListView.OnDragDrop := nil;
+    lListView.OnDragOver := nil;
+    lListView.DragMode := dmManual;
+  end;
   if lListView.Dragging then
     lListView.EndDrag(False);
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.RestorePassingListDrag;
+var
+  lListView: TListView;
+begin
+  if FPassingListDragLock > 0 then
+    Dec(FPassingListDragLock);
+  if FPassingListDragLock > 0 then
+    Exit;
+
+  FProtocolRebuildActive := False;
+  if (FPassingDisplay = nil) or not (FPassingDisplay is TListView) then
+    Exit;
+  lListView := TListView(FPassingDisplay);
+  lListView.OnDragDrop := OnPassingItemDragDrop;
+  lListView.OnDragOver := OnPassingItemDragOver;
+  lListView.DragMode := dmAutomatic;
 end;
 
 {==============================================================================}
@@ -1341,19 +1373,12 @@ var
   lPassing: TPassing;
   i: Integer;
   lListView: TListView;
-  lSavedDragMode: TDragMode;
 begin
   if (FPassingDisplay = nil) or not (FPassingDisplay is TListView) then
     Exit;
 
   lListView := TListView(FPassingDisplay);
-  (* Cancel any in-progress dmAutomatic drag before Clear. Otherwise VCL/Win32 can
-     finish the drag as a drop onto the last row — green flag gets lastTime-1ms. *)
-  if lListView.Dragging then
-    lListView.EndDrag(False);
-  lSavedDragMode := lListView.DragMode;
-  lListView.DragMode := dmManual;
-  FProtocolRebuildActive := True;
+  CancelPassingListDrag;
   lListView.Items.BeginUpdate;
   try
     lListView.Items.Clear;
@@ -1380,8 +1405,7 @@ begin
     end;
   finally
     lListView.Items.EndUpdate;
-    FProtocolRebuildActive := False;
-    lListView.DragMode := lSavedDragMode;
+    RestorePassingListDrag;
   end;
   RefreshPassingListStatus;
 end;
