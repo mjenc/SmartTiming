@@ -65,7 +65,7 @@ begin
 
   FFormatSuffix := '.TimeTrial';
   FResultsJsonFieldTitles :=
-    'Platz,Klasse,Nr,Name,Team,Wertungszeit,Diff,Zielzeit,Startzeit,DNS,DNF,DSQ,Strafen';
+    'Platz,Klasse,Nr,Name,Team,Wertungszeit,Gap,Zielzeit,Startzeit,DNS,DNF,DSQ,Strafen';
   FDefaultListFormatRanking :=
     '{"columns":[' +
     '{"Alignment":0,"Fieldname":"CLASS","Visible":true,"Width":100,"Title":"Klasse","Index":0},' +
@@ -74,7 +74,7 @@ begin
     '{"Alignment":0,"Fieldname":"Column3","Visible":true,"Width":130,"Title":"Name","Index":3,"Alignment":0},' +
     '{"Alignment":0,"Fieldname":"Column4","Visible":true,"Width":130,"Title":"Team","Index":4,"Alignment":0},' +
     '{"Alignment":0,"Fieldname":"RANKINGTIME","Visible":true,"Width":100,"Title":"Wertungszeit","Index":5,"Alignment":2},' +
-    '{"Alignment":0,"Fieldname":"Column6","Visible":true,"Width":64,"Title":"Diff","Index":6,"Alignment":2},' +
+    '{"Alignment":0,"Fieldname":"Column6","Visible":true,"Width":64,"Title":"Gap","Index":6,"Alignment":2},' +
     '{"Alignment":0,"Fieldname":"FINISHTIME","Visible":true,"Width":100,"Title":"Zielzeit","Index":7,"Alignment":2},' +
     '{"Alignment":1,"Fieldname":"STARTTIME","Visible":false,"Width":-1,"Title":"Startzeit","Index":8,"Alignment":2},' +
     '{"Alignment":1,"Fieldname":"DNS","Visible":true,"Width":30,"Index":9},' +

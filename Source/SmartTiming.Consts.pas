@@ -128,7 +128,7 @@ resourcestring
 
   cFieldTitleLap = 'Runde';
   cFieldTitlePassingTime = 'Durchgangszeit';
-  cFieldTitleGap = 'Abstand';
+  cFieldTitleGap = 'Gap';
   cFieldTitleChipID = 'ChipID';
   cFieldTitlePassingStatus = 'Status';
   cFieldTitleLapTime = 'Rundenzeit';

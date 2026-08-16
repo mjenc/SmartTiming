@@ -57,7 +57,7 @@ begin
   FRankingSQLClassSorting := 'C.CLASS, ';
   FFormatSuffix := AFormatSuffix;
   FResultsJsonFieldTitles :=
-    'Platz,Klasse,Nr,Name,Team,Wertungszeit,Diff,Zielzeit,Startzeit,DNS,DNF,DSQ,Strafen';
+    'Platz,Klasse,Nr,Name,Team,Wertungszeit,Gap,Zielzeit,Startzeit,DNS,DNF,DSQ,Strafen';
   FDefaultListFormatRanking := '';
 end;
 

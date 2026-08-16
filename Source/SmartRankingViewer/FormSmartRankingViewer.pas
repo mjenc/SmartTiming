@@ -104,7 +104,7 @@ const
     '</body>' + #13#10 +
     '</html>';
 
-  cTitlesToShow = 'Platz,Klasse,Nr,Name,Team,Wertungszeit,Diff';
+  cTitlesToShow = 'Platz,Klasse,Nr,Name,Team,Wertungszeit,Gap';
 
 {==============================================================================}
 procedure TFormRankingViewer.FormCreate(Sender: TObject);
