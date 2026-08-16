@@ -288,7 +288,7 @@ const
             'A' + IntToStr(lRow),
             lEndColChar + IntToStr(lRow)].Merge(EmptyParam);
         lExcelSheet.Cells.Item[lRow, 1].Value2 := lLines[i];
-        lExcelSheet.Cells.Item[lRow, 1].HorizontalAlignment := xlHAlignLeft;
+//        lExcelSheet.Cells.Item[lRow, 1].HorizontalAlignment := xlHAlignLeft;
         Inc(lRow);
       end;
     finally
