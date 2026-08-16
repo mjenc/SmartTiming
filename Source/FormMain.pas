@@ -49,6 +49,8 @@ type
     EditTitle: TEdit;
     PanelRaces: TPanel;
     PanelPassings: TPanel;
+    PanelRaceProtocol: TPanel;
+    SplitterPassingsProtocol: TSplitter;
     Splitter1: TSplitter;
     Splitter2: TSplitter;
     PanelStandings: TPanel;
@@ -228,6 +230,7 @@ type
     function GetSelectedRaceId: Integer;
     procedure RefreshControlsFromEventDataObject(AEvent: TEventDataObject);
     function GetNewPanelForPassings(ARaceId: Integer): TWinControl;
+    procedure UpdateLapProtocolHost(ARaceItem: TRaceItem);
     procedure RefreshFlagButtonsActive(ARaceStatus: TRaceStatus);
   end;
 
@@ -689,7 +692,10 @@ begin
   end;
 
   if ListBoxRaces.ItemIndex < 0 then
+  begin
+    UpdateLapProtocolHost(nil);
     Exit;
+  end;
 
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
 
@@ -704,11 +710,39 @@ begin
     end;
   end;
 
+  UpdateLapProtocolHost(lRaceItem);
+
   lRankingGrid := TDBGrid(lRaceItem.RaceEngine.RankingDisplay);
   lRaceItem.RaceEngine.RefreshRankingDisplay;
   lRankingGrid.Parent := PanelStandings;
   lRankingGrid.Align := alClient;
   lRankingGrid.Visible := true;
+end;
+
+{==============================================================================}
+procedure TFormMain.UpdateLapProtocolHost(ARaceItem: TRaceItem);
+var
+  i: Integer;
+  lRace: TRaceItem;
+begin
+  for i := 0 to ListBoxRaces.Count - 1 do
+  begin
+    lRace := TRaceItem(ListBoxRaces.Items.Objects[i]);
+    if (lRace <> nil) and (lRace.RaceEngine <> nil) then
+      lRace.RaceEngine.DetachLapProtocol;
+  end;
+
+  if (ARaceItem = nil) or (ARaceItem.RaceEngine = nil) or
+     (not ARaceItem.RaceEngine.SupportsLapProtocol) then
+  begin
+    PanelRaceProtocol.Visible := False;
+    SplitterPassingsProtocol.Visible := False;
+    Exit;
+  end;
+
+  PanelRaceProtocol.Visible := True;
+  SplitterPassingsProtocol.Visible := True;
+  ARaceItem.RaceEngine.AttachLapProtocol(PanelRaceProtocol);
 end;
 
 {==============================================================================}

@@ -141,6 +141,10 @@ type
     function SupportsNewLeaderFlag: Boolean; virtual;
     (* Criterium: next peak passage scores sprint points (5/3/2/1). *)
     function SupportsPointsSprintFlag: Boolean; virtual;
+    (* Circuit/Criterium: graphical lap protocol below the passing list. *)
+    function SupportsLapProtocol: Boolean; virtual;
+    procedure AttachLapProtocol(AHost: TWinControl); virtual;
+    procedure DetachLapProtocol; virtual;
 
     // ranking
     procedure RefreshRankingDisplay;
@@ -257,6 +261,24 @@ end;
 function TCustomRaceEngine.SupportsPointsSprintFlag: Boolean;
 begin
   Result := False;
+end;
+
+{==============================================================================}
+function TCustomRaceEngine.SupportsLapProtocol: Boolean;
+begin
+  Result := False;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.AttachLapProtocol(AHost: TWinControl);
+begin
+  (* Default: no lap protocol. *)
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.DetachLapProtocol;
+begin
+  (* Default: no lap protocol. *)
 end;
 
 {==============================================================================}

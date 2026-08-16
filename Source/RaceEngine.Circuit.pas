@@ -27,7 +27,8 @@ uses
   Classes, Controls, ComCtrls, SysUtils, Types, UITypes, Graphics, Windows, Variants,
   Winapi.Messages, Forms, DB, Data.SqlExpr, DateUtils, Generics.Collections,
   SmartTiming.Consts, DecoderInterface, SmartTiming.Cache,
-  RaceEngine.Custom, DataModule, SmartTiming.Event, SmartTiming.Controller;
+  RaceEngine.Custom, DataModule, SmartTiming.Event, SmartTiming.Controller,
+  RaceProtocol;
 
 type
   TCircuitRaceEngine = class(TCustomRaceEngine)
@@ -38,8 +39,11 @@ type
     FClosingStartResolved: Boolean;
     FHasClosingStart: Boolean;
     FClosingStartTime: TDateTime;
+    FRaceProtocol: TRaceProtocol;
     procedure InvalidateClosingStartCache;
     function TryGetClosingStartTime(out ACloseTime: TDateTime): Boolean;
+    procedure EnsureRaceProtocol;
+    procedure AppendPassingToLapProtocol(const APassing: TPassing);
   protected
     FAutoFinishJustPlaced: Boolean;
     function TryGetGreenFlagStartTime(out AStartTime: TDateTime): Boolean;
@@ -64,6 +68,10 @@ type
     procedure AddPassingToDisplay(APassing: TPassing; AAutoScroll: boolean); override;
     procedure ClearAllPassings; override;
     procedure ReassignLapsForRace; override;
+    procedure RebuildProtocolDisplay; override;
+    function SupportsLapProtocol: Boolean; override;
+    procedure AttachLapProtocol(AHost: TWinControl); override;
+    procedure DetachLapProtocol; override;
 
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); override;
     procedure ExportResultsToExcelTemplate(const AOutputFile: string;
@@ -129,12 +137,15 @@ begin
   FHasClosingStart := False;
   FClosingStartTime := 0;
   FAutoFinishJustPlaced := False;
+  FRaceProtocol := nil;
 end;
 
 {==============================================================================}
 destructor TCircuitRaceEngine.Destroy;
 begin
   try
+    DetachLapProtocol;
+    FreeAndNil(FRaceProtocol);
     TGridFormatProvider.SaveSettings(FRankingGrid, FFormatSuffix);
   finally
     inherited Destroy;
@@ -404,6 +415,7 @@ begin
     lListItem.Data := Pointer(-APassing.Hits);
     TListView(FPassingDisplay).Items.AddItem(lListItem);
     lListItem.ImageIndex := -1;
+    AppendPassingToLapProtocol(APassing);
     Exit;
   end;
 
@@ -422,6 +434,94 @@ begin
 
   if AAutoScroll then
     lListItem.MakeVisible(False);
+
+  AppendPassingToLapProtocol(APassing);
+end;
+
+{==============================================================================}
+procedure TCircuitRaceEngine.EnsureRaceProtocol;
+begin
+  if FRaceProtocol <> nil then
+    Exit;
+  FRaceProtocol := TRaceProtocol.Create(nil);
+  FRaceProtocol.Visible := False;
+end;
+
+{==============================================================================}
+procedure TCircuitRaceEngine.AppendPassingToLapProtocol(const APassing: TPassing);
+var
+  lBib: Integer;
+  lName: string;
+  lTeamClub: string;
+  lPassingType: TPassingType;
+begin
+  EnsureRaceProtocol;
+
+  if APassing.IsSystemMarker then
+  begin
+    case APassing.Hits of
+      cSystemHitsWarmUp:
+        lPassingType := ptWarmUp;
+      cSystemHitsStarted:
+        lPassingType := ptStartRace;
+      cSystemHitsNeutralized:
+        lPassingType := ptNeutralize;
+      cSystemHitsFinished:
+        lPassingType := ptFinish;
+      cSystemHitsAborted, cSystemHitsStopped:
+        lPassingType := ptStop;
+      cSystemHitsNewLeader:
+        lPassingType := ptNewLeader;
+    else
+      Exit;
+    end;
+    FRaceProtocol.AddPassing(0, lPassingType);
+    Exit;
+  end;
+
+  if APassing.PassingStatus <> Ord(psValid) then
+    Exit;
+
+  MainDataModule.GetCompetitorInfoForPassing(APassing, lBib, lName, lTeamClub);
+  if lBib <= 0 then
+    Exit;
+
+  FRaceProtocol.AddPassing(lBib, ptRider);
+end;
+
+{==============================================================================}
+function TCircuitRaceEngine.SupportsLapProtocol: Boolean;
+begin
+  Result := True;
+end;
+
+{==============================================================================}
+procedure TCircuitRaceEngine.AttachLapProtocol(AHost: TWinControl);
+begin
+  if AHost = nil then
+    Exit;
+  EnsureRaceProtocol;
+  FRaceProtocol.Parent := AHost;
+  FRaceProtocol.Align := alClient;
+  FRaceProtocol.Visible := True;
+  FRaceProtocol.BringToFront;
+end;
+
+{==============================================================================}
+procedure TCircuitRaceEngine.DetachLapProtocol;
+begin
+  if FRaceProtocol = nil then
+    Exit;
+  FRaceProtocol.Visible := False;
+  FRaceProtocol.Parent := nil;
+end;
+
+{==============================================================================}
+procedure TCircuitRaceEngine.RebuildProtocolDisplay;
+begin
+  EnsureRaceProtocol;
+  FRaceProtocol.Clear;
+  inherited;
 end;
 
 {==============================================================================}
@@ -559,6 +659,8 @@ end;
 procedure TCircuitRaceEngine.ClearAllPassings;
 begin
   TListView(FPassingDisplay).Clear;
+  if FRaceProtocol <> nil then
+    FRaceProtocol.Clear;
 end;
 
 {==============================================================================}

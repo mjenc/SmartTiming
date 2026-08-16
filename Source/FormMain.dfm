@@ -480,6 +480,15 @@ object FormMain: TFormMain
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 1
+          object SplitterPassingsProtocol: TSplitter
+            Left = 0
+            Top = 572
+            Width = 521
+            Height = 4
+            Cursor = crVSplit
+            Align = alBottom
+            Visible = False
+          end
           object PanelRaceControls: TPanel
             Left = 0
             Top = 0
@@ -575,7 +584,7 @@ object FormMain: TFormMain
               Top = 3
               Width = 38
               Height = 38
-              Hint = 'Punkte — n'#228'chste Passage der Spitze'
+              Hint = 'Punkte '#226#128#148' n'#228'chste Passage der Spitze'
               Caption = 'PK'
               TabOrder = 9
               Visible = False
@@ -607,10 +616,20 @@ object FormMain: TFormMain
             Left = 0
             Top = 41
             Width = 521
-            Height = 735
+            Height = 531
             Align = alClient
             BevelOuter = bvNone
             TabOrder = 1
+          end
+          object PanelRaceProtocol: TPanel
+            Left = 0
+            Top = 576
+            Width = 521
+            Height = 200
+            Align = alBottom
+            BevelOuter = bvNone
+            TabOrder = 2
+            Visible = False
           end
         end
         object PanelStandings: TPanel
@@ -821,17 +840,15 @@ object FormMain: TFormMain
       ShowCaption = False
       TabOrder = 3
       object LabelPlausibilityStats: TLabel
-        Left = 8
+        Left = 240
         Top = 4
-        Width = 304
-        Height = 37
+        Width = 72
+        Height = 15
         Align = alClient
         Alignment = taRightJustify
         Caption = 'Plausibilit'#228't: -'
         Layout = tlCenter
         WordWrap = True
-        ExplicitWidth = 56
-        ExplicitHeight = 15
       end
     end
     object PanelTemperatureChart: TPanel
