@@ -231,13 +231,15 @@ end;
 
 procedure TRaceProtocol.HandleSpecialPassings(APassingType: TPassingType);
 begin
+  (* New lap columns only while counting is active: after Start, before Finish. *)
   case APassingType of
-    ptWarmUp, ptNeutralize, ptStop:
+    ptWarmUp, ptNeutralize, ptStop, ptFinish:
       FLapCountingActive := false;
     ptStartRace:
       FLapCountingActive := true;
     ptNewLeader:
-      StartNewLap;
+      if FLapCountingActive then
+        StartNewLap;
   end;
 end;
 
