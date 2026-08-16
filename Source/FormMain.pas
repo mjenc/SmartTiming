@@ -220,6 +220,7 @@ type
 
   protected
     procedure OnGetRaceType(ASender: TField; var AText: string; ADisplayText: Boolean);
+    procedure SyncEventFromForm;
 
   public
     procedure RefreshRacesListBox;
@@ -942,6 +943,17 @@ begin
 end;
 
 {==============================================================================}
+procedure TFormMain.SyncEventFromForm;
+begin
+  if (GSmartTimingController = nil) or (GSmartTimingController.Event = nil) then
+    Exit;
+  GSmartTimingController.Event.Organizer := EditOrganizer.Text;
+  GSmartTimingController.Event.Title := EditTitle.Text;
+  LabelOrganizer.Caption := EditOrganizer.Text;
+  LabelTitle.Caption := EditTitle.Text;
+end;
+
+{==============================================================================}
 procedure TFormMain.MenuItemBackupClick(Sender: TObject);
 var
   lDay, lMonth, lYear, lHour, lMin, lSec, lMSec: Word;
@@ -1186,6 +1198,7 @@ var
 begin
   if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
     Exit;
+  SyncEventFromForm;
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
   lRaceItem.RaceEngine.ExportParticipantsToExcelTemplate('');
 end;
@@ -1203,6 +1216,7 @@ var
 begin
   if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
     Exit;
+  SyncEventFromForm;
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
   lRaceItem.RaceEngine.ExportResultsToExcelTemplate('', CheckBoxResultsGroupByClass.Checked);
 end;
@@ -1214,6 +1228,7 @@ var
 begin
   if (ListBoxRaces.ItemIndex < 0) or (ListBoxRaces.ItemIndex >= ListBoxRaces.Count) then
     Exit;
+  SyncEventFromForm;
   lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
   lRaceItem.RaceEngine.PrintResults(CheckBoxResultsGroupByClass.Checked);
 end;

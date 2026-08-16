@@ -98,8 +98,7 @@ begin
     Exit;
   if (FEvent = nil) and (GSmartTimingController <> nil) then
     FEvent := GSmartTimingController.Event;
-  if FEvent <> nil then
-    FEvent.RefreshFromDatabase;
+  (* Use in-memory Event (FormMain syncs edits before export); do not reload DB. *)
   ASheet.PageSetup.LeftHeader := ReplaceTitlePlaceholders(ASheet.PageSetup.LeftHeader);
   ASheet.PageSetup.CenterHeader := ReplaceTitlePlaceholders(ASheet.PageSetup.CenterHeader);
   ASheet.PageSetup.RightHeader := ReplaceTitlePlaceholders(ASheet.PageSetup.RightHeader);
