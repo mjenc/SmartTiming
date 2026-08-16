@@ -22,6 +22,8 @@ type
 
   protected
     FOnGetFieldValue: TFNFillerOnGetFieldValue;
+    function ReplaceTitlePlaceholders(const AText: string): string;
+    procedure ApplyTitlePlaceholders(ASheet: TExcelWorksheet);
     procedure FillTitle; virtual;
     procedure GenerateRankValue(const AFieldName: string; var AValue: string);
     function IsOutputField(const AFieldName: string): boolean;
@@ -39,17 +41,20 @@ type
     property OnGetFieldValue: TFNFillerOnGetFieldValue read FOnGetFieldValue write FOnGetFieldValue;
     (* Race id for Kommuniqué lookup; <0 disables. Per-class when GroupByClass. *)
     property CommuniqueRaceId: Integer read FCommuniqueRaceId write FCommuniqueRaceId;
+    property Event: TEventDataObject read FEvent write FEvent;
   end;
 
 implementation
 
 uses
-  Variants, DataModule, Dialogs;
+  Variants, DataModule, Dialogs, SmartTiming.Controller;
 
 {==============================================================================}
 constructor TExcelFiller.Create(AEvent: TEventDataObject; const ARaceTitle: string);
 begin
   FEvent := AEvent;
+  if (FEvent = nil) and (GSmartTimingController <> nil) then
+    FEvent := GSmartTimingController.Event;
   FRaceTitle := ARaceTitle;
   FCommuniqueRaceId := -1;
 
@@ -66,9 +71,47 @@ begin
 end;
 
 {==============================================================================}
+function TExcelFiller.ReplaceTitlePlaceholders(const AText: string): string;
+var
+  lTitle: string;
+  lOrganizer: string;
+begin
+  Result := AText;
+  if FEvent <> nil then
+  begin
+    lTitle := FEvent.Title;
+    lOrganizer := FEvent.Organizer;
+  end
+  else
+  begin
+    lTitle := '';
+    lOrganizer := '';
+  end;
+  Result := StringReplace(Result, '<Event-Title>', lTitle, [rfReplaceAll, rfIgnoreCase]);
+  Result := StringReplace(Result, '<Organizer>', lOrganizer, [rfReplaceAll, rfIgnoreCase]);
+end;
+
+{==============================================================================}
+procedure TExcelFiller.ApplyTitlePlaceholders(ASheet: TExcelWorksheet);
+begin
+  if ASheet = nil then
+    Exit;
+  if (FEvent = nil) and (GSmartTimingController <> nil) then
+    FEvent := GSmartTimingController.Event;
+  if FEvent <> nil then
+    FEvent.RefreshFromDatabase;
+  ASheet.PageSetup.LeftHeader := ReplaceTitlePlaceholders(ASheet.PageSetup.LeftHeader);
+  ASheet.PageSetup.CenterHeader := ReplaceTitlePlaceholders(ASheet.PageSetup.CenterHeader);
+  ASheet.PageSetup.RightHeader := ReplaceTitlePlaceholders(ASheet.PageSetup.RightHeader);
+  ASheet.PageSetup.LeftFooter := ReplaceTitlePlaceholders(ASheet.PageSetup.LeftFooter);
+  ASheet.PageSetup.CenterFooter := ReplaceTitlePlaceholders(ASheet.PageSetup.CenterFooter);
+  ASheet.PageSetup.RightFooter := ReplaceTitlePlaceholders(ASheet.PageSetup.RightFooter);
+end;
+
+{==============================================================================}
 procedure TExcelFiller.FillTitle;
 begin
-
+  (* Placeholders are applied in OpenTemplate via ApplyTitlePlaceholders. *)
 end;
 
 {==============================================================================}
@@ -181,6 +224,7 @@ const
     lExcelWorkbook.Author[0] := cSmartTimingAppName + ' ' + cCopyright;
     lExcelSheet := TExcelWorksheet.Create(nil);
     lExcelSheet.ConnectTo(lExcelWorkbook.Sheets[1] as _Worksheet);
+    ApplyTitlePlaceholders(lExcelSheet);
     lCenterHeaderBase := lExcelSheet.PageSetup.CenterHeader;
   end;
 
@@ -221,6 +265,37 @@ const
       Result := MainDataModule.GetPenaltyCommuniqueText(FCommuniqueRaceId);
   end;
 
+  procedure WriteCommunique;
+  var
+    lLines: TStringList;
+    i: Integer;
+    lRow: Integer;
+    lEndColChar: Char;
+  begin
+    lCommunique := ResolveCommunique;
+    if Trim(lCommunique) = '' then
+      Exit;
+
+    lLines := TStringList.Create;
+    try
+      lLines.Text := lCommunique;
+      lRow := cDataRowStartIndex + lRows.Count + 1;
+      lEndColChar := Char(Ord('A') + lVisibleFieldCount - 1);
+      for i := 0 to lLines.Count - 1 do
+      begin
+        (* One communique line per spreadsheet row, spanning the result columns. *)
+        if lVisibleFieldCount > 1 then
+          lExcelSheet.Cells.Range[
+            'A' + IntToStr(lRow),
+            lEndColChar + IntToStr(lRow)].Merge(EmptyParam);
+        lExcelSheet.Cells.Item[lRow, 1].Value2 := lLines[i];
+        Inc(lRow);
+      end;
+    finally
+      FreeAndNil(lLines);
+    end;
+  end;
+
   procedure EmitBufferedClass;
   var
     r, c: Integer;
@@ -232,9 +307,9 @@ const
     try
       if AGroupByClass then
         lExcelSheet.PageSetup.CenterHeader :=
-          lCenterHeaderBase + CRLF + FRaceTitle + ' - ' + lCurrentClass
+          lCenterHeaderBase + #13 + FRaceTitle + ' - ' + lCurrentClass
       else
-        lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + CRLF + FRaceTitle;
+        lExcelSheet.PageSetup.CenterHeader := lCenterHeaderBase + #13 + FRaceTitle;
 
       lCellRange := VarArrayCreate([0, lRows.Count - 1, 0, lVisibleFieldCount - 1], varVariant);
       for r := 0 to lRows.Count - 1 do
@@ -247,9 +322,7 @@ const
       GetRangeCellNames('A', cDataRowStartIndex, lVisibleFieldCount, lRows.Count, lStartCell, lEndCell);
       lExcelSheet.Cells.Range[lStartCell, lEndCell].Value[xlRangeValueDefault] := lCellRange;
 
-      lCommunique := ResolveCommunique;
-      if Trim(lCommunique) <> '' then
-        lExcelSheet.Cells.Item[cDataRowStartIndex + lRows.Count + 1, 1].Value2 := lCommunique;
+      WriteCommunique;
 
       DoAction;
     finally

@@ -864,7 +864,7 @@ var
   lExcelFiller: TExcelFiller;
   lResultSet: TSQLDataSet;
 begin
-  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
+  lExcelFiller := TExcelFiller.Create(FEvent, FRaceItem.Title);
   try
     lExcelFiller.TemplateFile := gStdTemplatePath + 'StartListCircuit.xlsx';
 
@@ -891,7 +891,7 @@ var
   lExcelFiller: TExcelFiller;
   lResultSet: TSQLDataSet;
 begin
-  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
+  lExcelFiller := TExcelFiller.Create(FEvent, FRaceItem.Title);
   try
     lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListCircuit.xlsx';
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
@@ -913,7 +913,7 @@ var
   lExcelFiller: TExcelFiller;
   lResultSet: TSQLDataSet;
 begin
-  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
+  lExcelFiller := TExcelFiller.Create(FEvent, FRaceItem.Title);
   try
     lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListCircuit.xlsx';
     lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;

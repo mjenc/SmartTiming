@@ -122,15 +122,18 @@ var
 begin
   try
     LogOnDebug(cLogger, ['RefreshFromDatabase', 'EventId = ' + FEventId.ToString]);
-    if not Exists(FEventId) then
-      Exit;
-
-    lDataSet := MainDataModule.OpenReadOnlyQuery(
-      'SELECT * FROM EVENTS WHERE EVENTID = ' + FEventId.ToString);
+    if Exists(FEventId) then
+      lDataSet := MainDataModule.OpenReadOnlyQuery(
+        'SELECT * FROM EVENTS WHERE EVENTID = ' + FEventId.ToString)
+    else
+      (* EventId may still be unset after open; take the first (usually only) row. *)
+      lDataSet := MainDataModule.OpenReadOnlyQuery(
+        'SELECT * FROM EVENTS ORDER BY EVENTID LIMIT 1');
     try
       if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
         Exit;
 
+      FEventId := lDataSet.FieldByName('EVENTID').AsInteger;
       FOrganizer := lDataSet.FieldByName('ORGANIZER').AsString;
       FTitle := lDataSet.FieldByName('TITLE').AsString;
       FDateFrom := SmartTimingTools.GetFieldAsDatetime(lDataSet.FieldByName('DATEFROM'), 0);
