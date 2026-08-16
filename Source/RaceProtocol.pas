@@ -3,16 +3,17 @@
 interface
 
 uses
-  System.SysUtils, System.Classes, Vcl.Controls, Vcl.Graphics, System.Types,
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms, Vcl.Graphics, System.Types,
   System.Generics.Collections, System.Math;
 
 type
   TPassingType = (ptRider, ptWarmUp, ptStartRace, ptNeutralize, ptLastLap, ptFinish, ptStop, ptNewLeader);
 
-  // Datenstruktur für einen einzelnen Eintrag (ein Kästchen)
+  TRaceProtocolLayoutMode = (rplCompact, rplSingleColumn);
+
   TPassingItem = record
     Bib: Integer;
-    HasDot: Boolean; // True, wenn eine Runde verpasst wurde
+    HasDot: Boolean;
     PassingType: TPassingType;
   end;
 
@@ -22,7 +23,6 @@ type
     LastLap: Integer;
   end;
 
-  // Datenstruktur für eine ganze Spalte (Runde)
   TLapColumn = class
   private
     FItems: TList<TPassingItem>;
@@ -37,9 +37,11 @@ type
     FColumns: TObjectList<TLapColumn>;
     FRidersLaps: TDictionary<Integer, TRiderItem>;
     FCurrentColumnIndex: Integer;
-    FLapCountingActive: boolean;
+    FLapCountingActive: Boolean;
+    FAllowOneMoreColumnBreak: Boolean;
+    FLayoutMode: TRaceProtocolLayoutMode;
+    FAutoScroll: Boolean;
 
-    // Design-Konstanten (könnten auch Properties sein)
     FItemWidth: Integer;
     FItemHeight: Integer;
     FHeaderHeight: Integer;
@@ -50,6 +52,16 @@ type
     procedure DrawItem(Canvas: TCanvas; X, Y: Integer; Item: TPassingItem);
     procedure HandleSpecialPassings(APassingType: TPassingType);
     procedure MoveTrailingFinishFlags(AFromCol, AToCol: TLapColumn);
+    procedure AddFinishFlag(const AItem: TPassingItem);
+    procedure FreezeLapColumns;
+    function GetViewportSize(out AWidth, AHeight: Integer): Boolean;
+    function GetItemsPerColumnHeight(AViewportHeight: Integer): Integer;
+    function CalcColumnWidth(AItemCount, AItemsPerColHeight: Integer): Integer;
+    procedure CalcContentSize(out AWidth, AHeight: Integer);
+    function ColumnLeft(AColumnIndex: Integer; AItemsPerColHeight: Integer): Integer;
+    procedure SetLayoutMode(AValue: TRaceProtocolLayoutMode);
+    procedure SetAutoScrollEnabled(AValue: Boolean);
+    procedure ScrollIntoViewLatest;
   protected
     procedure Paint; override;
   public
@@ -58,6 +70,10 @@ type
 
     procedure AddPassing(ARiderNumber: Integer; APassingType: TPassingType = ptRider);
     procedure Clear;
+    procedure UpdateContentSize;
+
+    property LayoutMode: TRaceProtocolLayoutMode read FLayoutMode write SetLayoutMode;
+    property AutoScroll: Boolean read FAutoScroll write SetAutoScrollEnabled;
   published
     property Align;
     property Anchors;
@@ -65,7 +81,6 @@ type
     property Font;
     property ParentColor;
     property ParentFont;
-    // Größe der Komponente explizit freigeben
     property Height;
     property Width;
   end;
@@ -102,19 +117,20 @@ begin
   Width := 600;
   Height := 400;
 
-  // Design-Einstellungen (anpassbar)
   FItemWidth := 35;
   FItemHeight := 20;
   FHeaderHeight := 30;
-  FColMargin := 2; // Abstand zwischen den Kästchen
+  FColMargin := 2;
 
   FColumns := TObjectList<TLapColumn>.Create(True);
   FRidersLaps := TDictionary<Integer, TRiderItem>.Create;
 
-  // Initial immer die erste Spalte (Runde 1) anlegen
   FColumns.Add(TLapColumn.Create);
   FCurrentColumnIndex := 0;
-  FLapCountingActive := false;
+  FLapCountingActive := False;
+  FAllowOneMoreColumnBreak := False;
+  FLayoutMode := rplCompact;
+  FAutoScroll := True;
 end;
 
 destructor TRaceProtocol.Destroy;
@@ -124,6 +140,168 @@ begin
   inherited;
 end;
 
+procedure TRaceProtocol.SetLayoutMode(AValue: TRaceProtocolLayoutMode);
+begin
+  if FLayoutMode = AValue then
+    Exit;
+  FLayoutMode := AValue;
+  UpdateContentSize;
+  if Parent <> nil then
+    Invalidate;
+end;
+
+procedure TRaceProtocol.SetAutoScrollEnabled(AValue: Boolean);
+begin
+  FAutoScroll := AValue;
+end;
+
+function TRaceProtocol.GetViewportSize(out AWidth, AHeight: Integer): Boolean;
+begin
+  Result := False;
+  AWidth := ClientWidth;
+  AHeight := ClientHeight;
+  if (Parent <> nil) and (Parent is TScrollBox) then
+  begin
+    AWidth := TScrollBox(Parent).ClientWidth;
+    AHeight := TScrollBox(Parent).ClientHeight;
+    Result := True;
+  end
+  else if Parent <> nil then
+  begin
+    AWidth := Parent.ClientWidth;
+    AHeight := Parent.ClientHeight;
+    Result := True;
+  end;
+  if AWidth < 1 then
+    AWidth := 1;
+  if AHeight < 1 then
+    AHeight := 1;
+end;
+
+function TRaceProtocol.GetItemsPerColumnHeight(AViewportHeight: Integer): Integer;
+var
+  lTotalItemHeight: Integer;
+begin
+  if FLayoutMode = rplSingleColumn then
+    Exit(MaxInt);
+
+  lTotalItemHeight := FItemHeight + FColMargin;
+  if (AViewportHeight - FHeaderHeight) > lTotalItemHeight then
+    Result := (AViewportHeight - FHeaderHeight) div lTotalItemHeight
+  else
+    Result := 1;
+end;
+
+function TRaceProtocol.CalcColumnWidth(AItemCount, AItemsPerColHeight: Integer): Integer;
+var
+  lSubCols: Integer;
+begin
+  if AItemCount <= 0 then
+    lSubCols := 1
+  else if FLayoutMode = rplSingleColumn then
+    lSubCols := 1
+  else
+    lSubCols := Ceil(AItemCount / AItemsPerColHeight);
+  Result := lSubCols * (FItemWidth + FColMargin) + FColMargin;
+end;
+
+function TRaceProtocol.ColumnLeft(AColumnIndex: Integer; AItemsPerColHeight: Integer): Integer;
+var
+  i: Integer;
+begin
+  Result := 0;
+  for i := 0 to AColumnIndex - 1 do
+    Result := Result + CalcColumnWidth(FColumns[i].Items.Count, AItemsPerColHeight) + 2;
+end;
+
+procedure TRaceProtocol.CalcContentSize(out AWidth, AHeight: Integer);
+var
+  i: Integer;
+  lViewportW, lViewportH: Integer;
+  lItemsPerCol: Integer;
+  lColWidth: Integer;
+  lMaxItems: Integer;
+  lTotalItemHeight: Integer;
+begin
+  GetViewportSize(lViewportW, lViewportH);
+  lItemsPerCol := GetItemsPerColumnHeight(lViewportH);
+  lTotalItemHeight := FItemHeight + FColMargin;
+
+  AWidth := 0;
+  lMaxItems := 0;
+  for i := 0 to FColumns.Count - 1 do
+  begin
+    lColWidth := CalcColumnWidth(FColumns[i].Items.Count, lItemsPerCol);
+    AWidth := AWidth + lColWidth + 2;
+    if FColumns[i].Items.Count > lMaxItems then
+      lMaxItems := FColumns[i].Items.Count;
+  end;
+  if AWidth < lViewportW then
+    AWidth := lViewportW;
+
+  if FLayoutMode = rplSingleColumn then
+    AHeight := FHeaderHeight + FColMargin + Max(1, lMaxItems) * lTotalItemHeight
+  else
+    AHeight := lViewportH;
+  if AHeight < lViewportH then
+    AHeight := lViewportH;
+end;
+
+procedure TRaceProtocol.UpdateContentSize;
+var
+  lWidth, lHeight: Integer;
+begin
+  if Parent = nil then
+    Exit;
+  CalcContentSize(lWidth, lHeight);
+  if (Width <> lWidth) or (Height <> lHeight) then
+  begin
+    SetBounds(Left, Top, lWidth, lHeight);
+    if Parent is TScrollBox then
+      TScrollBox(Parent).Realign;
+  end;
+end;
+
+procedure TRaceProtocol.ScrollIntoViewLatest;
+var
+  lScrollBox: TScrollBox;
+  lViewportW, lViewportH: Integer;
+  lItemsPerCol: Integer;
+  lLeft: Integer;
+  lColWidth: Integer;
+  lTarget: Integer;
+  lItemCount: Integer;
+  lTotalItemHeight: Integer;
+  lBottom: Integer;
+begin
+  if not FAutoScroll then
+    Exit;
+  if not (Parent is TScrollBox) then
+    Exit;
+  lScrollBox := TScrollBox(Parent);
+
+  GetViewportSize(lViewportW, lViewportH);
+  lItemsPerCol := GetItemsPerColumnHeight(lViewportH);
+  lLeft := ColumnLeft(FCurrentColumnIndex, lItemsPerCol);
+  lColWidth := CalcColumnWidth(FColumns[FCurrentColumnIndex].Items.Count, lItemsPerCol);
+
+  lTarget := lLeft + lColWidth - lViewportW;
+  if lTarget < 0 then
+    lTarget := 0;
+  lScrollBox.HorzScrollBar.Position := lTarget;
+
+  if FLayoutMode = rplSingleColumn then
+  begin
+    lTotalItemHeight := FItemHeight + FColMargin;
+    lItemCount := FColumns[FCurrentColumnIndex].Items.Count;
+    lBottom := FHeaderHeight + FColMargin + lItemCount * lTotalItemHeight;
+    lTarget := lBottom - lViewportH;
+    if lTarget < 0 then
+      lTarget := 0;
+    lScrollBox.VertScrollBar.Position := lTarget;
+  end;
+end;
+
 procedure TRaceProtocol.Clear;
 begin
   FColumns.Clear;
@@ -131,14 +309,17 @@ begin
   FColumns.Add(TLapColumn.Create);
   FCurrentColumnIndex := 0;
   FLapCountingActive := False;
-  Invalidate;
+  FAllowOneMoreColumnBreak := False;
+  UpdateContentSize;
+  if Parent <> nil then
+    Invalidate;
 end;
 
 function TRaceProtocol.StartNewLap: TLapColumn;
 begin
   FColumns.Add(TLapColumn.Create);
   Inc(FCurrentColumnIndex);
-  result := FColumns[FCurrentColumnIndex];
+  Result := FColumns[FCurrentColumnIndex];
 end;
 
 procedure TRaceProtocol.MoveTrailingFinishFlags(AFromCol, AToCol: TLapColumn);
@@ -150,8 +331,6 @@ begin
   if (AFromCol = nil) or (AToCol = nil) or (AFromCol = AToCol) then
     Exit;
 
-  (* FIN is stored 1ms before the winner; when the winner opens a new column,
-     pull trailing finish markers along so FIN appears before the winner. *)
   lMoved := TList<TPassingItem>.Create;
   try
     while AFromCol.Items.Count > 0 do
@@ -169,6 +348,39 @@ begin
   end;
 end;
 
+procedure TRaceProtocol.FreezeLapColumns;
+begin
+  FLapCountingActive := False;
+  FAllowOneMoreColumnBreak := False;
+end;
+
+procedure TRaceProtocol.AddFinishFlag(const AItem: TPassingItem);
+var
+  CurrentCol: TLapColumn;
+begin
+  if FLayoutMode = rplSingleColumn then
+  begin
+    (* Own column for FIN, then a fresh column for finishers. *)
+    if FColumns[FCurrentColumnIndex].Items.Count > 0 then
+      StartNewLap;
+    CurrentCol := FColumns[FCurrentColumnIndex];
+    CurrentCol.Items.Add(AItem);
+    StartNewLap;
+    FreezeLapColumns;
+    Exit;
+  end;
+
+  (* Compact: keep FIN in the current column; allow one more rider-driven
+     column break so MoveTrailingFinishFlags can place FIN before the winner,
+     then freeze further lap columns. *)
+  CurrentCol := FColumns[FCurrentColumnIndex];
+  CurrentCol.Items.Add(AItem);
+  if FLapCountingActive then
+    FAllowOneMoreColumnBreak := True
+  else
+    FreezeLapColumns;
+end;
+
 procedure TRaceProtocol.AddPassing(ARiderNumber: Integer; APassingType: TPassingType = ptRider);
 var
   CurrentCol: TLapColumn;
@@ -182,17 +394,30 @@ begin
   Item.HasDot := False;
   Item.PassingType := APassingType;
 
+  if APassingType = ptFinish then
+  begin
+    AddFinishFlag(Item);
+    UpdateContentSize;
+    if Parent <> nil then
+      Invalidate;
+    ScrollIntoViewLatest;
+    Exit;
+  end;
+
   if APassingType <> ptRider then
   begin
     HandleSpecialPassings(APassingType);
+    CurrentCol := FColumns[FCurrentColumnIndex];
     CurrentCol.Items.Add(Item);
-    Invalidate;
+    UpdateContentSize;
+    if Parent <> nil then
+      Invalidate;
+    ScrollIntoViewLatest;
     Exit;
   end;
 
   if FLapCountingActive then
   begin
-    // Prüfen, ob Nummer schon in der aktuellen Spalte ist
     for i := 0 to CurrentCol.Items.Count - 1 do
     begin
       if CurrentCol.Items[i].Bib = ARiderNumber then
@@ -205,9 +430,6 @@ begin
     end;
   end;
 
-  // Rundenrückstand prüfen (vor Inc): Spalte ist 0-basiert, LapCount =
-  // bisherige Wertungsdurchfahrten. Erscheint der Fahrer in Spalte C mit
-  // LapCount < C, hat er mindestens eine Spalte verpasst → überrundet.
   if not FRidersLaps.TryGetValue(ARiderNumber, CurrentRider) then
   begin
     CurrentRider.Bib := ARiderNumber;
@@ -221,24 +443,32 @@ begin
     Inc(CurrentRider.LapCount);
 
   FRidersLaps.AddOrSetValue(ARiderNumber, CurrentRider);
-
-  // Hinzufügen und Status aktualisieren
   CurrentCol.Items.Add(Item);
 
-  // Neu zeichnen
-  Invalidate;
+  (* After FIN: freeze once the finish column is settled (with or without a break). *)
+  if FAllowOneMoreColumnBreak then
+    FreezeLapColumns;
+
+  UpdateContentSize;
+  if Parent <> nil then
+    Invalidate;
+  ScrollIntoViewLatest;
 end;
 
 procedure TRaceProtocol.HandleSpecialPassings(APassingType: TPassingType);
 begin
-  (* New lap columns only while counting is active: after Start, before Finish. *)
+  (* New lap columns only while counting is active: after Start, before Finish.
+     Finish is handled in AddFinishFlag (layout-specific). *)
   case APassingType of
-    ptWarmUp, ptNeutralize, ptStop, ptFinish:
-      FLapCountingActive := false;
+    ptWarmUp, ptNeutralize, ptStop:
+      FreezeLapColumns;
     ptStartRace:
-      FLapCountingActive := true;
+      begin
+        FLapCountingActive := True;
+        FAllowOneMoreColumnBreak := False;
+      end;
     ptNewLeader:
-      if FLapCountingActive then
+      if FLapCountingActive and not FAllowOneMoreColumnBreak then
         StartNewLap;
   end;
 end;
@@ -249,36 +479,29 @@ var
   CountTxt: string;
   TxtSize: TSize;
 begin
-  // Hintergrund Grauverlauf (simuliert)
-  Canvas.Brush.Color := $00E0E0E0; // Helles Grau
+  Canvas.Brush.Color := $00E0E0E0;
   Canvas.FillRect(Rect);
 
-  // Trennlinie rechts
   Canvas.Pen.Color := clWhite;
   Canvas.Pen.Width := 2;
   Canvas.MoveTo(Rect.Right - 1, Rect.Top);
   Canvas.LineTo(Rect.Right - 1, Rect.Bottom);
 
-  // Große Zahl (Runde)
   Canvas.Font.Assign(Self.Font);
   Canvas.Font.Size := 14;
-  Canvas.Font.Color := clWhite; // Schatten/Outline Effekt simpel
   Txt := IntToStr(LapIndex);
 
-  // Zentriert zeichnen
   TxtSize := Canvas.TextExtent(Txt);
   Canvas.Brush.Style := bsClear;
-  Canvas.Font.Color := clGray; // Schatten
+  Canvas.Font.Color := clGray;
   Canvas.TextOut(Rect.Left + (Rect.Width - TxtSize.cx) div 2 + 1, Rect.Top + 2 + 1, Txt);
-  Canvas.Font.Color := clWhite; // Text
+  Canvas.Font.Color := clWhite;
   Canvas.TextOut(Rect.Left + (Rect.Width - TxtSize.cx) div 2, Rect.Top + 2, Txt);
 
-  // Kleine rote Zahl (Anzahl Passagen)
   CountTxt := IntToStr(Count);
   Canvas.Font.Size := 7;
   Canvas.Font.Color := clRed;
   TxtSize := Canvas.TextExtent(CountTxt);
-  // Unten rechts im Header oder oben rechts (Bild: eher unten rechts auf der Linie)
   Canvas.TextOut(Rect.Right - TxtSize.cx - 2, Rect.Bottom - TxtSize.cy - 2, CountTxt);
 end;
 
@@ -289,49 +512,48 @@ var
   TxtSize: TSize;
 begin
   R := Rect(X, Y, X + FItemWidth, Y + FItemHeight);
-  InflateRect(R, -1, -1); // Kleiner Abstand
+  InflateRect(R, -1, -1);
 
-  // Rahmen (Grün)
   case Item.PassingType of
     ptRider:
       begin
-        Canvas.Pen.Color := $00008000; // Dunkelgrün
+        Canvas.Pen.Color := $00008000;
         Txt := IntToStr(Item.Bib);
       end;
     ptWarmUp:
       begin
         Canvas.Pen.Color := clPurple;
-        Txt:= 'WU';
+        Txt := 'WU';
       end;
     ptStartRace:
       begin
         Canvas.Pen.Color := clGreen;
-        Txt:= 'STRT';
+        Txt := 'STRT';
       end;
     ptNeutralize:
       begin
         Canvas.Pen.Color := clYellow;
-        Txt:= 'NEU';
+        Txt := 'NEU';
       end;
     ptLastLap:
       begin
         Canvas.Pen.Color := clWebRosyBrown;
-        Txt:= 'BELL';
+        Txt := 'BELL';
       end;
     ptFinish:
       begin
         Canvas.Pen.Color := clBlack;
-        Txt:= 'FIN';
+        Txt := 'FIN';
       end;
     ptStop:
       begin
         Canvas.Pen.Color := clRed;
-        Txt:= 'STP';
+        Txt := 'STP';
       end;
     ptNewLeader:
       begin
         Canvas.Pen.Color := clWhite;
-        Txt:= 'NL';
+        Txt := 'NL';
       end;
   end;
   Canvas.Pen.Width := 2;
@@ -339,18 +561,15 @@ begin
   Canvas.Brush.Style := bsSolid;
   Canvas.Rectangle(R);
 
-  // Text (Nummer)
   Canvas.Font.Assign(Self.Font);
   Canvas.Font.Style := [fsBold];
   Canvas.Font.Color := clBlack;
   TxtSize := Canvas.TextExtent(Txt);
 
-  // Text zentrieren
   Canvas.Brush.Style := bsClear;
   Canvas.TextOut(R.Left + (R.Width - TxtSize.cx) div 2,
                  R.Top + (R.Height - TxtSize.cy) div 2, Txt);
 
-  // Der "schwarze Punkt" (Rundenrückstand / überrundet)
   if Item.HasDot then
   begin
     Canvas.Brush.Color := clBlack;
@@ -368,60 +587,55 @@ var
   ItemsPerColHeight: Integer;
   SubCols: Integer;
   TotalItemHeight: Integer;
-
-  // Variablen für Item Position
-  ItemIdx: Integer;
   SubColIdx: Integer;
   RowIdx: Integer;
   DrawX, DrawY: Integer;
+  lViewportW, lViewportH: Integer;
 begin
   inherited;
 
-  // Zeichenfläche löschen
   Canvas.Brush.Color := Color;
   Canvas.FillRect(ClientRect);
 
+  GetViewportSize(lViewportW, lViewportH);
   TotalItemHeight := FItemHeight + FColMargin;
-  // Wie viele Items passen vertikal untereinander?
-  if (ClientHeight - FHeaderHeight) > TotalItemHeight then
-    ItemsPerColHeight := (ClientHeight - FHeaderHeight) div TotalItemHeight
-  else
-    ItemsPerColHeight := 1; // Fallback
+  ItemsPerColHeight := GetItemsPerColumnHeight(lViewportH);
 
   XOffset := 0;
-
-  // Durch alle Runden-Spalten iterieren
   for i := 0 to FColumns.Count - 1 do
   begin
     ColObj := FColumns[i];
 
-    // Berechnen, wie breit diese Spalte sein muss (Unterspalten)
-    if ColObj.Items.Count > 0 then
+    if FLayoutMode = rplSingleColumn then
+      SubCols := 1
+    else if ColObj.Items.Count > 0 then
       SubCols := Ceil(ColObj.Items.Count / ItemsPerColHeight)
     else
       SubCols := 1;
 
     EffectiveColWidth := SubCols * (FItemWidth + FColMargin) + FColMargin;
 
-    // Header Zeichnen
     DrawHeader(Canvas, Rect(XOffset, 0, XOffset + EffectiveColWidth, FHeaderHeight),
                i, ColObj.Items.Count);
 
-    // Items Zeichnen
     for j := 0 to ColObj.Items.Count - 1 do
     begin
-      // Berechnung der Position (inkl. Unterspalten-Logik)
-      SubColIdx := j div ItemsPerColHeight;
-      RowIdx := j mod ItemsPerColHeight;
+      if FLayoutMode = rplSingleColumn then
+      begin
+        SubColIdx := 0;
+        RowIdx := j;
+      end
+      else
+      begin
+        SubColIdx := j div ItemsPerColHeight;
+        RowIdx := j mod ItemsPerColHeight;
+      end;
 
       DrawX := XOffset + FColMargin + (SubColIdx * (FItemWidth + FColMargin));
       DrawY := FHeaderHeight + FColMargin + (RowIdx * TotalItemHeight);
-
       DrawItem(Canvas, DrawX, DrawY, ColObj.Items[j]);
     end;
 
-    // Offset für die nächste Hauptspalte verschieben + Trennlinie
-    // Graue Trennlinie zwischen Hauptspalten zeichnen
     Canvas.Pen.Color := clSilver;
     Canvas.Pen.Width := 1;
     Canvas.MoveTo(XOffset + EffectiveColWidth, 0);

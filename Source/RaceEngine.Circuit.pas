@@ -72,6 +72,7 @@ type
     function SupportsLapProtocol: Boolean; override;
     procedure AttachLapProtocol(AHost: TWinControl); override;
     procedure DetachLapProtocol; override;
+    function TryGetLapProtocol(out AProtocol: TObject): Boolean; override;
 
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); override;
     procedure ExportResultsToExcelTemplate(const AOutputFile: string;
@@ -502,8 +503,11 @@ begin
     Exit;
   EnsureRaceProtocol;
   FRaceProtocol.Parent := AHost;
-  FRaceProtocol.Align := alClient;
+  FRaceProtocol.Align := alNone;
+  FRaceProtocol.Left := 0;
+  FRaceProtocol.Top := 0;
   FRaceProtocol.Visible := True;
+  FRaceProtocol.UpdateContentSize;
   FRaceProtocol.BringToFront;
 end;
 
@@ -514,6 +518,14 @@ begin
     Exit;
   FRaceProtocol.Visible := False;
   FRaceProtocol.Parent := nil;
+end;
+
+{==============================================================================}
+function TCircuitRaceEngine.TryGetLapProtocol(out AProtocol: TObject): Boolean;
+begin
+  EnsureRaceProtocol;
+  AProtocol := FRaceProtocol;
+  Result := FRaceProtocol <> nil;
 end;
 
 {==============================================================================}

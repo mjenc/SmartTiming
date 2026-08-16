@@ -50,6 +50,11 @@ type
     PanelRaces: TPanel;
     PanelPassings: TPanel;
     PanelRaceProtocol: TPanel;
+    PanelRaceProtocolControls: TPanel;
+    ScrollBoxRaceProtocol: TScrollBox;
+    LabelRaceProtocolLayout: TLabel;
+    ComboBoxRaceProtocolLayout: TComboBox;
+    CheckBoxRaceProtocolAutoScroll: TCheckBox;
     SplitterPassingsProtocol: TSplitter;
     Splitter1: TSplitter;
     Splitter2: TSplitter;
@@ -170,6 +175,9 @@ type
     procedure MenuItemCheckBatteryStatusClick(Sender: TObject);
     procedure MenuItemBackupClick(Sender: TObject);
     procedure ToggleAutoScrollClick(Sender: TObject);
+    procedure ComboBoxRaceProtocolLayoutChange(Sender: TObject);
+    procedure CheckBoxRaceProtocolAutoScrollClick(Sender: TObject);
+    procedure ScrollBoxRaceProtocolResize(Sender: TObject);
     procedure LabelDecoderManufacturerClick(Sender: TObject);
     procedure PopupMenuCompetitorActionsPopup(Sender: TObject);
     procedure ButtonPrintParticipantListClick(Sender: TObject);
@@ -217,6 +225,9 @@ type
     procedure ProcessPlausibilityQueue;
     procedure HandlePlausibilityStatsChanged(const AStats: TPlausibilitySessionStats);
     procedure RefreshPlausibilityStatsHint(const AStats: TPlausibilitySessionStats);
+    procedure ApplyRaceProtocolSettings(ARaceEngine: TCustomRaceEngine);
+    procedure LoadRaceProtocolSettings;
+    procedure SaveRaceProtocolSettings;
 
   protected
     procedure OnGetRaceType(ASender: TField; var AText: string; ADisplayText: Boolean);
@@ -242,7 +253,7 @@ var
 implementation
 
 uses
-  SmartTiming.Controller, Report.ExcelTemplateFiller;
+  SmartTiming.Controller, Report.ExcelTemplateFiller, RaceProtocol;
 
 {$R *.dfm}
 
@@ -743,7 +754,99 @@ begin
 
   PanelRaceProtocol.Visible := True;
   SplitterPassingsProtocol.Visible := True;
-  ARaceItem.RaceEngine.AttachLapProtocol(PanelRaceProtocol);
+  ARaceItem.RaceEngine.AttachLapProtocol(ScrollBoxRaceProtocol);
+  ApplyRaceProtocolSettings(ARaceItem.RaceEngine);
+end;
+
+{==============================================================================}
+procedure TFormMain.ApplyRaceProtocolSettings(ARaceEngine: TCustomRaceEngine);
+var
+  lObj: TObject;
+  lProtocol: TRaceProtocol;
+begin
+  if (ARaceEngine = nil) or (not ARaceEngine.TryGetLapProtocol(lObj)) then
+    Exit;
+  lProtocol := TRaceProtocol(lObj);
+  if lProtocol.Parent = nil then
+    Exit;
+  if ComboBoxRaceProtocolLayout.ItemIndex = 1 then
+    lProtocol.LayoutMode := rplSingleColumn
+  else
+    lProtocol.LayoutMode := rplCompact;
+  lProtocol.AutoScroll := CheckBoxRaceProtocolAutoScroll.Checked;
+  lProtocol.UpdateContentSize;
+  lProtocol.Invalidate;
+end;
+
+{==============================================================================}
+procedure TFormMain.LoadRaceProtocolSettings;
+var
+  lLayout: Integer;
+begin
+  lLayout := StrToIntDef(
+    SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings',
+      'RaceProtocolLayout', '0'), 0);
+  if (lLayout < 0) or (lLayout > ComboBoxRaceProtocolLayout.Items.Count - 1) then
+    lLayout := 0;
+  ComboBoxRaceProtocolLayout.ItemIndex := lLayout;
+  CheckBoxRaceProtocolAutoScroll.Checked := SmartTimingTools.RegistryReadBool(
+    HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'RaceProtocolAutoScroll', True);
+end;
+
+{==============================================================================}
+procedure TFormMain.SaveRaceProtocolSettings;
+begin
+  SmartTimingTools.RegistryWriteString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings',
+    'RaceProtocolLayout', IntToStr(ComboBoxRaceProtocolLayout.ItemIndex));
+  SmartTimingTools.RegistryWriteBool(HKEY_CURRENT_USER, cRegKeyPath + '\Settings',
+    'RaceProtocolAutoScroll', CheckBoxRaceProtocolAutoScroll.Checked);
+end;
+
+{==============================================================================}
+procedure TFormMain.ComboBoxRaceProtocolLayoutChange(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
+begin
+  SaveRaceProtocolSettings;
+  if ListBoxRaces.ItemIndex < 0 then
+    Exit;
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  if (lRaceItem <> nil) and (lRaceItem.RaceEngine <> nil) then
+    ApplyRaceProtocolSettings(lRaceItem.RaceEngine);
+end;
+
+{==============================================================================}
+procedure TFormMain.CheckBoxRaceProtocolAutoScrollClick(Sender: TObject);
+var
+  lRaceItem: TRaceItem;
+begin
+  SaveRaceProtocolSettings;
+  if ListBoxRaces.ItemIndex < 0 then
+    Exit;
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  if (lRaceItem <> nil) and (lRaceItem.RaceEngine <> nil) then
+    ApplyRaceProtocolSettings(lRaceItem.RaceEngine);
+end;
+
+{==============================================================================}
+procedure TFormMain.ScrollBoxRaceProtocolResize(Sender: TObject);
+var
+  lObj: TObject;
+  lProtocol: TRaceProtocol;
+  lRaceItem: TRaceItem;
+begin
+  if not PanelRaceProtocol.Visible then
+    Exit;
+  if ListBoxRaces.ItemIndex < 0 then
+    Exit;
+  lRaceItem := TRaceItem(ListBoxRaces.Items.Objects[ListBoxRaces.ItemIndex]);
+  if (lRaceItem = nil) or (lRaceItem.RaceEngine = nil) then
+    Exit;
+  if not lRaceItem.RaceEngine.TryGetLapProtocol(lObj) then
+    Exit;
+  lProtocol := TRaceProtocol(lObj);
+  lProtocol.UpdateContentSize;
+  lProtocol.Invalidate;
 end;
 
 {==============================================================================}
@@ -922,6 +1025,7 @@ end;
 procedure TFormMain.ReadSettings;
 begin
   SmartTimingTools.InitFieldDescriptions;
+  LoadRaceProtocolSettings;
 end;
 
 {==============================================================================}

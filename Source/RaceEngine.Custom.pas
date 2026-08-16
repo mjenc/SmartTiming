@@ -145,6 +145,7 @@ type
     function SupportsLapProtocol: Boolean; virtual;
     procedure AttachLapProtocol(AHost: TWinControl); virtual;
     procedure DetachLapProtocol; virtual;
+    function TryGetLapProtocol(out AProtocol: TObject): Boolean; virtual;
 
     // ranking
     procedure RefreshRankingDisplay;
@@ -279,6 +280,13 @@ end;
 procedure TCustomRaceEngine.DetachLapProtocol;
 begin
   (* Default: no lap protocol. *)
+end;
+
+{==============================================================================}
+function TCustomRaceEngine.TryGetLapProtocol(out AProtocol: TObject): Boolean;
+begin
+  AProtocol := nil;
+  Result := False;
 end;
 
 {==============================================================================}

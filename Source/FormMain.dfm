@@ -628,8 +628,60 @@ object FormMain: TFormMain
             Height = 200
             Align = alBottom
             BevelOuter = bvNone
+            Caption = ''
             TabOrder = 2
             Visible = False
+            object PanelRaceProtocolControls: TPanel
+              Left = 0
+              Top = 0
+              Width = 521
+              Height = 28
+              Align = alTop
+              BevelOuter = bvNone
+              TabOrder = 0
+              object LabelRaceProtocolLayout: TLabel
+                Left = 8
+                Top = 6
+                Width = 36
+                Height = 15
+                Caption = 'Layout'
+              end
+              object ComboBoxRaceProtocolLayout: TComboBox
+                Left = 52
+                Top = 2
+                Width = 120
+                Height = 23
+                Style = csDropDownList
+                ItemIndex = 0
+                TabOrder = 0
+                Text = 'Kompakt'
+                OnChange = ComboBoxRaceProtocolLayoutChange
+                Items.Strings = (
+                  'Kompakt'
+                  'Eine Spalte')
+              end
+              object CheckBoxRaceProtocolAutoScroll: TCheckBox
+                Left = 188
+                Top = 5
+                Width = 97
+                Height = 17
+                Caption = 'AutoScroll'
+                Checked = True
+                State = cbChecked
+                TabOrder = 1
+                OnClick = CheckBoxRaceProtocolAutoScrollClick
+              end
+            end
+            object ScrollBoxRaceProtocol: TScrollBox
+              Left = 0
+              Top = 28
+              Width = 521
+              Height = 172
+              Align = alClient
+              BorderStyle = bsNone
+              TabOrder = 1
+              OnResize = ScrollBoxRaceProtocolResize
+            end
           end
         end
         object PanelStandings: TPanel
