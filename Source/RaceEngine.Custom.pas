@@ -546,31 +546,37 @@ procedure TCustomRaceEngine.OnDrawRankingColumn(Sender: TObject; const Rect: TRe
 var
   lSender: TDBGrid;
   lLeft: Integer;
+  lStatus: string;
+  lDataSet: TDataSet;
 begin
-  try
-    if not (Sender is TDBGrid) then
-      Exit;
-    lSender := Sender as TDBGrid;
-    if Field.IsNull or (not SameText(Field.DisplayName, 'Platz')) then
-      Exit;
-    if lSender.DataSource.DataSet.FieldByName('DNS').AsInteger <> 0 then
-    begin
-      lLeft := Rect.Left + (Rect.Right - Rect.Left) div 2 - (lSender.Canvas.TextWidth('DNS') div 2);
-      lSender.Canvas.TextRect(Rect, lLeft, Rect.Top + 2, 'DNS');
-    end;
-    if lSender.DataSource.DataSet.FieldByName('DNF').AsInteger <> 0 then
-    begin
-      lLeft := Rect.Left + (Rect.Right - Rect.Left) div 2 - (lSender.Canvas.TextWidth('DNF') div 2);
-      lSender.Canvas.TextRect(Rect, lLeft, Rect.Top + 2, 'DNF');
-    end;
-    if lSender.DataSource.DataSet.FieldByName('DSQ').AsInteger <> 0 then
-    begin
-      lLeft := Rect.Left + (Rect.Right - Rect.Left) div 2 - (lSender.Canvas.TextWidth('DSQ') div 2);
-      lSender.Canvas.TextRect(Rect, lLeft, Rect.Top + 2, 'DSQ');
-    end;
-  finally
-    OnColorizePodium(Sender, Rect, Field, State);
+  if not (Sender is TDBGrid) then
+    Exit;
+  lSender := Sender as TDBGrid;
+  if (Field = nil) or (not SameText(Field.DisplayName, 'Platz')) then
+    Exit;
+  if (lSender.DataSource = nil) or (lSender.DataSource.DataSet = nil) then
+    Exit;
+
+  lDataSet := lSender.DataSource.DataSet;
+  lStatus := '';
+  if lDataSet.FieldByName('DNS').AsInteger <> 0 then
+    lStatus := 'DNS'
+  else if lDataSet.FieldByName('DNF').AsInteger <> 0 then
+    lStatus := 'DNF'
+  else if lDataSet.FieldByName('DSQ').AsInteger <> 0 then
+    lStatus := 'DSQ';
+
+  if lStatus <> '' then
+  begin
+    (* Erase the place number drawn by default; keep grid selection colors. *)
+    lSender.Canvas.FillRect(Rect);
+    lLeft := Rect.Left + (Rect.Right - Rect.Left) div 2 -
+      (lSender.Canvas.TextWidth(lStatus) div 2);
+    lSender.Canvas.TextRect(Rect, lLeft, Rect.Top + 2, lStatus);
+    Exit;
   end;
+
+  OnColorizePodium(Sender, Rect, Field, State);
 end;
 
 {==============================================================================}
@@ -580,12 +586,22 @@ var
   lFGColor: TColor;
   lSender: TDBGrid;
   lLeft: Integer;
+  lDataSet: TDataSet;
 begin
   if not (Sender is TDBGrid) then
     Exit;
   lSender := Sender as TDBGrid;
-  if Field.IsNull or (not SameText(Field.DisplayName, 'Platz')) then
+  if (Field = nil) or Field.IsNull or (not SameText(Field.DisplayName, 'Platz')) then
     Exit;
+  if (lSender.DataSource = nil) or (lSender.DataSource.DataSet = nil) then
+    Exit;
+
+  lDataSet := lSender.DataSource.DataSet;
+  if (lDataSet.FieldByName('DNS').AsInteger <> 0) or
+     (lDataSet.FieldByName('DNF').AsInteger <> 0) or
+     (lDataSet.FieldByName('DSQ').AsInteger <> 0) then
+    Exit;
+
   if Field.AsInteger > 3 then
     Exit;
 
