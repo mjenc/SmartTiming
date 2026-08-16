@@ -1300,44 +1300,45 @@ function TMainDataModule.BuildPenaltyCommuniqueText(ARaceId: Integer;
   AFilterByClass: Boolean; const AClass: string): string;
 var
   lDataSet: TSQLDataSet;
-  lLines: TStringList;
   lText: string;
   lSql: string;
+  lHasEntry: Boolean;
 begin
   Result := '';
   if ARaceId < 0 then
     Exit;
-  lLines := TStringList.Create;
-  try
-    lSql :=
-      'SELECT P.PENALTIES FROM PARTICIPATION P ' +
-      'INNER JOIN COMPETITORS C ON C.COMPETITORID = P.COMPETITORID ' +
-      'WHERE P.RACEID = ' + ARaceId.ToString +
-      ' AND IFNULL(TRIM(P.PENALTIES), '''') <> '''' ';
-    if AFilterByClass then
-      lSql := lSql + ' AND IFNULL(C.CLASS, '''') = ' + AClass.QuotedString;
-    lSql := lSql + ' ORDER BY C.BIB, P.PARTICIPATIONID';
 
-    lDataSet := OpenReadOnlyQuery(lSql);
-    try
-      if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
-        Exit;
-      lDataSet.First;
-      while not lDataSet.Eof do
-      begin
-        lText := Trim(lDataSet.Fields[0].AsString);
-        if lText <> '' then
-          lLines.Add(lText);
-        lDataSet.Next;
-      end;
-    finally
-      FreeAndNil(lDataSet);
-    end;
-    if lLines.Count = 0 then
+  lSql :=
+    'SELECT P.PENALTIES FROM PARTICIPATION P ' +
+    'INNER JOIN COMPETITORS C ON C.COMPETITORID = P.COMPETITORID ' +
+    'WHERE P.RACEID = ' + ARaceId.ToString +
+    ' AND IFNULL(TRIM(P.PENALTIES), '''') <> '''' ';
+  if AFilterByClass then
+    lSql := lSql + ' AND IFNULL(C.CLASS, '''') = ' + AClass.QuotedString;
+  lSql := lSql + ' ORDER BY C.BIB, P.PARTICIPATIONID';
+
+  lDataSet := OpenReadOnlyQuery(lSql);
+  try
+    if (lDataSet = nil) or not lDataSet.Active or lDataSet.IsEmpty then
       Exit;
-    Result := cMessagesCommuniqueHeader + sLineBreak + sLineBreak + lLines.Text;
+    Result := cMessagesCommuniqueHeader;
+    lHasEntry := False;
+    lDataSet.First;
+    while not lDataSet.Eof do
+    begin
+      lText := Trim(lDataSet.Fields[0].AsString);
+      if lText <> '' then
+      begin
+        (* Blank line after header and between entries; keep newlines inside an entry. *)
+        Result := Result + sLineBreak + sLineBreak + lText;
+        lHasEntry := True;
+      end;
+      lDataSet.Next;
+    end;
+    if not lHasEntry then
+      Result := '';
   finally
-    FreeAndNil(lLines);
+    FreeAndNil(lDataSet);
   end;
 end;
 

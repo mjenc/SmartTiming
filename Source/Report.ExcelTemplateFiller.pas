@@ -282,12 +282,13 @@ const
       lEndColChar := Char(Ord('A') + lVisibleFieldCount - 1);
       for i := 0 to lLines.Count - 1 do
       begin
-        (* One communique line per spreadsheet row, spanning the result columns. *)
+        (* One text line per row (multi-line entries stay multi-row; blank = gap). *)
         if lVisibleFieldCount > 1 then
           lExcelSheet.Cells.Range[
             'A' + IntToStr(lRow),
             lEndColChar + IntToStr(lRow)].Merge(EmptyParam);
         lExcelSheet.Cells.Item[lRow, 1].Value2 := lLines[i];
+        lExcelSheet.Cells.Item[lRow, 1].HorizontalAlignment := xlHAlignLeft;
         Inc(lRow);
       end;
     finally
