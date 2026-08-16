@@ -113,9 +113,11 @@ type
     procedure OnShowAssignmentHistory(ASender: TObject); virtual;
 
     procedure AssignLap(var APassing: TPassing); virtual;
-    (* ITT: Ziel-Flagge beendet die Wertung. Circuit/Criterium: weitere Fahrer
-       bekommen danach noch ihre Schlussrunde. *)
+    (* ITT: Ziel-Flagge beendet die Wertung sofort. Circuit/Criterium: Recalc
+       muss nach der Flagge weiterlaufen, damit die Schlussrunde noch zählt. *)
     function FinishFlagEndsLapCounting: Boolean; virtual;
+    procedure CancelPassingListDrag;
+    procedure RestorePassingListDrag;
     function PassingImageIndex(const APassing: TPassing): Integer; virtual;
     function PassingMatchesFilter(const APassing: TPassing): Boolean; virtual;
     procedure AppendPassingListItem(const APassing: TPassing; AAutoScroll: Boolean); virtual;
@@ -158,8 +160,7 @@ type
     procedure ShowCompetitorPassings(ACompetitorId: Integer); virtual;
     procedure SetPassingStatusAndRecalc(APassingNumber: Integer; AStatus: TPassingState);
     procedure RebuildProtocolDisplay; virtual;
-    procedure CancelPassingListDrag;
-    procedure RestorePassingListDrag;
+    procedure WithPassingListDragLocked(const AProc: TProc);
 
     // Reports
     procedure ExportParticipantsToExcelTemplate(const AOutputFile: string); virtual; abstract;
@@ -690,8 +691,11 @@ begin
   if FLastRefreshTimestamp >= FLastChangeTimestamp then
     Exit;
 
-  if (FRankingGrid <> nil) and (FRankingGrid.Columns.Count > 0) then
-    FRankingGridColumnsJSON := TGridFormatProvider.GridToJSON(FRankingGrid);
+  if (FRankingGrid <> nil) and (FRankingGrid.Tag = cGridFormatApplied) and
+     (FRankingGrid.Columns.Count > 0) then
+    FRankingGridColumnsJSON := TGridFormatProvider.GridToJSON(FRankingGrid)
+  else
+    FRankingGridColumnsJSON := '';
 
   FSQLDataSetRankings.Active := false;
   FSQLDataSetRankings.CommandText := FRankingQuery;
@@ -713,7 +717,8 @@ begin
   end;
   AfterOpenRankingResultSet(FClientDataSetRankings);
 
-  (* Dataset reopen resets DBGrid column widths; restore the last layout. *)
+  (* Dataset reopen resets DBGrid column widths; restore only a layout the
+     user (or LoadSettings) already applied — never capture field defaults. *)
   if FRankingGridColumnsJSON <> '' then
     TGridFormatProvider.ApplyJSON(FRankingGrid, FRankingGridColumnsJSON)
   else
@@ -725,12 +730,8 @@ procedure TCustomRaceEngine.SaveRankingGridFormat;
 begin
   if FRankingGrid = nil then
     Exit;
-  if FRankingGrid.Columns.Count > 0 then
-    FRankingGridColumnsJSON := TGridFormatProvider.GridToJSON(FRankingGrid);
   if FRankingGrid.Tag <> cGridFormatApplied then
     TGridFormatProvider.LoadSettings(FRankingGrid, FDefaultListFormatRanking, FFormatSuffix);
-  if FRankingGridColumnsJSON <> '' then
-    TGridFormatProvider.ApplyJSON(FRankingGrid, FRankingGridColumnsJSON);
   TGridFormatProvider.SaveSettings(FRankingGrid, FFormatSuffix);
 end;
 
@@ -812,6 +813,7 @@ begin
       MainDataModule.SQLConnection.RollbackFreeAndNil(lTransaction);
       raise;
     end;
+    FLastChangeTimestamp := Now;
     RefreshRankingDisplay;
 
   finally
@@ -1373,6 +1375,19 @@ begin
   lListView.OnDragDrop := OnPassingItemDragDrop;
   lListView.OnDragOver := OnPassingItemDragOver;
   lListView.DragMode := dmAutomatic;
+end;
+
+{==============================================================================}
+procedure TCustomRaceEngine.WithPassingListDragLocked(const AProc: TProc);
+begin
+  if not Assigned(AProc) then
+    Exit;
+  CancelPassingListDrag;
+  try
+    AProc();
+  finally
+    RestorePassingListDrag;
+  end;
 end;
 
 {==============================================================================}

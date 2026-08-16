@@ -55,7 +55,13 @@ type
     procedure RemovePassing(APassingNumber: Integer);
     function AddManualPassing(var APassing: TPassing): TManualPassingResult;
     procedure ResetRacesDataSet;
-    procedure ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
+    procedure ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus); overload;
+    procedure ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus;
+      APassingTime: TDateTime); overload;
+    (* Circuit/Criterium: place Ziel-Flagge 1ms before the leader's finishing
+       crossing if none exists yet. Updates RACES.STATUS; flag remains movable. *)
+    function EnsureFinishFlagBeforeLeader(ARaceId: Integer;
+      ALeaderFinishTime: TDateTime): Boolean;
     procedure RetryDecoderSearch;
     procedure ImportTRIATimes(const AFileName: string);
     procedure RememberAlwaysAcceptChip(const AChipId: string);
@@ -83,7 +89,8 @@ var
 implementation
 
 uses
-  FormMain, SmartTiming.Cache, SmartTiming.TransponderAssignment, Tools.Logger;
+  FormMain, SmartTiming.Cache, SmartTiming.TransponderAssignment, Tools.Logger,
+  System.DateUtils;
 
 const
   cLogger = 'SmartTiming.Controller';
@@ -325,11 +332,22 @@ end;
 
 {==============================================================================}
 procedure TSmartTimingController.ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus);
+begin
+  ChangeRaceStatus(ARaceId, ARaceStatus, Now);
+end;
+
+{==============================================================================}
+procedure TSmartTimingController.ChangeRaceStatus(ARaceId: Integer; ARaceStatus: TRaceStatus;
+  APassingTime: TDateTime);
 var
   lPassing: TPassing;
   lRaceItem: TRaceItem;
   lUpdateRaceStatus: Boolean;
   lDisplayStatus: TRaceStatus;
+  lList: TList<TPassing>;
+  lExisting: TPassing;
+  lFinishExists: Boolean;
+  i: Integer;
 begin
   try
     LogOnDebug(cLogger, ['ChangeRaceStatus']);
@@ -343,29 +361,53 @@ begin
       if FRaceList.TryGetValue(ARaceId, lRaceItem) then
         lRaceItem.Status := ARaceStatus;
 
-      (* Terminal statuses free chips for reuse in later races. *)
-      if ARaceStatus in [rsFinished, rsAborted, rsStopped] then
+      (* Abort/Stop free chips for later races. Finished keeps assignments open
+         so remaining riders can still score their closing lap. *)
+      if ARaceStatus in [rsAborted, rsStopped] then
         MainDataModule.CloseAllOpenTransponderAssignmentsForRace(ARaceId);
     end;
 
-    lPassing.PassingNumber := MainDataModule.AllocateSyntheticPassingNumber;
-    lPassing.ChipId := '';
-    lPassing.PassingTime := Now;
-    lPassing.SignalStrength := 100;
-    lPassing.Hits := 0 - Ord(ARaceStatus);
-    lPassing.Flags := 2;
-    lPassing.Sport := sSportsIdCycling;
-    lPassing.DecoderId := 'SYSTEM';
-    lPassing.RaceId := ARaceId;
-    lPassing.PassingStatus := Ord(psValid);
-    lPassing.LapIndex := -1;
-    lPassing.CompetitorId := -1;
+    lFinishExists := False;
+    if ARaceStatus = rsFinished then
+    begin
+      lList := TList<TPassing>.Create;
+      try
+        TPassingStore.GetSingleton.FillPassingsForRace(ARaceId, lList);
+        for i := 0 to lList.Count - 1 do
+        begin
+          lExisting := lList[i];
+          if lExisting.IsSystemMarker and (lExisting.Hits = cSystemHitsFinished) then
+          begin
+            lFinishExists := True;
+            Break;
+          end;
+        end;
+      finally
+        FreeAndNil(lList);
+      end;
+    end;
 
-    MainDataModule.AddPassingToDatabase(lPassing, ARaceId);
-    (* RecalcCountingLaps reads markers from PassingStore — keep in sync with DB. *)
-    TPassingStore.GetSingleton.AddPassing(lPassing);
+    if not lFinishExists then
+    begin
+      lPassing.PassingNumber := MainDataModule.AllocateSyntheticPassingNumber;
+      lPassing.ChipId := '';
+      lPassing.PassingTime := APassingTime;
+      lPassing.SignalStrength := 100;
+      lPassing.Hits := 0 - Ord(ARaceStatus);
+      lPassing.Flags := 2;
+      lPassing.Sport := sSportsIdCycling;
+      lPassing.DecoderId := 'SYSTEM';
+      lPassing.RaceId := ARaceId;
+      lPassing.PassingStatus := Ord(psValid);
+      lPassing.LapIndex := -1;
+      lPassing.CompetitorId := -1;
 
-    GFormMain.AddPassingForRaceId(ARaceId, lPassing);
+      MainDataModule.AddPassingToDatabase(lPassing, ARaceId);
+      (* RecalcCountingLaps reads markers from PassingStore — keep in sync with DB. *)
+      TPassingStore.GetSingleton.AddPassing(lPassing);
+
+      GFormMain.AddPassingForRaceId(ARaceId, lPassing);
+    end;
 
     if lUpdateRaceStatus then
       lDisplayStatus := ARaceStatus
@@ -374,9 +416,68 @@ begin
     else
       lDisplayStatus := rsStarted;
     GFormMain.RefreshFlagButtonsActive(lDisplayStatus);
+    if lUpdateRaceStatus then
+      GFormMain.RefreshRacesListBox;
   except
     LogAndRaise(ExceptObject, cLogger, Tools.Logger.Error, ['ChangeRaceStatus']);
   end;
+end;
+
+{==============================================================================}
+function TSmartTimingController.EnsureFinishFlagBeforeLeader(ARaceId: Integer;
+  ALeaderFinishTime: TDateTime): Boolean;
+var
+  lList: TList<TPassing>;
+  lPassing: TPassing;
+  lRaceItem: TRaceItem;
+  lFlagTime: TDateTime;
+  i: Integer;
+begin
+  Result := False;
+  if (ARaceId < 0) or (ALeaderFinishTime <= 0) then
+    Exit;
+
+  lList := TList<TPassing>.Create;
+  try
+    TPassingStore.GetSingleton.FillPassingsForRace(ARaceId, lList);
+    for i := 0 to lList.Count - 1 do
+    begin
+      lPassing := lList[i];
+      if lPassing.IsSystemMarker and (lPassing.Hits = cSystemHitsFinished) then
+        Exit;
+    end;
+  finally
+    FreeAndNil(lList);
+  end;
+
+  lFlagTime := IncMilliSecond(ALeaderFinishTime, -1);
+  (* Insert marker only into DB/store; caller rebuilds the protocol so the flag
+     sorts 1ms before the leader instead of appending at the list end. *)
+  lPassing.PassingNumber := MainDataModule.AllocateSyntheticPassingNumber;
+  lPassing.ChipId := '';
+  lPassing.PassingTime := lFlagTime;
+  lPassing.SignalStrength := 100;
+  lPassing.Hits := cSystemHitsFinished;
+  lPassing.Flags := 2;
+  lPassing.Sport := sSportsIdCycling;
+  lPassing.DecoderId := 'SYSTEM';
+  lPassing.RaceId := ARaceId;
+  lPassing.PassingStatus := Ord(psValid);
+  lPassing.LapIndex := -1;
+  lPassing.CompetitorId := -1;
+
+  MainDataModule.AddPassingToDatabase(lPassing, ARaceId);
+  TPassingStore.GetSingleton.AddPassing(lPassing);
+
+  MainDataModule.SetRaceStatus(ARaceId, rsFinished);
+  if FRaceList.TryGetValue(ARaceId, lRaceItem) then
+    lRaceItem.Status := rsFinished;
+
+  (* Do not RefreshRacesListBox here: ProcessMessages would refresh the ranking
+     while LAPS may still be 0 (Recalc) and then skip the real refresh. *)
+  if GFormMain <> nil then
+    GFormMain.RefreshFlagButtonsActive(rsFinished);
+  Result := True;
 end;
 
 {==============================================================================}
@@ -705,27 +806,34 @@ function TSmartTimingController.AfterChipAssignedToCompetitor(ARaceId, ACompetit
   const AChipId: string): Integer;
 var
   lRaceItem: TRaceItem;
+  lEngine: TCustomRaceEngine;
+  lResult: Integer;
 begin
   Result := 0;
-  lRaceItem := nil;
+  lEngine := nil;
   if (ARaceId >= 0) and FRaceList.TryGetValue(ARaceId, lRaceItem) and
-     (lRaceItem.RaceEngine <> nil) then
-    lRaceItem.RaceEngine.CancelPassingListDrag;
-  try
+     (lRaceItem <> nil) then
+    lEngine := lRaceItem.RaceEngine;
+
+  if lEngine = nil then
+  begin
     Result := TTransponderAssignmentService.ReattachOrphanPassingsForChip(
       ARaceId, ACompetitorId, AChipId);
-    if (ARaceId < 0) or not FRaceList.TryGetValue(ARaceId, lRaceItem) then
-      Exit;
-    if lRaceItem.RaceEngine = nil then
-      Exit;
-    lRaceItem.RaceEngine.RecalcCountingLaps;
-    lRaceItem.RaceEngine.ReassignLapsForRace;
-    lRaceItem.RaceEngine.RebuildProtocolDisplay;
-    lRaceItem.RaceEngine.RefreshRankingDisplay;
-  finally
-    if (lRaceItem <> nil) and (lRaceItem.RaceEngine <> nil) then
-      lRaceItem.RaceEngine.RestorePassingListDrag;
+    Exit;
   end;
+
+  lResult := 0;
+  lEngine.WithPassingListDragLocked(
+    procedure
+    begin
+      lResult := TTransponderAssignmentService.ReattachOrphanPassingsForChip(
+        ARaceId, ACompetitorId, AChipId);
+      lEngine.RecalcCountingLaps;
+      lEngine.ReassignLapsForRace;
+      lEngine.RebuildProtocolDisplay;
+      lEngine.RefreshRankingDisplay;
+    end);
+  Result := lResult;
 end;
 
 {==============================================================================}

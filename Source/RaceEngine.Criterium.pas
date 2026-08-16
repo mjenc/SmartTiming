@@ -14,9 +14,11 @@
     with fewer laps (e.g. 29), same idea as Circuit — physical crossings when
     the Hauptfeld completes Soll; no artificial cap at Soll for anyone.
   - Lap counting: after the Hauptfeld (non-holdout peak) first reaches
-    TargetLaps, remaining riders with fewer than TargetLaps still score one
-    closing crossing, then stop. Holdouts already at/above Target keep
-    Soll+N and are not incremented again.
+    TargetLaps, a Ziel-Flagge is placed automatically 1ms before that
+    crossing (still movable). The operator may also wave finish early.
+    Remaining riders with fewer than TargetLaps still score one closing
+    crossing, then stop. Holdouts already at/above Target keep Soll+N and
+    are not incremented again.
 
   Points
   - Flagge Punkte (rsPointsSprint): next up to four peak passings get 5/3/2/1.
@@ -45,9 +47,11 @@ type
     function IsNewLeaderMarker(const APassing: TPassing): Boolean;
     function IsStartMarker(const APassing: TPassing): Boolean;
     function IsBreakMarker(const APassing: TPassing): Boolean;
+    function IsFinishMarker(const APassing: TPassing): Boolean;
   protected
     function SupportsNewLeaderFlag: Boolean; override;
     function SupportsPointsSprintFlag: Boolean; override;
+    function CanAutoPlaceFinishFlagOnPassing(const APassing: TPassing): Boolean; override;
     procedure UpdateParticipationTable(ACurrentPassingId: integer); override;
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject;
@@ -125,6 +129,15 @@ begin
 end;
 
 {==============================================================================}
+function TCriteriumRaceEngine.CanAutoPlaceFinishFlagOnPassing(
+  const APassing: TPassing): Boolean;
+begin
+  (* Holdouts can reach TargetLaps before the Hauptfeld; auto-finish is
+     triggered from ApplyCriteriumScoring when the field peak hits Soll. *)
+  Result := False;
+end;
+
+{==============================================================================}
 function TCriteriumRaceEngine.IsStartMarker(const APassing: TPassing): Boolean;
 begin
   Result := APassing.IsSystemMarker and (APassing.Hits = cSystemHitsStarted);
@@ -137,6 +150,12 @@ begin
     ((APassing.Hits = cSystemHitsNotStarted) or
      (APassing.Hits = cSystemHitsNeutralized) or
      (APassing.Hits = cSystemHitsStopped));
+end;
+
+{==============================================================================}
+function TCriteriumRaceEngine.IsFinishMarker(const APassing: TPassing): Boolean;
+begin
+  Result := APassing.IsSystemMarker and (APassing.Hits = cSystemHitsFinished);
 end;
 
 {==============================================================================}
@@ -167,6 +186,8 @@ var
   lSprintArmed: Boolean;
   lSprintDouble: Boolean;
   lFieldDistanceDone: Boolean;
+  lHadFinishFlag: Boolean;
+  lAutoFinishLeaderTime: TDateTime;
   lSlotsLeft: Integer;
   lCompetitorId: Integer;
   lLaps: Integer;
@@ -273,6 +294,8 @@ begin
     lSprintArmed := False;
     lSprintDouble := False;
     lFieldDistanceDone := False;
+    lHadFinishFlag := False;
+    lAutoFinishLeaderTime := 0;
     lSlotsLeft := 0;
 
     for i := 0 to lList.Count - 1 do
@@ -282,6 +305,14 @@ begin
       if IsStartMarker(lPassing) then
       begin
         lInActive := True;
+        Continue;
+      end;
+      if IsFinishMarker(lPassing) then
+      begin
+        (* Early Ziel (rain) or checkered: start closing, keep scoring one more. *)
+        lHadFinishFlag := True;
+        if lInActive then
+          lFieldDistanceDone := True;
         Continue;
       end;
       if IsBreakMarker(lPassing) then
@@ -352,6 +383,8 @@ begin
       ClearHoldoutsCaughtByField;
       if MaxEligiblePeakLap >= lTargetLaps then
       begin
+        if not lFieldDistanceDone then
+          lAutoFinishLeaderTime := lPassing.PassingTime;
         lFieldDistanceDone := True;
         lClosingDone.AddOrSetValue(lCompetitorId, True);
       end;
@@ -440,6 +473,10 @@ begin
         MainDataModule.UpdateParticipationValues(lParticipationId, lFields, lValues);
       end;
     end;
+
+    (* After LAPS are persisted — avoids ranking refresh while still at 0. *)
+    if (lAutoFinishLeaderTime > 0) and not lHadFinishFlag then
+      PlaceAutoFinishFlagAt(lAutoFinishLeaderTime);
   finally
     FreeAndNil(lClosingDone);
     FreeAndNil(lAwardedThisSprint);
@@ -479,6 +516,7 @@ begin
     MainDataModule.ResetRaceParticitipations(FRaceItem.Id);
     FLastConsideredPassingId := 0;
     ApplyCriteriumScoring;
+    ReassignLapsForRace;
 
     (* Advance cursor past decoder passings so live scoring does not re-walk them. *)
     lMaxDecoderId := 0;
@@ -501,6 +539,12 @@ begin
     MainDataModule.SQLConnection.RollbackFreeAndNil(lTransaction);
     raise;
   end;
+  if FAutoFinishJustPlaced then
+  begin
+    FAutoFinishJustPlaced := False;
+    RebuildProtocolDisplay;
+  end;
+  FLastChangeTimestamp := Now;
   RefreshRankingDisplay;
 end;
 
@@ -508,7 +552,8 @@ end;
 procedure TCriteriumRaceEngine.AddPassingToDisplay(APassing: TPassing; AAutoScroll: boolean);
 begin
   inherited;
-  if IsPointsSprintMarker(APassing) or IsNewLeaderMarker(APassing) then
+  if IsPointsSprintMarker(APassing) or IsNewLeaderMarker(APassing) or
+     IsFinishMarker(APassing) then
     ApplyCriteriumScoring;
 end;
 

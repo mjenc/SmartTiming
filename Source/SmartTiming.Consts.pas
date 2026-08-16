@@ -269,8 +269,10 @@ const
   cUnassignedPassingsDisplayLimit = 500;
   (* Race statuses that block parallel chip reuse (Plan 2). *)
   cActiveRaceStatusesForChipConflict: TRaceStates = [rsWarmUp, rsStarted, rsNeutralized];
-  (* Race statuses that accept scored live passings (legacy: Started only). *)
-  cRaceStatusesAcceptingPassings: TRaceStates = [rsStarted];
+  (* Race statuses that accept scored live passings.
+     Finished stays open so mass-start riders can still take their closing lap
+     after the checkered flag (manual or auto). *)
+  cRaceStatusesAcceptingPassings: TRaceStates = [rsStarted, rsFinished];
 
 type
   TFinishStatus = (fsFinished, fsDNS, fsDNF, fsDSQ);

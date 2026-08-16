@@ -10,9 +10,11 @@
     flag times (except Warm-Up) may be moved via menu or drag&drop if the operator
     was late — place the start flag before the first rider who crossed the loop
     after the gun. Warm-Up stays fixed because it activates capture.
-  - When the first rider in the race reaches that count, remaining riders
-    still score one more crossing (their finish). After that closing
-    crossing, scoring stops for that rider (no cooldown laps).
+  - When the first rider reaches that count, a Ziel-Flagge is placed
+    automatically 1ms before that crossing (still movable). The operator
+    may also wave the finish flag early (rain). Remaining riders still
+    score one more crossing (their finish). After that closing crossing,
+    scoring and protocol LapIndex stop for that rider (cooldown = Auslauf).
   - Ranking prefers more laps (lapped riders behind), then finish time.
   - One overall ranking for the race. Class results (_BYCLASS) only filter that
     order by CLASS and renumber places — no separate scoring per class.
@@ -33,7 +35,13 @@ type
     FRankingGridFormatInitialized: boolean;
     FSQLGroupingString: string;
     FSQLSortingString: string;
+    FClosingStartResolved: Boolean;
+    FHasClosingStart: Boolean;
+    FClosingStartTime: TDateTime;
+    procedure InvalidateClosingStartCache;
+    function TryGetClosingStartTime(out ACloseTime: TDateTime): Boolean;
   protected
+    FAutoFinishJustPlaced: Boolean;
     function TryGetGreenFlagStartTime(out AStartTime: TDateTime): Boolean;
     function FinishFlagEndsLapCounting: Boolean; override;
     procedure UpdateParticipationTable(ACurrentPassingId: integer); override;
@@ -44,6 +52,8 @@ type
     function GetPassingDisplay: TWinControl; override;
     procedure AssignLap(var APassing: TPassing); override;
     procedure AppendPassingListItem(const APassing: TPassing; AAutoScroll: Boolean); override;
+    function CanAutoPlaceFinishFlagOnPassing(const APassing: TPassing): Boolean; virtual;
+    function PlaceAutoFinishFlagAt(ALeaderFinishTime: TDateTime): Boolean;
   public
     constructor Create(AParent: TWinControl; AEvent: TEventDataObject;
       ARaceItem: TRaceItem); override;
@@ -112,6 +122,10 @@ begin
   FRankingQuery := GetRankingSQL(False);
   FSQLDataSetRankings.CommandText := FRankingQuery;
   FRankingGridFormatInitialized := False;
+  FClosingStartResolved := False;
+  FHasClosingStart := False;
+  FClosingStartTime := 0;
+  FAutoFinishJustPlaced := False;
 end;
 
 {==============================================================================}
@@ -163,6 +177,131 @@ begin
 end;
 
 {==============================================================================}
+procedure TCircuitRaceEngine.InvalidateClosingStartCache;
+begin
+  FClosingStartResolved := False;
+  FHasClosingStart := False;
+  FClosingStartTime := 0;
+end;
+
+{==============================================================================}
+function TCircuitRaceEngine.TryGetClosingStartTime(out ACloseTime: TDateTime): Boolean;
+var
+  lList: TList<TPassing>;
+  lPassing: TPassing;
+  lLapsByCompetitor: TDictionary<Integer, Integer>;
+  lGreenFlagStart: TDateTime;
+  lHasGreenFlag: Boolean;
+  lHasFlag: Boolean;
+  lHasLeader: Boolean;
+  lFlagTime: TDateTime;
+  lLeaderTime: TDateTime;
+  lCompetitorId: Integer;
+  lCount: Integer;
+  lLaps: Integer;
+  lTargetLaps: Integer;
+  i: Integer;
+begin
+  if FClosingStartResolved then
+  begin
+    Result := FHasClosingStart;
+    ACloseTime := FClosingStartTime;
+    Exit;
+  end;
+
+  Result := False;
+  ACloseTime := 0;
+  lTargetLaps := FRaceItem.Laps;
+  lHasGreenFlag := TryGetGreenFlagStartTime(lGreenFlagStart);
+  lHasFlag := False;
+  lHasLeader := False;
+  lFlagTime := 0;
+  lLeaderTime := 0;
+
+  lList := TList<TPassing>.Create;
+  lLapsByCompetitor := TDictionary<Integer, Integer>.Create;
+  try
+    TPassingStore.GetSingleton.FillPassingsForRace(FRaceItem.Id, lList);
+    lList.Sort(
+      TComparer<TPassing>.Construct(
+        function(const Left, Right: TPassing): Integer
+        begin
+          Result := CompareDateTime(Left.PassingTime, Right.PassingTime);
+          if Result = 0 then
+            Result := Left.PassingNumber - Right.PassingNumber;
+        end));
+
+    for i := 0 to lList.Count - 1 do
+    begin
+      lPassing := lList[i];
+      if lPassing.IsSystemMarker then
+      begin
+        if lPassing.Hits <> cSystemHitsFinished then
+          Continue;
+        if lHasGreenFlag and (Frac(lPassing.PassingTime) < lGreenFlagStart) then
+          Continue;
+        if (not lHasFlag) or (CompareDateTime(lPassing.PassingTime, lFlagTime) < 0) then
+        begin
+          lFlagTime := lPassing.PassingTime;
+          lHasFlag := True;
+        end;
+        Continue;
+      end;
+
+      if lHasLeader or (lTargetLaps <= 0) then
+        Continue;
+      if lPassing.PassingStatus <> Ord(psValid) then
+        Continue;
+      if lHasGreenFlag and (Frac(lPassing.PassingTime) < lGreenFlagStart) then
+        Continue;
+
+      lCompetitorId := lPassing.CompetitorId;
+      if lCompetitorId < 0 then
+      begin
+        if not TTransponderAssignmentService.TryGetCompetitorForRaceChipAtTime(
+             FRaceItem.Id, lPassing.ChipId, lPassing.PassingTime, lCompetitorId) then
+          Continue;
+      end;
+
+      if not lLapsByCompetitor.TryGetValue(lCompetitorId, lCount) then
+        lCount := 0;
+      Inc(lCount);
+      lLapsByCompetitor.AddOrSetValue(lCompetitorId, lCount);
+      if FRaceItem.FirstPassingIsLap then
+        lLaps := lCount
+      else
+        lLaps := lCount - 1;
+      if lLaps >= lTargetLaps then
+      begin
+        lLeaderTime := lPassing.PassingTime;
+        lHasLeader := True;
+      end;
+    end;
+  finally
+    FreeAndNil(lLapsByCompetitor);
+    FreeAndNil(lList);
+  end;
+
+  (* Auto Ziel-Flagge sits 1ms before the leader for list order only. Scoring
+     must close at the leader finish so that crossing still gets LapIndex/LAPS.
+     Manual early finish (flag only) still closes at the flag time. *)
+  if lHasLeader then
+  begin
+    ACloseTime := lLeaderTime;
+    Result := True;
+  end
+  else if lHasFlag then
+  begin
+    ACloseTime := lFlagTime;
+    Result := True;
+  end;
+
+  FClosingStartResolved := True;
+  FHasClosingStart := Result;
+  FClosingStartTime := ACloseTime;
+end;
+
+{==============================================================================}
 procedure TCircuitRaceEngine.AfterOpenRankingResultSet(ADataSet: TDataSet);
 begin
   if (FRankingGrid = nil) or FRankingGridFormatInitialized then
@@ -198,6 +337,8 @@ end;
 {==============================================================================}
 procedure TCircuitRaceEngine.AddPassingToDisplay(APassing: TPassing; AAutoScroll: boolean);
 begin
+  InvalidateClosingStartCache;
+  FAutoFinishJustPlaced := False;
   if not APassing.IsSystemMarker then
   begin
     AssignLap(APassing);
@@ -205,12 +346,38 @@ begin
       APassing.PassingNumber, APassing.LapIndex, APassing.CompetitorId);
     UpdateParticipationTable(APassing.PassingNumber);
     FLastChangeTimestamp := Now;
+    if CanAutoPlaceFinishFlagOnPassing(APassing) then
+      PlaceAutoFinishFlagAt(APassing.PassingTime);
+  end;
+
+  if FAutoFinishJustPlaced then
+  begin
+    FAutoFinishJustPlaced := False;
+    InvalidateClosingStartCache;
+    RebuildProtocolDisplay;
+    Exit;
   end;
 
   if not PassingMatchesFilter(APassing) then
     Exit;
 
   AppendPassingListItem(APassing, AAutoScroll);
+end;
+
+{==============================================================================}
+function TCircuitRaceEngine.CanAutoPlaceFinishFlagOnPassing(
+  const APassing: TPassing): Boolean;
+begin
+  Result := (FRaceItem.Laps > 0) and (APassing.LapIndex >= FRaceItem.Laps);
+end;
+
+{==============================================================================}
+function TCircuitRaceEngine.PlaceAutoFinishFlagAt(ALeaderFinishTime: TDateTime): Boolean;
+begin
+  Result := GSmartTimingController.EnsureFinishFlagBeforeLeader(
+    FRaceItem.Id, ALeaderFinishTime);
+  if Result then
+    FAutoFinishJustPlaced := True;
 end;
 
 {==============================================================================}
@@ -260,11 +427,16 @@ var
   lList: TList<TPassing>;
   lOther: TPassing;
   lPriorValid: Integer;
+  lValidAtOrBeforeClose: Integer;
+  lValidAfterCloseBeforeThis: Integer;
   lChipKey: string;
   lCompetitorId: Integer;
   lOrdinal: Integer;
+  lLapsAtClose: Integer;
   lGreenFlagStart: TDateTime;
   lHasGreenFlag: Boolean;
+  lCloseTime: TDateTime;
+  lHasClose: Boolean;
   i: Integer;
 begin
   APassing.LapIndex := -1;
@@ -291,7 +463,10 @@ begin
   if lHasGreenFlag and (Frac(APassing.PassingTime) < lGreenFlagStart) then
     Exit;
 
+  lHasClose := TryGetClosingStartTime(lCloseTime);
   lPriorValid := 0;
+  lValidAtOrBeforeClose := 0;
+  lValidAfterCloseBeforeThis := 0;
   lList := TList<TPassing>.Create;
   try
     TPassingStore.GetSingleton.FillPassingsForRace(FRaceItem.Id, lList);
@@ -314,9 +489,29 @@ begin
          (lOther.PassingNumber > APassing.PassingNumber) then
         Continue;
       Inc(lPriorValid);
+      if not lHasClose then
+        Continue;
+      if CompareDateTime(lOther.PassingTime, lCloseTime) <= 0 then
+        Inc(lValidAtOrBeforeClose)
+      else
+        Inc(lValidAfterCloseBeforeThis);
     end;
   finally
     FreeAndNil(lList);
+  end;
+
+  if lHasClose and (CompareDateTime(APassing.PassingTime, lCloseTime) > 0) then
+  begin
+    if FRaceItem.FirstPassingIsLap then
+      lLapsAtClose := lValidAtOrBeforeClose
+    else
+      lLapsAtClose := lValidAtOrBeforeClose - 1;
+    if lLapsAtClose < 0 then
+      lLapsAtClose := 0;
+    if (FRaceItem.Laps > 0) and (lLapsAtClose >= FRaceItem.Laps) then
+      Exit;
+    if lValidAfterCloseBeforeThis >= 1 then
+      Exit;
   end;
 
   lOrdinal := lPriorValid + 1;
@@ -333,6 +528,7 @@ var
   lPassing: TPassing;
   i: Integer;
 begin
+  InvalidateClosingStartCache;
   lList := TList<TPassing>.Create;
   try
     TPassingStore.GetSingleton.FillPassingsForRace(FRaceItem.Id, lList);
@@ -374,33 +570,11 @@ var
   lIgnoredStartTime: TDatetime;
   lFinishTime: TDatetime;
   lRankingTime: TDatetime;
-  lRaceFinishTime: TDatetime;
-  lRaceAlreadyFinished: Boolean;
   lTargetLaps: Integer;
-  lStoredLaps: Integer;
   lGreenFlagStart: TDateTime;
   lHasGreenFlag: Boolean;
   lSorted: TList<TPassing>;
   i: Integer;
-
-  function RiderAlreadyTookClosingLap(AParticipationId: Integer): Boolean;
-  var
-    lText: string;
-    lStoredFinish: TDateTime;
-    lFmt: TFormatSettings;
-  begin
-    Result := False;
-    lText := Trim(MainDataModule.GetParticipationStringField(AParticipationId, 'FINISHTIME'));
-    if lText = '' then
-      Exit;
-    lFmt := TFormatSettings.Create;
-    lFmt.TimeSeparator := ':';
-    lFmt.DecimalSeparator := '.';
-    if not TryStrToTime(lText, lStoredFinish, lFmt) then
-      if not TryStrToDateTime(lText, lStoredFinish, lFmt) then
-        Exit;
-    Result := Frac(lStoredFinish) > lRaceFinishTime;
-  end;
 
   procedure ApplyPassingToParticipation(const APassing: TPassing);
   begin
@@ -417,28 +591,16 @@ var
     if lTargetLaps <= 0 then
       Exit;
 
-    (* LapIndex from AssignLap is authoritative (avoids stuck LAPS=0 when
-       FirstPassingIsLap=false). LapIndex 0 = first approach, not yet a lap. *)
+    (* LapIndex from AssignLap is authoritative, including freeze after the
+       closing crossing (LapIndex = -1 → Auslauf, not scored). *)
     lLaps := APassing.LapIndex;
     if lLaps <= 0 then
       Exit;
 
-    lRaceAlreadyFinished := MainDataModule.TryGetRaceFinishTimeByTargetLaps(
-      FRaceItem.Id, lTargetLaps, lRaceFinishTime);
-
-    lStoredLaps := MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, APassing.ChipId,
+    MainDataModule.GetNumberOfLapsForParticipant(FRaceItem.Id, APassing.ChipId,
       APassing.PassingTime, lParticipationId, lIgnoredStartTime);
     if lParticipationId < 0 then
       Exit;
-
-    (* Leader reached Soll: others still get one closing crossing, then freeze. *)
-    if lRaceAlreadyFinished and (Frac(APassing.PassingTime) > lRaceFinishTime) then
-    begin
-      if lStoredLaps >= lTargetLaps then
-        Exit;
-      if RiderAlreadyTookClosingLap(lParticipationId) then
-        Exit;
-    end;
 
     if lLaps > lTargetLaps then
       lLaps := lTargetLaps;
