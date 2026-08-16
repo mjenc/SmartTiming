@@ -411,6 +411,18 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="..\Templates\ResultListCircuit.xlsx" Configuration="Debug" Class="File">
+                    <Platform Name="Win32">
+                        <RemoteName>ResultListCircuit.xlsx</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="..\Templates\StartListCircuit.xlsx" Configuration="Debug" Class="File">
+                    <Platform Name="Win32">
+                        <RemoteName>StartListCircuit.xlsx</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="..\Templates\ResultListPoints.xlsx" Configuration="Debug" Class="File">
                     <Platform Name="Win32">
                         <RemoteName>ResultListPoints.xlsx</RemoteName>

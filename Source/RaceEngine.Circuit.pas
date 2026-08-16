@@ -47,9 +47,11 @@ type
     procedure UpdateParticipationTable(ACurrentPassingId: integer); override;
     procedure AfterOpenRankingResultSet(ADataSet: TDataSet); override;
     procedure SetRankingGroupedByClass(AValue: boolean); override;
+    procedure OnGetResultFieldValue(ACol: Integer; ADataSet: TDataSet; var AValue: string);
     procedure OnPassingItemCompare(ASender: TObject; AItem1, AItem2: TListItem;
       AData: Integer; var ACompare: Integer); override;
     function GetPassingDisplay: TWinControl; override;
+    function GetResultSQL(AGroupByClass: Boolean): string; override;
     procedure AssignLap(var APassing: TPassing); override;
     procedure AppendPassingListItem(const APassing: TPassing; AAutoScroll: Boolean); override;
     function CanAutoPlaceFinishFlagOnPassing(const APassing: TPassing): Boolean; virtual;
@@ -72,8 +74,8 @@ type
 implementation
 
 uses
-  SmartTiming.GridFormatProvider, System.Generics.Defaults,
-  SmartTiming.TransponderAssignment, Vcl.Dialogs;
+  Report.ExcelTemplateFiller, SmartTiming.GridFormatProvider,
+  System.Generics.Defaults, SmartTiming.TransponderAssignment, Vcl.Dialogs;
 
 {==============================================================================}
 constructor TCircuitRaceEngine.Create(AParent: TWinControl; AEvent: TEventDataObject;
@@ -85,8 +87,9 @@ begin
     'FROM RANKING_CIRCUIT%1:s ' +
     'WHERE RACEID = %0:s %3:s ' +
     'ORDER BY %2:s DNS, DNF, DSQ, LAPS DESC, FINISHTIME IS NULL, FINISHTIME, BIB';
+  (* Column order matches ResultListCircuit.xlsx (CLASS/DNS/DNF/DSQ are filler-internal). *)
   FResultSQLFormat :=
-    'SELECT CURRENTRANKING, CLASS, BIB, NAME, TEAM, UCIID, LAPS, RANKINGTIME, GAP, ' +
+    'SELECT CURRENTRANKING, CLASS, BIB, NAME, TEAM, UCIID, RANKINGTIME, LAPS, GAP, ' +
     'DNS, DNF, DSQ ' +
     'FROM RANKING_CIRCUIT%1:s ' +
     'WHERE RACEID = %0:s ' +
@@ -679,22 +682,148 @@ begin
 end;
 
 {==============================================================================}
-procedure TCircuitRaceEngine.ExportParticipantsToExcelTemplate(const AOutputFile: string);
+function TCircuitRaceEngine.GetResultSQL(AGroupByClass: Boolean): string;
+var
+  lView: string;
+  lClassCorr: string;
+  lOrderPrefix: string;
 begin
-  SmartTimingTools.ShowDialog(cMessagesRaceEngineSkeletonExport, '', [tcbOk], tcbOk);
+  if AGroupByClass then
+  begin
+    lView := 'RANKING_CIRCUIT_BYCLASS';
+    lClassCorr := ' AND L.CLASS = V.CLASS';
+    lOrderPrefix := 'V.CLASS, ';
+  end
+  else
+  begin
+    lView := 'RANKING_CIRCUIT';
+    lClassCorr := '';
+    lOrderPrefix := '';
+  end;
+
+  (* Gap to leader: same laps -> finish-time delta; fewer laps -> +N Rd.
+     CAST AS TEXT keeps Excel from treating Julian fractions as numbers. *)
+  Result :=
+    'SELECT V.CURRENTRANKING, V.CLASS, V.BIB, V.NAME, V.TEAM, V.UCIID, V.RANKINGTIME, V.LAPS, ' +
+    'CAST(CASE ' +
+    'WHEN IFNULL(V.DNS,0)<>0 OR IFNULL(V.DNF,0)<>0 OR IFNULL(V.DSQ,0)<>0 THEN NULL ' +
+    'WHEN V.CURRENTRANKING = 1 THEN '''' ' +
+    'WHEN IFNULL(V.LAPS,0) < IFNULL((SELECT L.LAPS FROM ' + lView +
+    ' L WHERE L.RACEID = V.RACEID' + lClassCorr + ' AND L.CURRENTRANKING = 1 LIMIT 1),0) ' +
+    'THEN ''+'' || CAST((IFNULL((SELECT L.LAPS FROM ' + lView +
+    ' L WHERE L.RACEID = V.RACEID' + lClassCorr +
+    ' AND L.CURRENTRANKING = 1 LIMIT 1),0) - IFNULL(V.LAPS,0)) AS TEXT) || '' Rd.'' ' +
+    'WHEN V.FINISHTIME IS NOT NULL AND (SELECT L.FINISHTIME FROM ' + lView +
+    ' L WHERE L.RACEID = V.RACEID' + lClassCorr +
+    ' AND L.CURRENTRANKING = 1 LIMIT 1) IS NOT NULL ' +
+    'THEN STRFTIME(''%H:%M:%f'', JULIANDAY(''00:00:00'') + (JULIANDAY(V.FINISHTIME) - JULIANDAY((SELECT L.FINISHTIME FROM ' +
+    lView + ' L WHERE L.RACEID = V.RACEID' + lClassCorr +
+    ' AND L.CURRENTRANKING = 1 LIMIT 1)))) ' +
+    'ELSE NULL END AS TEXT) AS GAP, ' +
+    'V.DNS, V.DNF, V.DSQ ' +
+    'FROM ' + lView + ' V WHERE V.RACEID = ' + FRaceItem.Id.ToString + ' ' +
+    'ORDER BY ' + lOrderPrefix +
+    'V.DNS, V.DNF, V.DSQ, V.LAPS DESC, V.FINISHTIME IS NULL, V.FINISHTIME, V.BIB';
+end;
+
+{==============================================================================}
+procedure TCircuitRaceEngine.OnGetResultFieldValue(ACol: Integer; ADataSet: TDataSet;
+  var AValue: string);
+var
+  lField: TField;
+begin
+  if ACol <> 0 then
+    Exit;
+  lField := ADataSet.FieldByName('DNS');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
+  begin
+    AValue := 'DNS';
+    Exit;
+  end;
+
+  lField := ADataSet.FieldByName('DNF');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
+  begin
+    AValue := 'DNF';
+    Exit;
+  end;
+
+  lField := ADataSet.FieldByName('DSQ');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
+  begin
+    AValue := 'DSQ';
+    Exit;
+  end;
+end;
+
+{==============================================================================}
+procedure TCircuitRaceEngine.ExportParticipantsToExcelTemplate(const AOutputFile: string);
+var
+  lExcelFiller: TExcelFiller;
+  lResultSet: TSQLDataSet;
+begin
+  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
+  try
+    lExcelFiller.TemplateFile := gStdTemplatePath + 'StartListCircuit.xlsx';
+
+    lResultSet := nil;
+    MainDataModule.FillReadOnlyDataSetForSQL(
+      'SELECT C.CLASS, C.BIB, C.LASTNAME || '', '' || C.FIRSTNAME NAME, C.TEAM, C.UCIID ' +
+      'FROM COMPETITORS C INNER JOIN PARTICIPATION P ON C.COMPETITORID = P.COMPETITORID ' +
+      'WHERE RACEID = ' + FRaceItem.Id.ToString + ' ' +
+      'ORDER BY C.CLASS, C.BIB',
+      lResultSet);
+
+    lExcelFiller.FillDataRowsAndSave(gStdDataPath + Format('StartList-%s.xlsx', [FRaceItem.Title]),
+      lResultSet, FRankingGroupedByClass);
+  finally
+    FreeAndNil(lExcelFiller);
+    FreeAndNil(lResultSet);
+  end;
 end;
 
 {==============================================================================}
 procedure TCircuitRaceEngine.ExportResultsToExcelTemplate(const AOutputFile: string;
   AGroupByClass: boolean);
+var
+  lExcelFiller: TExcelFiller;
+  lResultSet: TSQLDataSet;
 begin
-  SmartTimingTools.ShowDialog(cMessagesRaceEngineSkeletonExport, '', [tcbOk], tcbOk);
+  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
+  try
+    lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListCircuit.xlsx';
+    lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
+    lExcelFiller.CommuniqueRaceId := FRaceItem.Id;
+    lResultSet := nil;
+    MainDataModule.FillReadOnlyDataSetForSQL(GetResultSQL(AGroupByClass), lResultSet);
+
+    lExcelFiller.FillDataRowsAndSave(gStdDataPath + Format('Results-%s.xlsx', [FRaceItem.Title]),
+      lResultSet, AGroupByClass);
+  finally
+    FreeAndNil(lExcelFiller);
+    FreeAndNil(lResultSet);
+  end;
 end;
 
 {==============================================================================}
 procedure TCircuitRaceEngine.PrintResults(AGroupByClass: boolean);
+var
+  lExcelFiller: TExcelFiller;
+  lResultSet: TSQLDataSet;
 begin
-  SmartTimingTools.ShowDialog(cMessagesRaceEngineSkeletonExport, '', [tcbOk], tcbOk);
+  lExcelFiller := TExcelFiller.Create(GSmartTimingController.Event, FRaceItem.Title);
+  try
+    lExcelFiller.TemplateFile := gStdTemplatePath + 'ResultListCircuit.xlsx';
+    lExcelFiller.OnGetFieldValue := OnGetResultFieldValue;
+    lExcelFiller.CommuniqueRaceId := FRaceItem.Id;
+    lResultSet := nil;
+    MainDataModule.FillReadOnlyDataSetForSQL(GetResultSQL(AGroupByClass), lResultSet);
+
+    lExcelFiller.FillDataRowsAndPrint(lResultSet, AGroupByClass);
+  finally
+    FreeAndNil(lExcelFiller);
+    FreeAndNil(lResultSet);
+  end;
 end;
 
 {==============================================================================}
