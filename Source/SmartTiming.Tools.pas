@@ -32,6 +32,8 @@ type
     class function GetRaceTypeStringFromEnum(ARaceType: TRaceType): string;
     class function IsRaceTypeSupported(ARaceType: TRaceType): Boolean;
     class function GetSupportedRaceTypes: TRaceTypes;
+    class function GetRaceDetailFields(ARaceType: TRaceType): TRaceDetailFields;
+    class function GetAvailableRaceStatesForType(ARaceType: TRaceType): TRaceStates;
     class function GetRaceStatusEnumFromString(const AValue: string): TRaceStatus;
     class function GetRaceStatusStringFromEnum(ARaceStatus: TRaceStatus): string;
     class procedure GetColorsForRaceStatus(ARaceStatus: TRaceStatus; ASelected: boolean; var ABgColor, AFgColor: TColor);
@@ -252,6 +254,24 @@ end;
 class function SmartTimingTools.GetSupportedRaceTypes: TRaceTypes;
 begin
   Result := [rtIndividualTimeTrial, rtTeamTimeTrial, rtCircuit, rtCriterium];
+end;
+
+{==============================================================================}
+class function SmartTimingTools.GetRaceDetailFields(ARaceType: TRaceType): TRaceDetailFields;
+begin
+  Result := [rdfLaps, rdfFirstPassingIsLap, rdfDistance, rdfMinLapDuration];
+end;
+
+{==============================================================================}
+class function SmartTimingTools.GetAvailableRaceStatesForType(ARaceType: TRaceType): TRaceStates;
+begin
+  Result := [rsNotStarted, rsWarmUp, rsStarted, rsFinished, rsAborted, rsStopped];
+  case ARaceType of
+    rtCircuit:
+      Include(Result, rsNeutralized);
+    rtCriterium:
+      Result := Result + [rsNeutralized, rsNewLeader, rsPointsSprint];
+  end;
 end;
 
 {==============================================================================}

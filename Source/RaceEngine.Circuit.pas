@@ -129,7 +129,7 @@ begin
     '{"Alignment":1,"Fieldname":"COMPETITORID","Visible":false,"Width":-1,"Index":15}]}';
 
   inherited Create(AParent, AEvent, ARaceItem);
-  (* Custom default already allows all race states. *)
+  (* Flag set comes from GetAvailableRaceStatesForType (Circuit: +Neutralize). *)
 
   FRankingQuery := GetRankingSQL(False);
   FSQLDataSetRankings.CommandText := FRankingQuery;

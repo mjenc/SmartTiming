@@ -127,6 +127,7 @@ resourcestring
   cFieldTitleHandicapFactor = 'Handicapfaktor';
 
   cFieldTitleLap = 'Runde';
+  cRaceDetailsLapCount = 'Runden';
   cFieldTitlePassingTime = 'Durchgangszeit';
   cFieldTitleGap = 'Gap';
   cFieldTitleChipID = 'ChipID';
@@ -250,6 +251,8 @@ type
   TRaceStatus = (rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped,
     rsNewLeader, rsPointsSprint);
   TRaceStates = set of TRaceStatus;
+  TRaceDetailField = (rdfLaps, rdfFirstPassingIsLap, rdfDistance, rdfMinLapDuration);
+  TRaceDetailFields = set of TRaceDetailField;
 
 const
   (* SYSTEM marker Hits = -Ord(TRaceStatus). Keep CreateSchema.sql HITS filters in sync. *)

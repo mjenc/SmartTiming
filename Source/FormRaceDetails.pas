@@ -32,6 +32,7 @@ type
     procedure ButtonOKClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure ComboBoxRaceTypeChange(Sender: TObject);
   private
     FDataSource: TDataSource;
     FEventId: integer;
@@ -41,6 +42,8 @@ type
     function GetStartDatetime: TDatetime;
     function GetLastUsedRaceType: TRaceType;
     procedure SaveLastUsedRaceType(ARaceType: TRaceType);
+    function GetSelectedRaceType: TRaceType;
+    procedure ApplyRaceTypeFields;
   public
     constructor Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean; AEventDate: TDatetime); reintroduce;
   end;
@@ -133,6 +136,7 @@ begin
   end;
   if ComboBoxRaceType.ItemIndex < 0 then
     ComboBoxRaceType.ItemIndex := 0;
+  ApplyRaceTypeFields;
 
   DBEditLapCount.DataSource := FDataSource;
   DBEditLapCount.DataField := 'LAPS';
@@ -157,6 +161,57 @@ end;
 procedure TFormRaceDetails.FormShow(Sender: TObject);
 begin
   DBEditTitle.SetFocus;
+end;
+
+{==============================================================================}
+function TFormRaceDetails.GetSelectedRaceType: TRaceType;
+begin
+  Result := rtCircuit;
+  if ComboBoxRaceType.ItemIndex >= 0 then
+    Result := TRaceType(Integer(ComboBoxRaceType.Items.Objects[ComboBoxRaceType.ItemIndex]));
+end;
+
+{==============================================================================}
+procedure TFormRaceDetails.ApplyRaceTypeFields;
+var
+  lType: TRaceType;
+  lFields: TRaceDetailFields;
+  lTop: Integer;
+
+  procedure PlaceRow(ALabel, AEdit: TControl; AVisible: Boolean; ARowHeight: Integer);
+  begin
+    if ALabel <> nil then
+    begin
+      ALabel.Visible := AVisible;
+      if AVisible then
+        ALabel.Top := lTop + 3;
+    end;
+    if AEdit <> nil then
+    begin
+      AEdit.Visible := AVisible;
+      if AVisible then
+        AEdit.Top := lTop;
+    end;
+    if AVisible then
+      Inc(lTop, ARowHeight);
+  end;
+
+begin
+  lType := GetSelectedRaceType;
+  lFields := SmartTimingTools.GetRaceDetailFields(lType);
+  LabelLapCount.Caption := cRaceDetailsLapCount;
+
+  lTop := 108;
+  PlaceRow(LabelLapCount, DBEditLapCount, rdfLaps in lFields, 29);
+  PlaceRow(nil, CBFirstPassingCounts, rdfFirstPassingIsLap in lFields, 26);
+  PlaceRow(Label3, DBEditDistance, rdfDistance in lFields, 29);
+  PlaceRow(Label4, EditMinLapDuration, rdfMinLapDuration in lFields, 29);
+end;
+
+{==============================================================================}
+procedure TFormRaceDetails.ComboBoxRaceTypeChange(Sender: TObject);
+begin
+  ApplyRaceTypeFields;
 end;
 
 {==============================================================================}
@@ -190,7 +245,7 @@ begin
     FDataSource.DataSet.FieldByName('RACETYPE').Value :=
       Integer(ComboBoxRaceType.Items.Objects[ComboBoxRaceType.ItemIndex])
   else
-    FDataSource.DataSet.FieldByName('RACETYPE').Value := Ord(rtIndividualTimeTrial);
+    FDataSource.DataSet.FieldByName('RACETYPE').Value := Ord(rtCircuit);
   if CBFirstPassingCounts.Checked then
     FDataSource.DataSet.FieldByName('FIRSTPASSINGISLAP').Value := 1
   else

@@ -31,8 +31,8 @@ Die Basisklasse `TCustomRaceEngine` und die Factory `TRaceEngineFactory` sind de
 2. ITT hinter der bestehenden Implementierung belassen (Referenzverhalten, keine Fachänderung). — **erledigt**
 3. Skelette anlegen: `RaceEngine.Circuit`, `RaceEngine.Criterium`, `RaceEngine.TeamTimeTrial` (TTT nicht mehr leere ITT-Ableitung). — **erledigt**
    (gemeinsame Basis `RaceEngine.Skeleton`; Platzhalter-Ranking ohne Scoring; Export/Druck Hinweis)
-4. Pro Engine definieren: `AvailableRaceStates`, `UpdateParticipationTable`, Ranking-SQL-Hook. — **teilweise**
-   - **AvailableRaceStates:** alle Engines erlauben den vollen Statussatz (ITT/TTT-Einschränkung entfernt).
+4. Pro Engine definieren: `AvailableRaceStates`, `UpdateParticipationTable`, Ranking-SQL-Hook. — **erledigt** (TTT Scoring bleibt Skeleton)
+   - **AvailableRaceStates:** ITT/TTT ohne Neutralisation/NS/PK; Circuit +Neutralisation; Criterium +Neutralisation+NS+PK (`GetAvailableRaceStatesForType`).
    - **Circuit:** Scoring + `RANKING_CIRCUIT` / `_BYCLASS` — gleiche Soll-Runden für alle Klassen;
      gemeinsamer Start = grüne Flagge (SYSTEM/`rsStarted`, F5, einmal pro Rennen);
      Flaggenzeiten verschiebbar (Korrektur-UI / Drag&Drop) außer Warm-Up (aktiviert Erfassung);
@@ -49,11 +49,13 @@ Die Basisklasse `TCustomRaceEngine` und die Factory `TRaceEngineFactory` sind de
      erreicht. PK → 5/3/2/1 race-weit (Schlussrunde doppelt bei Peak ≥ Soll−1).
      **Gesamtranking**; `_BYCLASS` = Filter der Gesamtordnung nach Klasse (keine neue
      Punktevergabe). Ranking: Runden, Punkte, späterer Punktgewinn.
-   - TTT: weiterhin Skeleton (Schritt 4 Rest).
+   - TTT: Skeleton (Scoring später, Plan 8e).
 5. Controller und WebService: Ranking nur noch über Engine-API, nicht über hardcodierte View-Namen.
    (teilweise durch Plan 7 abgedeckt — bei neuen Engines prüfen)
-6. UI/Factory für neue Typen verdrahten; unbekannte Typen ablehnen (keine DB-Migrationspfade).
-   (Combo über `GetSupportedRaceTypes` bereits; typabhängige Felder noch offen)
+6. UI/Factory für neue Typen verdrahten; unbekannte Typen ablehnen (keine DB-Migrationspfade). — **erledigt**
+   (Combo über `GetSupportedRaceTypes`; Runden-Feld durchgängig „Runden“;
+   FirstPassingIsLap und MinLapDuration für alle Typen; Renntyp auch nach Start änderbar;
+   Flaggen aus `AvailableRaceStates` inkl. NS/PK.)
 
 ## Abhängigkeiten
 

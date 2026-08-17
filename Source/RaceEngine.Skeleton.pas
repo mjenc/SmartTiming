@@ -68,8 +68,6 @@ begin
   if FRankingSQLFormat = '' then
     ApplySkeletonFormats('.Skeleton');
   inherited Create(AParent, AEvent, ARaceItem);
-  FAvailableRaceStates :=
-    [rsNotStarted, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped];
   FRankingQuery := GetRankingSQL(False);
   FSQLDataSetRankings.CommandText := FRankingQuery;
 end;

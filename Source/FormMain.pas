@@ -1381,6 +1381,10 @@ procedure TFormMain.RefreshFlagButtonsVisibility(ARaceItem: TRaceItem);
       Exit(ButtonAbort);
     rsStopped:
       Exit(ButtonStop);
+    rsNewLeader:
+      Exit(ButtonNewLeader);
+    rsPointsSprint:
+      Exit(ButtonPointsSprint);
     else
       Exit(nil);
     end;
@@ -1395,7 +1399,7 @@ begin
   lRaceStates := ARaceItem.RaceEngine.AvailableRaceStates;
 
   lLeftPos := 16;
-  for lRaceStatus := rsNotStarted to rsStopped do
+  for lRaceStatus := Low(TRaceStatus) to High(TRaceStatus) do
   begin
     lButton := GetButtonForStatus(lRaceStatus);
     if lButton = nil then
@@ -1403,32 +1407,13 @@ begin
 
     if not (lRaceStatus in lRaceStates) then
     begin
-      if lButton <> nil then
-        lButton.Visible := false;
+      lButton.Visible := False;
       Continue;
     end;
-    lButton.Visible := true;
+    lButton.Visible := True;
     lButton.Left := lLeftPos;
     Inc(lLeftPos, lButton.Width + 6);
   end;
-
-  (* Criterium event flags — not part of the race-status FSM. *)
-  if ARaceItem.RaceEngine.SupportsNewLeaderFlag then
-  begin
-    ButtonNewLeader.Visible := True;
-    ButtonNewLeader.Left := lLeftPos;
-    Inc(lLeftPos, ButtonNewLeader.Width + 6);
-  end
-  else
-    ButtonNewLeader.Visible := False;
-
-  if ARaceItem.RaceEngine.SupportsPointsSprintFlag then
-  begin
-    ButtonPointsSprint.Visible := True;
-    ButtonPointsSprint.Left := lLeftPos;
-  end
-  else
-    ButtonPointsSprint.Visible := False;
 end;
 
 {==============================================================================}

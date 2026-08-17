@@ -49,8 +49,6 @@ type
     function IsBreakMarker(const APassing: TPassing): Boolean;
     function IsFinishMarker(const APassing: TPassing): Boolean;
   protected
-    function SupportsNewLeaderFlag: Boolean; override;
-    function SupportsPointsSprintFlag: Boolean; override;
     function CanAutoPlaceFinishFlagOnPassing(const APassing: TPassing): Boolean; override;
     procedure UpdateParticipationTable(ACurrentPassingId: integer); override;
   public
@@ -114,18 +112,6 @@ begin
 
   FRankingQuery := GetRankingSQL(False);
   FSQLDataSetRankings.CommandText := FRankingQuery;
-end;
-
-{==============================================================================}
-function TCriteriumRaceEngine.SupportsNewLeaderFlag: Boolean;
-begin
-  Result := True;
-end;
-
-{==============================================================================}
-function TCriteriumRaceEngine.SupportsPointsSprintFlag: Boolean;
-begin
-  Result := True;
 end;
 
 {==============================================================================}

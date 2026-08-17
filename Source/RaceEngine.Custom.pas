@@ -232,7 +232,10 @@ begin
 
   FEvent := AEvent;
   FRaceItem := ARaceItem;
-  FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped];
+  if ARaceItem <> nil then
+    FAvailableRaceStates := SmartTimingTools.GetAvailableRaceStatesForType(ARaceItem.RaceType)
+  else
+    FAvailableRaceStates := [rsNotStarted, rsWarmUp, rsStarted, rsFinished, rsAborted, rsStopped];
 
   CreateAndInitializePopupMenu;
 
@@ -256,13 +259,13 @@ end;
 {==============================================================================}
 function TCustomRaceEngine.SupportsNewLeaderFlag: Boolean;
 begin
-  Result := False;
+  Result := rsNewLeader in FAvailableRaceStates;
 end;
 
 {==============================================================================}
 function TCustomRaceEngine.SupportsPointsSprintFlag: Boolean;
 begin
-  Result := False;
+  Result := rsPointsSprint in FAvailableRaceStates;
 end;
 
 {==============================================================================}

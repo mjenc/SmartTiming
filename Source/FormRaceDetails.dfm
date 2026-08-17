@@ -21,8 +21,6 @@ object FormRaceDetails: TFormRaceDetails
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 278
-    ExplicitWidth = 404
     DesignSize = (
       406
       41)
@@ -37,7 +35,6 @@ object FormRaceDetails: TFormRaceDetails
       ModalResult = 1
       TabOrder = 0
       OnClick = ButtonOKClick
-      ExplicitLeft = 230
     end
     object ButtonCancel: TButton
       Left = 320
@@ -49,7 +46,6 @@ object FormRaceDetails: TFormRaceDetails
       Caption = 'Abbrechen'
       ModalResult = 2
       TabOrder = 1
-      ExplicitLeft = 318
     end
   end
   object PanelMain: TPanel
@@ -60,8 +56,6 @@ object FormRaceDetails: TFormRaceDetails
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 404
-    ExplicitHeight = 278
     object Bezeichnung: TLabel
       Left = 17
       Top = 24
@@ -106,7 +100,7 @@ object FormRaceDetails: TFormRaceDetails
       Top = 111
       Width = 62
       Height = 15
-      Caption = 'Rundenzahl'
+      Caption = 'Runden'
     end
     object Label3: TLabel
       Left = 17
@@ -144,7 +138,9 @@ object FormRaceDetails: TFormRaceDetails
       Top = 79
       Width = 193
       Height = 23
+      Style = csDropDownList
       TabOrder = 3
+      OnChange = ComboBoxRaceTypeChange
     end
     object CBFirstPassingCounts: TCheckBox
       Left = 17
