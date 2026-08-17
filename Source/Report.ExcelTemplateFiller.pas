@@ -288,7 +288,8 @@ const
             'A' + IntToStr(lRow),
             lEndColChar + IntToStr(lRow)].Merge(EmptyParam);
         lExcelSheet.Cells.Item[lRow, 1].Value2 := lLines[i];
-//        lExcelSheet.Cells.Item[lRow, 1].HorizontalAlignment := xlHAlignLeft;
+        if SameText(Trim(lLines[i]), cMessagesCommuniqueHeader) then
+          lExcelSheet.Cells.Item[lRow, 1].Font.Bold := True;
         Inc(lRow);
       end;
     finally

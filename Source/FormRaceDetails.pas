@@ -39,6 +39,8 @@ type
     FEventDate: TDatetime;
     FStatus: integer;
     function GetStartDatetime: TDatetime;
+    function GetLastUsedRaceType: TRaceType;
+    procedure SaveLastUsedRaceType(ARaceType: TRaceType);
   public
     constructor Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean; AEventDate: TDatetime); reintroduce;
   end;
@@ -62,6 +64,28 @@ begin
   FIsInsert := AIsInsert;
   FEventDate := AEventDate;
   FStatus := 0;
+end;
+
+{==============================================================================}
+function TFormRaceDetails.GetLastUsedRaceType: TRaceType;
+var
+  lRaceType: TRaceType;
+  lStored: string;
+begin
+  lStored := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER,
+    cRegKeyPath + '\Settings', 'LastRaceType',
+    SmartTimingTools.GetRaceTypeStringFromEnum(rtCircuit));
+  lRaceType := SmartTimingTools.GetRaceTypeEnumFromString(lStored);
+  if not SmartTimingTools.IsRaceTypeSupported(lRaceType) then
+    Exit(rtCircuit);
+  Result := lRaceType;
+end;
+
+{==============================================================================}
+procedure TFormRaceDetails.SaveLastUsedRaceType(ARaceType: TRaceType);
+begin
+  SmartTimingTools.RegistryWriteString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings',
+    'LastRaceType', SmartTimingTools.GetRaceTypeStringFromEnum(ARaceType));
 end;
 
 {==============================================================================}
@@ -98,7 +122,8 @@ begin
       SmartTimingTools.GetRaceTypeStringFromEnum(lRaceType), TObject(lRaceType));
   end;
   if FIsInsert then
-    ComboBoxRaceType.ItemIndex := ComboBoxRaceType.Items.IndexOfObject(TObject(rtIndividualTimeTrial))
+    ComboBoxRaceType.ItemIndex := ComboBoxRaceType.Items.IndexOfObject(
+      TObject(GetLastUsedRaceType))
   else
   begin
     lRaceType := TRaceType(FDataSource.DataSet.FieldByName('RACETYPE').AsInteger);
@@ -151,6 +176,10 @@ procedure TFormRaceDetails.ButtonOKClick(Sender: TObject);
 var
   lDateTime: TDatetime;
 begin
+  if ComboBoxRaceType.ItemIndex >= 0 then
+    SaveLastUsedRaceType(TRaceType(
+      Integer(ComboBoxRaceType.Items.Objects[ComboBoxRaceType.ItemIndex])));
+
   if FIsInsert then
   begin
     FDataSource.DataSet.FieldByName('EVENTID').Value := FEventId;

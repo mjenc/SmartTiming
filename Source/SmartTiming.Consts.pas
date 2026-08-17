@@ -245,7 +245,7 @@ resourcestring
   cMessagesSimulatorRunCorrectionTests = 'Korrektur-Regression';
 
 type
-  TRaceType = (rtUnknown, rtIndividualTimeTrial, rtTeamTimeTrial, rtCircuit, rtCriterium);
+  TRaceType = (rtUnknown, rtCircuit, rtCriterium, rtIndividualTimeTrial, rtTeamTimeTrial);
   TRaceTypes = set of TRaceType;
   TRaceStatus = (rsNotStarted = 0, rsWarmUp, rsStarted, rsNeutralized, rsFinished, rsAborted, rsStopped,
     rsNewLeader, rsPointsSprint);
