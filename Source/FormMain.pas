@@ -725,9 +725,9 @@ begin
   UpdateLapProtocolHost(lRaceItem);
 
   lRankingGrid := TDBGrid(lRaceItem.RaceEngine.RankingDisplay);
-  lRaceItem.RaceEngine.RefreshRankingDisplay;
   lRankingGrid.Parent := PanelStandings;
   lRankingGrid.Align := alClient;
+  lRaceItem.RaceEngine.RefreshRankingDisplay;
   lRankingGrid.Visible := true;
 end;
 
@@ -885,9 +885,9 @@ begin
   PanelResultGrid.Caption := '';
 
   lRankingGrid := TDBGrid(lRaceItem.RaceEngine.RankingDisplay);
-  lRaceItem.RaceEngine.RefreshRankingDisplay;
   lRankingGrid.Parent := PanelResultGrid;
   lRankingGrid.Align := alClient;
+  lRaceItem.RaceEngine.RefreshRankingDisplay;
   lRankingGrid.Visible := true;
 end;
 

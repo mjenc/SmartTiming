@@ -89,11 +89,12 @@ begin
     if not SameText(lFieldName, AColumns[i].FieldName) then
       Continue;
     lColumn := AColumns[i];
-     lColumn.Visible := ASOColumn.B['Visible'];
+    lColumn.Visible := ASOColumn.B['Visible'];
     lColumn.Alignment := TAlignment(ASOColumn.I['Alignment']);
     lColumn.Width := ASOColumn.I['Width'];
     lColumn.Title.Caption := ASOColumn.S['Title'];
-    lColumn.Index := ASOColumn.I['Index'];
+    if (ASOColumn.I['Index'] >= 0) and (ASOColumn.I['Index'] < AColumns.Count) then
+      lColumn.Index := ASOColumn.I['Index'];
     Exit;
   end;
 end;

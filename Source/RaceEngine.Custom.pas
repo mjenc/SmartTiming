@@ -579,6 +579,7 @@ var
   lLeft: Integer;
   lStatus: string;
   lDataSet: TDataSet;
+  lField: TField;
 begin
   if not (Sender is TDBGrid) then
     Exit;
@@ -589,13 +590,25 @@ begin
     Exit;
 
   lDataSet := lSender.DataSource.DataSet;
+  if (not lDataSet.Active) or lDataSet.IsEmpty then
+    Exit;
+
   lStatus := '';
-  if lDataSet.FieldByName('DNS').AsInteger <> 0 then
+  lField := lDataSet.FindField('DNS');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
     lStatus := 'DNS'
-  else if lDataSet.FieldByName('DNF').AsInteger <> 0 then
-    lStatus := 'DNF'
-  else if lDataSet.FieldByName('DSQ').AsInteger <> 0 then
-    lStatus := 'DSQ';
+  else
+  begin
+    lField := lDataSet.FindField('DNF');
+    if (lField <> nil) and (lField.AsInteger <> 0) then
+      lStatus := 'DNF'
+    else
+    begin
+      lField := lDataSet.FindField('DSQ');
+      if (lField <> nil) and (lField.AsInteger <> 0) then
+        lStatus := 'DSQ';
+    end;
+  end;
 
   if lStatus <> '' then
   begin
@@ -618,19 +631,29 @@ var
   lSender: TDBGrid;
   lLeft: Integer;
   lDataSet: TDataSet;
+  lField: TField;
 begin
   if not (Sender is TDBGrid) then
     Exit;
   lSender := Sender as TDBGrid;
-  if (Field = nil) or Field.IsNull or (not SameText(Field.DisplayName, 'Platz')) then
+  if (Field = nil) or (not SameText(Field.DisplayName, 'Platz')) then
     Exit;
   if (lSender.DataSource = nil) or (lSender.DataSource.DataSet = nil) then
     Exit;
 
   lDataSet := lSender.DataSource.DataSet;
-  if (lDataSet.FieldByName('DNS').AsInteger <> 0) or
-     (lDataSet.FieldByName('DNF').AsInteger <> 0) or
-     (lDataSet.FieldByName('DSQ').AsInteger <> 0) then
+  if (not lDataSet.Active) or lDataSet.IsEmpty then
+    Exit;
+  if Field.IsNull then
+    Exit;
+  lField := lDataSet.FindField('DNS');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
+    Exit;
+  lField := lDataSet.FindField('DNF');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
+    Exit;
+  lField := lDataSet.FindField('DSQ');
+  if (lField <> nil) and (lField.AsInteger <> 0) then
     Exit;
 
   if Field.AsInteger > 3 then
@@ -655,7 +678,9 @@ begin
   if FRankingGrid <> nil then
     Exit(FRankingGrid);
 
-  FRankingGrid := TDBGrid.CreateParented(FParent.Handle);
+  (* Create without a window handle so an inactive TCard (no riders yet) does
+     not raise "has no parent window". FormMain assigns Parent when showing. *)
+  FRankingGrid := TDBGrid.Create(FOwner);
   FRankingGrid.Name := 'DBGridRanking';
   FRankingGrid.ParentFont := false;
   FRankingGrid.Visible := false;
@@ -744,32 +769,48 @@ begin
   else
     FRankingGridColumnsJSON := '';
 
+  if FRankingQuery = '' then
+    FRankingQuery := GetRankingSQL(FRankingGroupedByClass);
+
   FSQLDataSetRankings.Active := false;
   FSQLDataSetRankings.CommandText := FRankingQuery;
   FSQLDataSetRankings.Active := true;
 
-  if FClientDataSetRankings.Active then
+  if FSQLDataSetRankings.FieldCount = 0 then
+  begin
+    if FClientDataSetRankings.Active then
+      FClientDataSetRankings.Active := False;
+  end
+  else if FClientDataSetRankings.Active then
     FClientDataSetRankings.Refresh
   else
     FClientDataSetRankings.Active := True;
-  FLastRefreshTimestamp := Now;
 
   if FRankingGrid = nil then
     GetRankingGrid;
+  if FRankingGrid = nil then
+    Exit;
 
   for i := 0 to FRankingGrid.Columns.Count - 1 do
   begin
     lColumn := FRankingGrid.Columns[i];
+    if lColumn.Field = nil then
+      Continue;
     SmartTimingTools.SetColumnProperties('RANKING', lColumn);
   end;
   AfterOpenRankingResultSet(FClientDataSetRankings);
 
   (* Dataset reopen resets DBGrid column widths; restore only a layout the
      user (or LoadSettings) already applied — never capture field defaults. *)
-  if FRankingGridColumnsJSON <> '' then
-    TGridFormatProvider.ApplyJSON(FRankingGrid, FRankingGridColumnsJSON)
-  else
-    TGridFormatProvider.LoadSettings(FRankingGrid, FDefaultListFormatRanking, FFormatSuffix);
+  if FRankingGrid.Columns.Count > 0 then
+  begin
+    if FRankingGridColumnsJSON <> '' then
+      TGridFormatProvider.ApplyJSON(FRankingGrid, FRankingGridColumnsJSON)
+    else
+      TGridFormatProvider.LoadSettings(FRankingGrid, FDefaultListFormatRanking, FFormatSuffix);
+  end;
+
+  FLastRefreshTimestamp := Now;
 end;
 
 {==============================================================================}

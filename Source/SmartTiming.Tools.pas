@@ -453,9 +453,17 @@ var
   lFieldType: TFieldType;
   lMethodName: string;
 begin
+  if (AColumn = nil) or (AColumn.Field = nil) then
+    Exit;
+  if GFieldDescriptionsSuperObject = nil then
+    Exit;
+
   if AColumn.Field.DataType = ftWideMemo then
     AColumn.Field.OnGetText := OnGetDefaultColumnText;
-  lTables := gFieldDescriptionsSuperObject.A['tables'];
+
+  lTables := GFieldDescriptionsSuperObject.A['tables'];
+  if lTables = nil then
+    Exit;
   for i := 0 to lTables.Length - 1 do
   begin
     if lTables.O[i].S['tablename'] <> ATable then
@@ -620,6 +628,14 @@ end;
 {==============================================================================}
 class procedure SmartTimingTools.DBGridDrawCheckBox(Sender: TObject; const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
 begin
+  if (Column = nil) or (Column.Field = nil) then
+    Exit;
+  if gdFixed in State then
+    Exit;
+  if (Column.Field.DataSet <> nil) and
+     ((not Column.Field.DataSet.Active) or Column.Field.DataSet.IsEmpty) then
+    Exit;
+
   if (not SameText(Column.Field.FieldName, 'FIRSTPASSINGISLAP'))
      and (not SameText(Column.Field.FieldName, 'DNS'))
      and (not SameText(Column.Field.FieldName, 'DNF'))
@@ -659,14 +675,19 @@ end;
 {==============================================================================}
 procedure TDBGrid.WMVScroll(var Msg: TWMVScroll);
 Var
- dataset: TDataSet;
+   dataset: TDataSet;
  si: TScrollInfo;
 Begin
  If (Msg.ScrollCode = SB_THUMBTRACK) Or
     (Msg.ScrollCode = SB_THUMBPOSITION) Then
  Begin
+   If (Self.DataSource = nil) or (Self.DataSource.DataSet = nil) Then
+   begin
+     inherited;
+     Exit;
+   end;
    dataset := Self.DataSource.DataSet;
-   If Assigned(dataset) Then
+   If Assigned(dataset) and dataset.Active and (not dataset.IsEmpty) Then
    Begin
      si.cbSize := SizeOf(si);
      si.fMask := SIF_ALL;
@@ -679,7 +700,8 @@ Begin
      inherited;
  End
  Else
-   inherited;end;
+   inherited;
+End;
 
 {==============================================================================}
 Procedure TDBGrid.UpdateScrollBar;
@@ -687,10 +709,17 @@ Var
  dataset: TDataSet;
  si: TScrollInfo;
 Begin
+ If not HandleAllocated Then
+   Exit;
+ If (Self.DataSource = nil) or (Self.DataSource.DataSet = nil) Then
+ Begin
+   ShowScrollBar(Self.Handle, SB_VERT, False);
+   Exit;
+ End;
  dataset := Self.DataSource.DataSet;
  If Assigned(dataset) Then
  Begin
-   If Not dataset.Active Or (dataset.RecordCount <= Self.RowCount - 1) Then
+   If (not dataset.Active) or dataset.IsEmpty or (dataset.RecordCount <= Self.RowCount - 1) Then
      ShowScrollBar(Self.Handle, SB_VERT, False)
    Else
      Begin
