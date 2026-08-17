@@ -1242,6 +1242,9 @@ end;
 {==============================================================================}
 procedure TFormMain.ButtonStopClick(Sender: TObject);
 begin
+  if SmartTimingTools.ShowDialog(cMessagesStopRecordingConfirm, '',
+       [tcbYes, tcbNo], tcbNo) <> mrYes then
+    Exit;
   RaceButtonStatusChange(rsStopped);
 end;
 

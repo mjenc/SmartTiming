@@ -50,7 +50,7 @@ Neue Disziplinen würden diese Lücken multiplizieren.
 | Durchfahrtszeit ändern | FormEditTime | PASSINGS | PassingStore | ja | Protokoll+Ranking |
 | Fahrer ändern | FormAssign | Assignments + **PASSINGS.RACEID** | PassingStore CompId/RaceId | ja | Protokoll+Ranking |
 | Passage entfernen | Confirm | PASSINGS DELETE | Store | ja | Protokoll+Ranking |
-| Drag&Drop Zeit | — (nur 1 Selektion) | PASSINGS | Store | ja | Protokoll+Ranking |
+| Drag&Drop Zeit | FormEditTime (nur 1 Selektion; Vorbelegung Ziel −1 ms) | PASSINGS | Store | ja | Protokoll+Ranking |
 | DNS/DNF/DSQ/Aktiv | — | PARTICIPATION | — | — | Ranking |
 | Strafen | FormPenalty | PARTICIPATION.PENALTIES (alle Selektion) | — | — | Ranking (+Kommuniqué Export je Klasse) |
 | Zielzeit ändern | FormEditTime | FINISHTIME + OVERRIDE (alle Selektion) | — | bei Reset: ja | Ranking |

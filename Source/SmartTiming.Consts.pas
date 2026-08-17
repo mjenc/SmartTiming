@@ -217,6 +217,9 @@ resourcestring
     'Hauptfeld auf Schlussrunde — Punkte werden doppelt gewertet (10 / 6 / 4 / 2).';
   cMessagesPassingDragSingleOnly =
     'Zeitkorrektur per Drag&Drop ist nur mit einer ausgewählten Passage möglich.';
+  cMessagesStopRecordingConfirm =
+    'Aufzeichnung wirklich beenden?'#13#10 +
+    'Die Stopp-Flagge beendet die Erfassung für dieses Rennen.';
   cMessagesChangeCompetitorNoChip = 'Diese Passage hat keinen Chip — Fahrer kann nicht geändert werden.';
   cMessagesFinishTimeOverrideHint =
     'Manuelle Zielzeit aktiv — Recalc überschreibt sie nicht. Zurücksetzen stellt die Passagen-Zeit wieder her.';

@@ -28,7 +28,7 @@ Die `TListView` der RaceEngine ist de facto das Rundenprotokoll, aber ohne Domä
 3. Dialog `FormCompetitorPassings` (öffenbar aus Ranking oder Protokoll). — **erledigt**
 4. Invalidate/Validate → DB + Cache + `RecalculateParticipation`. — **erledigt**
    (`SetPassingStatusAndRecalc` → UpdatePassing + RecalcCountingLaps + ReassignLaps)
-5. Drag&Drop-Zeitkorrektur ersetzen oder stark einschränken (explizite Zeitkorrektur bevorzugen).
+5. Drag&Drop bleibt; nach dem Ablegen Dialog `FormEditTime` (vorbelegt mit Zielzeit −1 ms). — **erledigt**
 6. Filter im Protokoll: nur gültig / alle / nur manuell. — **erledigt**
    (ComboBox über der Passagen-ListView; Statusmarker immer sichtbar; Rebuild aus Cache)
 

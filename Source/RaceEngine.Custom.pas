@@ -37,6 +37,7 @@ type
     procedure AfterPassingCorrection(ARebuildProtocol: Boolean = True);
     procedure AfterRankingCorrection;
     procedure OnProtocolFilterChange(ASender: TObject);
+    function PromptPassingTime(ASuggestedTime: TDateTime; out ANewTime: TDateTime): Boolean;
 
   protected
     const
@@ -1039,6 +1040,26 @@ begin
 end;
 
 {==============================================================================}
+function TCustomRaceEngine.PromptPassingTime(ASuggestedTime: TDateTime;
+  out ANewTime: TDateTime): Boolean;
+var
+  lForm: TFormEditTime;
+begin
+  Result := False;
+  ANewTime := ASuggestedTime;
+  lForm := TFormEditTime.Create(nil);
+  try
+    lForm.Time := Frac(ASuggestedTime);
+    if lForm.ShowModal <> mrOK then
+      Exit;
+    ANewTime := Trunc(ASuggestedTime) + Frac(lForm.Time);
+    Result := True;
+  finally
+    FreeAndNil(lForm);
+  end;
+end;
+
+{==============================================================================}
 procedure TCustomRaceEngine.SetParticipantState(AState: TParticipantState);
 var
   lCompetitorIDs: TArray<integer>;
@@ -1592,7 +1613,6 @@ var
   lListView: TListView;
   lPassingNumber: Integer;
   lPassing: TPassing;
-  lForm: TFormEditTime;
   lNewTime: TDateTime;
 begin
   lListView := TListView(FPassingDisplay);
@@ -1609,15 +1629,8 @@ begin
     Exit;
   end;
 
-  lForm := TFormEditTime.Create(nil);
-  try
-    lForm.Time := Frac(lPassing.PassingTime);
-    if lForm.ShowModal <> mrOK then
-      Exit;
-    lNewTime := Trunc(lPassing.PassingTime) + Frac(lForm.Time);
-  finally
-    FreeAndNil(lForm);
-  end;
+  if not PromptPassingTime(lPassing.PassingTime, lNewTime) then
+    Exit;
 
   GSmartTimingController.UpdatePassing(lPassingNumber, lNewTime, TPassingState(lPassing.PassingStatus));
   AfterPassingCorrection;
@@ -1734,7 +1747,8 @@ var
   lDropItem, lDragItem: TListItem;
   lListView: TListView;
   lPassingNumber: Integer;
-  lPassingTime: TDatetime;
+  lSuggestedTime: TDatetime;
+  lNewTime: TDatetime;
   lPassing: TPassing;
 begin
   if FProtocolRebuildActive then
@@ -1751,12 +1765,12 @@ begin
 
   lDropItem := lListView.GetItemAt(AX, AY);
   lDragItem := lListView.Selected;
-  if (lDropItem = nil) or (lDragItem = nil) or (lDragItem = lDropItem) then
+  if (lDropItem = nil) or (lDropItem = lDragItem) then
     Exit;
 
   lPassingNumber := lDropItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
   lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
-  lPassingTime := IncMilliSecond(lPassing.PassingTime, -1);
+  lSuggestedTime := IncMilliSecond(lPassing.PassingTime, -1);
 
   lPassingNumber := lDragItem.SubItems[cPassingItemSubItemIdxPassingNumber].ToInteger;
   lPassing := TPassingStore.GetSingleton.GetPassing(lPassingNumber);
@@ -1766,9 +1780,18 @@ begin
     Exit;
   end;
 
-  GSmartTimingController.UpdatePassing(lPassingNumber, lPassingTime,
-    TPassingState(lPassing.PassingStatus));
-  AfterPassingCorrection;
+  (* End drag before the modal — VCL can otherwise fire Drop again on mouse-up. *)
+  CancelPassingListDrag;
+  try
+    if not PromptPassingTime(lSuggestedTime, lNewTime) then
+      Exit;
+
+    GSmartTimingController.UpdatePassing(lPassingNumber, lNewTime,
+      TPassingState(lPassing.PassingStatus));
+    AfterPassingCorrection;
+  finally
+    RestorePassingListDrag;
+  end;
 end;
 
 {==============================================================================}
