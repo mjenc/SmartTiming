@@ -19,8 +19,8 @@ Neben den Fachlücken gibt es Schema-Unebenheiten (`PASSINGS.CHIPID` als INTEGER
 | WP | Inhalt |
 |----|--------|
 | **8a Schema** | `PASSINGS.CHIPID` als TEXT; Indizes; Assignment-Tabelle — **erledigt** (nur `CreateSchema.sql`, keine Migration) |
-| **8b Pipeline** | Passing-Ingress aus Controller in eigenen Service; weniger God-Object |
-| **8c Cache** | `UpdatePassing` inkl. Status; `FillPassingListForRaceId` respektiert `OnlyActive` |
+| **8b Pipeline** | Passing-Ingress aus Controller in eigenen Service; weniger God-Object — **erledigt** (`TPassingService`: Ingest Live/Manual/SYSTEM, Restore, Update, Remove; Controller = Adapter + Engine-Recalc) |
+| **8c Cache** | `UpdatePassing` inkl. Status; `FillPassingListForRaceId` respektiert `OnlyActive` — **erledigt** (atomarer Cache-Update Zeit+Status; OnlyActive war bereits korrekt) |
 | **8d Bugs** | `LoadRaces`-Prune prüfen/fixen; TTT in UI sperren, bis Plan 1 TTT liefert — **erledigt** |
 | **8e Teams** | Entweder TTT an `TEAMS`/`TEAMMEMBERS` anbinden oder Menü/Typ deaktivieren |
 | **8f Tests** | Checkliste/Smoke: Parallelrennen, Chip-Konflikt, MinLap, Manual Passing |
@@ -29,15 +29,15 @@ Neben den Fachlücken gibt es Schema-Unebenheiten (`PASSINGS.CHIPID` als INTEGER
 
 1. **Sofort:** 8d Bugfix + TTT-Sperre.
 2. **Früh:** 8a Schema nur in `CreateSchema.sql` (neue DBs).
-3. **Mit Plan 3/4:** 8c Cache-Konsistenz für Status/Zeit.
-4. **Iterativ:** 8b PassingService-Extraktion neben Feature-Arbeit.
+3. **Mit Plan 3/4:** 8c Cache-Konsistenz für Status/Zeit. — **erledigt**
+4. **Iterativ:** 8b PassingService-Extraktion. — **erledigt** (`Ingest` + Restore/Update/Remove)
 5. **Vor Multi-Disziplin-Rollout:** 8e klären, 8f Checkliste einmal grün.
 
 ## Abhängigkeiten
 
 - 8a überschneidet sich mit [Plan 2](02-chip-zuordnung.md).
 - 8c stützt [Plan 3](03-rundenprotokoll.md) und [Plan 4](04-plausibilitaet.md).
-- 8e/TTT hängt an [Plan 1](01-race-engine-strategie.md).
+- 8e/TTT: TTT-Engine auf spätere Version verschoben; 8e = Typ bleibt gesperrt (siehe 8d), keine TEAMS-Anbindung in diesem Durchgang.
 
 ## Akzeptanzkriterien
 

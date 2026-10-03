@@ -31,6 +31,7 @@ uses
   SmartTiming.Cache in 'SmartTiming.Cache.pas',
   SmartTiming.TransponderAssignment in 'SmartTiming.TransponderAssignment.pas',
   SmartTiming.PassingValidator in 'SmartTiming.PassingValidator.pas',
+  SmartTiming.PassingService in 'SmartTiming.PassingService.pas',
   Report.ExcelTemplateFiller in 'Report.ExcelTemplateFiller.pas',
   SmartTiming.Event in 'SmartTiming.Event.pas',
   SmartTiming.WebService in 'SmartTiming.WebService.pas',

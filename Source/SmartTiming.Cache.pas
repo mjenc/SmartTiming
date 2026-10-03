@@ -32,7 +32,10 @@ type
 
     procedure AddPassing(APassing: TPassing);
     function GetPassing(APassingId: Integer): TPassing;
-    procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime);
+    procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime); overload;
+    (* Plan 8c: time + status in one write so OnlyActive readers never see a half update. *)
+    procedure UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime;
+      APassingStatus: Integer); overload;
     procedure UpdatePassingRaceId(APassingNumber: Integer; ARaceId: Integer);
     procedure UpdatePassingStatus(APassingNumber: Integer; APassingStatus: Integer);
     procedure UpdatePassingDomainFields(APassingNumber: Integer; ALapIndex, ACompetitorId: Integer);
@@ -269,6 +272,13 @@ end;
 
 {==============================================================================}
 procedure TPassingStore.UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime);
+begin
+  UpdatePassing(APassingNumber, APassingTime, -1);
+end;
+
+{==============================================================================}
+procedure TPassingStore.UpdatePassing(APassingNumber: Integer; APassingTime: TDatetime;
+  APassingStatus: Integer);
 var
   lPassing: TPassing;
 begin
@@ -277,6 +287,8 @@ begin
     if not FPassingList.TryGetValue(APassingNumber, lPassing) then
       raise Exception.Create('Internal error Passing not found in Cache');
     lPassing.PassingTime := APassingTime;
+    if APassingStatus >= 0 then
+      lPassing.PassingStatus := APassingStatus;
     FPassingList.AddOrSetValue(APassingNumber, lPassing);
   finally
     Synchronizer.EndWrite;

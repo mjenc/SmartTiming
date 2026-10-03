@@ -4,8 +4,8 @@
   Plan 4 — Plausibility rule catalog (step 1).
 
   Pure evaluation against TPassingValidationContext (no UI).
-  Live pipeline: BuildLiveContext + Validate in Controller after resolve,
-  before participation update (Plan 4 step 2). Operator dialog is step 4.
+  Live pipeline: BuildLiveContext + Validate in TPassingService.Ingest after resolve,
+  before participation update (Plan 4 step 2 / Plan 8b). Operator dialog is step 4.
 
   Rule catalog (minimum):
     pvrUnknownChip          Chip not in Tx mapping
