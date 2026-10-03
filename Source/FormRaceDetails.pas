@@ -87,6 +87,8 @@ end;
 {==============================================================================}
 procedure TFormRaceDetails.SaveLastUsedRaceType(ARaceType: TRaceType);
 begin
+  if not SmartTimingTools.IsRaceTypeSupported(ARaceType) then
+    Exit;
   SmartTimingTools.RegistryWriteString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings',
     'LastRaceType', SmartTimingTools.GetRaceTypeStringFromEnum(ARaceType));
 end;
@@ -129,9 +131,15 @@ begin
       TObject(GetLastUsedRaceType))
   else
   begin
+    (* Existing deferred types (e.g. TTT) stay visible so the operator can switch away. *)
     lRaceType := TRaceType(FDataSource.DataSet.FieldByName('RACETYPE').AsInteger);
-    if not SmartTimingTools.IsRaceTypeSupported(lRaceType) then
-      lRaceType := rtIndividualTimeTrial;
+    if SmartTimingTools.CanCreateRaceEngine(lRaceType) and
+       (not SmartTimingTools.IsRaceTypeSupported(lRaceType)) and
+       (ComboBoxRaceType.Items.IndexOfObject(TObject(lRaceType)) < 0) then
+      ComboBoxRaceType.Items.AddObject(
+        SmartTimingTools.GetRaceTypeStringFromEnum(lRaceType), TObject(lRaceType));
+    if not SmartTimingTools.CanCreateRaceEngine(lRaceType) then
+      lRaceType := rtCircuit;
     ComboBoxRaceType.ItemIndex := ComboBoxRaceType.Items.IndexOfObject(TObject(lRaceType));
   end;
   if ComboBoxRaceType.ItemIndex < 0 then
@@ -177,6 +185,7 @@ var
   lType: TRaceType;
   lFields: TRaceDetailFields;
   lTop: Integer;
+  lEditLeft: Integer;
 
   procedure PlaceRow(ALabel, AEdit: TControl; AVisible: Boolean; ARowHeight: Integer);
   begin
@@ -190,7 +199,11 @@ var
     begin
       AEdit.Visible := AVisible;
       if AVisible then
+      begin
         AEdit.Top := lTop;
+        if (AEdit <> CBFirstPassingCounts) and (AEdit.Left < lEditLeft) then
+          AEdit.Left := lEditLeft;
+      end;
     end;
     if AVisible then
       Inc(lTop, ARowHeight);
@@ -200,12 +213,19 @@ begin
   lType := GetSelectedRaceType;
   lFields := SmartTimingTools.GetRaceDetailFields(lType);
   LabelLapCount.Caption := cRaceDetailsLapCount;
+  LabelLapCount.AutoSize := False;
+  LabelLapCount.Width := 150;
 
-  lTop := 108;
+  (* Always below Art combo — never reuse its Top (DPI / z-order overlap). *)
+  lEditLeft := ComboBoxRaceType.Left;
+  lTop := ComboBoxRaceType.Top + ComboBoxRaceType.Height + 12;
   PlaceRow(LabelLapCount, DBEditLapCount, rdfLaps in lFields, 29);
   PlaceRow(nil, CBFirstPassingCounts, rdfFirstPassingIsLap in lFields, 26);
   PlaceRow(Label3, DBEditDistance, rdfDistance in lFields, 29);
   PlaceRow(Label4, EditMinLapDuration, rdfMinLapDuration in lFields, 29);
+
+  Label2.BringToFront;
+  ComboBoxRaceType.BringToFront;
 end;
 
 {==============================================================================}

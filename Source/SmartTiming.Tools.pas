@@ -31,7 +31,10 @@ type
     class function GetRaceTypeEnumFromString(const AValue: string): TRaceType;
     class function GetRaceTypeStringFromEnum(ARaceType: TRaceType): string;
     class function IsRaceTypeSupported(ARaceType: TRaceType): Boolean;
+    (* Types offered when creating/editing a race in the UI (TTT deferred). *)
     class function GetSupportedRaceTypes: TRaceTypes;
+    (* Types the factory can still instantiate (includes deferred skeletons). *)
+    class function CanCreateRaceEngine(ARaceType: TRaceType): Boolean;
     class function GetRaceDetailFields(ARaceType: TRaceType): TRaceDetailFields;
     class function GetAvailableRaceStatesForType(ARaceType: TRaceType): TRaceStates;
     class function GetRaceStatusEnumFromString(const AValue: string): TRaceStatus;
@@ -253,7 +256,15 @@ end;
 {==============================================================================}
 class function SmartTimingTools.GetSupportedRaceTypes: TRaceTypes;
 begin
-  Result := [rtIndividualTimeTrial, rtTeamTimeTrial, rtCircuit, rtCriterium];
+  (* Plan 8e: TTT deferred — not offered for new races until scoring exists. *)
+  Result := [rtIndividualTimeTrial, rtCircuit, rtCriterium];
+end;
+
+{==============================================================================}
+class function SmartTimingTools.CanCreateRaceEngine(ARaceType: TRaceType): Boolean;
+begin
+  Result := ARaceType in
+    [rtIndividualTimeTrial, rtTeamTimeTrial, rtCircuit, rtCriterium];
 end;
 
 {==============================================================================}

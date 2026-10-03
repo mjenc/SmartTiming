@@ -97,23 +97,25 @@ object FormRaceDetails: TFormRaceDetails
     end
     object LabelLapCount: TLabel
       Left = 17
-      Top = 111
-      Width = 62
+      Top = 120
+      Width = 150
       Height = 15
+      AutoSize = False
       Caption = 'Runden'
     end
     object Label3: TLabel
       Left = 17
-      Top = 163
+      Top = 175
       Width = 38
       Height = 15
       Caption = 'Distanz'
     end
     object Label4: TLabel
       Left = 17
-      Top = 192
-      Width = 112
+      Top = 204
+      Width = 150
       Height = 15
+      AutoSize = False
       Caption = 'Minimale Rundenzeit'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -144,8 +146,8 @@ object FormRaceDetails: TFormRaceDetails
     end
     object CBFirstPassingCounts: TCheckBox
       Left = 17
-      Top = 137
-      Width = 180
+      Top = 149
+      Width = 250
       Height = 17
       Alignment = taLeftJustify
       Caption = 'Erste Passage z'#228'hlt als Runde'
@@ -153,7 +155,7 @@ object FormRaceDetails: TFormRaceDetails
     end
     object EditMinLapDuration: TMaskEdit
       Left = 181
-      Top = 189
+      Top = 201
       Width = 60
       Height = 23
       Alignment = taCenter
@@ -183,7 +185,7 @@ object FormRaceDetails: TFormRaceDetails
     end
     object DBEditLapCount: TDBEdit
       Left = 181
-      Top = 108
+      Top = 117
       Width = 60
       Height = 23
       DataSource = MainDataModule.DataSourceRaces
@@ -191,7 +193,7 @@ object FormRaceDetails: TFormRaceDetails
     end
     object DBEditDistance: TDBEdit
       Left = 181
-      Top = 160
+      Top = 172
       Width = 60
       Height = 23
       DataSource = MainDataModule.DataSourceRaces

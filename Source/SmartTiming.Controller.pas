@@ -212,7 +212,7 @@ begin
         SmartTimingTools.FillRaceItemFromDataSet(MainDataModule.DataSourceRaces.DataSet, lRaceItem);
         if lRaceItem.RaceEngine = nil then
         begin
-          if not SmartTimingTools.IsRaceTypeSupported(lRaceItem.RaceType) then
+          if not SmartTimingTools.CanCreateRaceEngine(lRaceItem.RaceType) then
             raise Exception.Create(cMessagesRaceTypeUnknown);
           lRaceItem.RaceEngine := TRaceEngineFactory.CreateRaceEngineForRaceType(
             GFormMain.GetNewPanelForPassings(lRaceId), FEventDataObject, lRaceItem);

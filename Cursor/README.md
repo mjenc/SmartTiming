@@ -21,6 +21,7 @@ Pläne zur Weiterentwicklung von SmartTiming (Mehrdisziplinen, parallele Läufe,
 | 6 | [06-korrektur-ui.md](06-korrektur-ui.md) | Korrektur-UI fertigstellen | Mittel |
 | 7 | [07-ranking-reporting.md](07-ranking-reporting.md) | Ranking & Reporting entkoppeln | Mittel |
 | 8 | [08-architektur-qualitaet.md](08-architektur-qualitaet.md) | Architektur- & Qualitätsthemen | Mittel |
+| 8f | [08f-smoke-checkliste.md](08f-smoke-checkliste.md) | Smoke-Checkliste Parallelbetrieb (zu Plan 8) | Mittel |
 | 9 | [09-mylaps-decoder-simulator.md](09-mylaps-decoder-simulator.md) | MyLaps-Decoder-Simulator (Test) | Mittel |
 
 ## Empfohlene Gesamt-Reihenfolge
