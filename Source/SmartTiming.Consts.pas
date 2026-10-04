@@ -244,6 +244,17 @@ resourcestring
   cMessagesSimulatorMappingCount = 'Mapping: %d Einträge';
   cMessagesSimulatorMappingNone = 'Mapping: leer';
   cMessagesSimulatorRunCorrectionTests = 'Korrektur-Regression';
+  cMessagesSimulatorModeInProcess = 'In-Process (SendSimulatedPassing)';
+  cMessagesSimulatorModeP3 = 'P3-Loopback (127.0.0.1:5403)';
+  cMessagesSimulatorHintInProcess =
+    'Erzeugt Test-Passagen wie ein MyLaps-Decoder. Kurznummer wird über das Tx-Mapping aufgelöst.';
+  cMessagesSimulatorHintP3 =
+    'Sendet echte MyLaps-P3-Phrasen an einen lokalen Fake-Decoder (nur Loopback 127.0.0.1:5403).';
+  cMessagesSimulatorP3ConnectFailed =
+    'P3-Loopback: Listener konnte nicht mit dem Fake-Decoder auf 127.0.0.1:5403 verbunden werden.'#13#10 +
+    'Port belegt (echter Decoder) oder Firewall?';
+  (* Wire DecoderId for P3 phrases; must stay XX-XX-XX-XX. *)
+  cSimulatorP3DecoderId = '40-24-04-00';
 
 type
   TRaceType = (rtUnknown, rtCircuit, rtCriterium, rtIndividualTimeTrial, rtTeamTimeTrial);
@@ -279,6 +290,11 @@ const
      Finished stays open so mass-start riders can still take their closing lap
      after the checkered flag (manual or auto). *)
   cRaceStatusesAcceptingPassings: TRaceStates = [rsStarted, rsFinished];
+  (* Soft-attach unknown chips into the selected race protocol (display only).
+     Includes Finished so orphans stay visible in the closing-lap window —
+     chip-conflict locking must NOT use this set. *)
+  cRaceStatusesAcceptingOrphanProtocol: TRaceStates =
+    [rsWarmUp, rsStarted, rsNeutralized, rsFinished];
 
 type
   TFinishStatus = (fsFinished, fsDNS, fsDNF, fsDSQ);

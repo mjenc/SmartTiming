@@ -2,7 +2,7 @@ object FormPassingSimulator: TFormPassingSimulator
   Left = 0
   Top = 0
   Caption = 'Decoder-Simulator (Test)'
-  ClientHeight = 520
+  ClientHeight = 560
   ClientWidth = 640
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -12,13 +12,14 @@ object FormPassingSimulator: TFormPassingSimulator
   Font.Style = []
   Position = poMainFormCenter
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnShow = FormShow
   TextHeight = 15
   object PanelTop: TPanel
     Left = 0
     Top = 0
     Width = 640
-    Height = 145
+    Height = 185
     Align = alTop
     BevelOuter = bvNone
     Padding.Left = 12
@@ -30,21 +31,36 @@ object FormPassingSimulator: TFormPassingSimulator
       Left = 12
       Top = 10
       Width = 616
-      Height = 15
+      Height = 30
       Align = alTop
       Caption = 
         'Erzeugt Test-Passagen wie ein MyLaps-Decoder. Kurznummer wird '#252'ber das Tx-Mapping aufgel'#246'st.'
       WordWrap = True
       ExplicitWidth = 500
     end
+    object RadioGroupMode: TRadioGroup
+      Left = 12
+      Top = 40
+      Width = 616
+      Height = 48
+      Align = alTop
+      Caption = 'Einspeisung'
+      Columns = 2
+      ItemIndex = 0
+      Items.Strings = (
+        'In-Process (SendSimulatedPassing)'
+        'P3-Loopback (127.0.0.1:5403)')
+      TabOrder = 0
+      OnClick = RadioGroupModeClick
+    end
     object PanelInputs: TPanel
       Left = 12
-      Top = 33
+      Top = 88
       Width = 616
-      Height = 104
+      Height = 89
       Align = alClient
       BevelOuter = bvNone
-      TabOrder = 0
+      TabOrder = 1
       object LabelShortId: TLabel
         Left = 0
         Top = 8
@@ -150,7 +166,7 @@ object FormPassingSimulator: TFormPassingSimulator
   end
   object PanelMapping: TPanel
     Left = 0
-    Top = 145
+    Top = 185
     Width = 640
     Height = 40
     Align = alTop
@@ -198,29 +214,33 @@ object FormPassingSimulator: TFormPassingSimulator
   end
   object ListViewLog: TListView
     Left = 0
-    Top = 185
+    Top = 225
     Width = 640
     Height = 294
     Align = alClient
     Columns = <
       item
         Caption = '#'
-        Width = 60
+        Width = 50
       end
       item
         Caption = 'Kurznummer'
-        Width = 90
+        Width = 80
       end
       item
         Caption = 'ChipId'
-        Width = 120
+        Width = 110
       end
       item
         Caption = 'Zeit'
-        Width = 120
+        Width = 110
       end
       item
         Caption = 'Signal'
+        Width = 55
+      end
+      item
+        Caption = 'Kanal'
         Width = 60
       end>
     ReadOnly = True
@@ -230,7 +250,7 @@ object FormPassingSimulator: TFormPassingSimulator
   end
   object PanelButtons: TPanel
     Left = 0
-    Top = 479
+    Top = 519
     Width = 640
     Height = 41
     Align = alBottom

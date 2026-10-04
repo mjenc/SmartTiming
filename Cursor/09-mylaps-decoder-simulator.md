@@ -55,7 +55,10 @@ Für Tests (Chip-Zuordnung, Unassigned, parallele Läufe) fehlt ein zuverlässig
 3. Passing bauen (`PassingNumber` fortlaufend/MAX+1, `ChipId` aus Mapping, `DecoderId='STSIM'`, Defaults Signal/Hits) und über `SendSimulatedPassing` einspeisen. — **erledigt**
 4. Kleines Sendeprotokoll in der Form; Mapping-leer-Zustand abfangen (Import-Hinweis). — **erledigt**
 5. Menü/Hotkey in `FormMain` prüfen (Simulator erreichbar, ohne Event-DB zu erzwingen außer Mapping). — **erledigt**
-6. *(Optional Phase B)* P3-Fake-Decoder + Umschalter „In-Process / P3-Loopback“. — offen
+6. *(Optional Phase B)* P3-Fake-Decoder + Umschalter „In-Process / P3-Loopback“. — **erledigt**
+   - `SmartTiming.MyLapsFakeDecoder`: TCP-Server nur `127.0.0.1:5403`, Phrasen via `GetPassingPhrase`
+   - Simulator-Umschalter In-Process / P3-Loopback; Listener verbindet wie zum echten Decoder
+   - `GetPassingPhrase` korrigiert (ChipId/LE-Felder); `SetActiveDecoder` beendet alten Listener sauber
 
 ## Abhängigkeiten
 
@@ -78,7 +81,7 @@ Für Tests (Chip-Zuordnung, Unassigned, parallele Läufe) fehlt ein zuverlässig
 - Unbekannte Kurznummer → Dialog/Hinweis, keine Passage.
 - Ohne Mapping → Hinweis zum Import, kein Crash.
 - Passage durchläuft denselben Controller-Pfad wie ein Decoder-Hit (Persistenz + Resolve).
-- *(Phase B, falls umgesetzt)* App verbindet gegen lokalen Fake-Decoder; gesendete P3-Passage kommt als normaler Listener-Hit an.
+- *(Phase B)* App verbindet gegen lokalen Fake-Decoder (`127.0.0.1:5403`); gesendete P3-Passage kommt als normaler Listener-Hit an. — manuell smoke-testen
 
 ## Risiken
 

@@ -125,10 +125,14 @@ begin
     LogOnDebug(cLogger, ['SetActiveDecoder', ADecoder.DecoderManufacturer, ADecoder.DecoderId, ADecoder.Address]);
     if FSearchListener <> nil then
     begin
-      FSearchListener.Terminate;
-      while not FSearchListener.CheckTerminated do
-        Sleep(100);
+      FSearchListener.StopAndWait;
       FreeAndNil(FSearchListener);
+    end;
+
+    if FListener <> nil then
+    begin
+      FListener.StopAndWait;
+      FreeAndNil(FListener);
     end;
 
     FDecoder := ADecoder;
@@ -143,6 +147,7 @@ end;
 {==============================================================================}
 function TDecoderEngine.GetIsConnected: boolean;
 begin
+  result := false;
   try
     LogOnDebug(cLogger, ['GetIsConnected']);
     if FListener = nil then

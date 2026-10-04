@@ -598,7 +598,8 @@ begin
   lStatus := lRaceItem.Status;
   if lStatus = rsNotStarted then
     lStatus := MainDataModule.GetRaceStatus(lRaceId);
-  if TTransponderAssignmentService.IsRaceStatusActiveForChipConflict(lStatus) then
+  (* Not chip-conflict: Finished stays open for orphan display (closing-lap window). *)
+  if lStatus in cRaceStatusesAcceptingOrphanProtocol then
     Result := lRaceId;
 end;
 

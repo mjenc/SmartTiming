@@ -1,8 +1,9 @@
 ﻿unit FormPassingSimulator;
 
 {==============================================================================
-  Decoder simulator (Plan 9 Phase A): enter short IDs, resolve via Tx mapping,
-  inject passings through TDecoderEngine.SendSimulatedPassing.
+  Decoder simulator (Plan 9):
+  Phase A — In-Process via SendSimulatedPassing
+  Phase B — MyLaps P3 loopback via local FakeDecoder + TMyLapsP3Listener
 ==============================================================================}
 
 interface
@@ -11,12 +12,14 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes, System.Math,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
   Vcl.ComCtrls, Vcl.Mask,
-  SmartTiming.Consts, SmartTiming.Cache, DecoderInterface, SmartTiming.DecoderEngine;
+  SmartTiming.Consts, SmartTiming.Cache, DecoderInterface, SmartTiming.DecoderEngine,
+  SmartTiming.MyLapsFakeDecoder;
 
 type
   TFormPassingSimulator = class(TForm)
     PanelTop: TPanel;
     LabelHint: TLabel;
+    RadioGroupMode: TRadioGroup;
     PanelInputs: TPanel;
     LabelShortId: TLabel;
     EditShortId: TEdit;
@@ -40,6 +43,7 @@ type
     ButtonClose: TButton;
     OpenDialogMapping: TOpenDialog;
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure ButtonCloseClick(Sender: TObject);
     procedure ButtonSendClick(Sender: TObject);
@@ -48,8 +52,12 @@ type
     procedure ButtonRunRuleTestsClick(Sender: TObject);
     procedure ButtonRunCorrectionTestsClick(Sender: TObject);
     procedure EditShortIdChange(Sender: TObject);
+    procedure RadioGroupModeClick(Sender: TObject);
   private
     FNextPassingNumber: Integer;
+    FFakeDecoder: TMyLapsP3FakeDecoder;
+    function UseP3Loopback: Boolean;
+    procedure RefreshModeHint;
     procedure RefreshMappingStatus;
     procedure RefreshChipPreview;
     procedure SyncNextPassingNumber;
@@ -57,7 +65,10 @@ type
     function TryGetPassingTime(out ATime: TDateTime): Boolean;
     function TryResolveShortId(out AShortId: Integer; out AChipId: string): Boolean;
     procedure AppendLog(APassingNumber, AShortId: Integer; const AChipId: string;
-      APassingTime: TDateTime; ASignal: Integer);
+      APassingTime: TDateTime; ASignal: Integer; const AChannel: string);
+    function BuildPassing(AShortId: Integer; const AChipId: string;
+      ATime: TDateTime; ASignal, AHits: Integer): TPassing;
+    function EnsureP3Loopback: Boolean;
     procedure SendPassing;
   end;
 
@@ -76,8 +87,23 @@ begin
   ButtonSend.Caption := cMessagesSimulatorSend;
   ButtonImportMapping.Caption := cMessagesSimulatorImportMapping;
   ButtonRunCorrectionTests.Caption := cMessagesSimulatorRunCorrectionTests;
+  (* Create before ItemIndex — setting ItemIndex fires OnClick. *)
+  FFakeDecoder := TMyLapsP3FakeDecoder.Create;
+  RadioGroupMode.Items.Clear;
+  RadioGroupMode.Items.Add(cMessagesSimulatorModeInProcess);
+  RadioGroupMode.Items.Add(cMessagesSimulatorModeP3);
+  RadioGroupMode.ItemIndex := 0;
   SyncNextPassingNumber;
   SetTimeEdit(Now);
+  RefreshModeHint;
+end;
+
+{==============================================================================}
+procedure TFormPassingSimulator.FormDestroy(Sender: TObject);
+begin
+  if FFakeDecoder <> nil then
+    FFakeDecoder.Stop;
+  FreeAndNil(FFakeDecoder);
 end;
 
 {==============================================================================}
@@ -92,6 +118,29 @@ end;
 procedure TFormPassingSimulator.ButtonCloseClick(Sender: TObject);
 begin
   Close;
+end;
+
+{==============================================================================}
+function TFormPassingSimulator.UseP3Loopback: Boolean;
+begin
+  Result := RadioGroupMode.ItemIndex = 1;
+end;
+
+{==============================================================================}
+procedure TFormPassingSimulator.RefreshModeHint;
+begin
+  if UseP3Loopback then
+    LabelHint.Caption := cMessagesSimulatorHintP3
+  else
+    LabelHint.Caption := cMessagesSimulatorHintInProcess;
+end;
+
+{==============================================================================}
+procedure TFormPassingSimulator.RadioGroupModeClick(Sender: TObject);
+begin
+  RefreshModeHint;
+  if (not UseP3Loopback) and (FFakeDecoder <> nil) then
+    FFakeDecoder.Stop;
 end;
 
 {==============================================================================}
@@ -237,7 +286,8 @@ end;
 
 {==============================================================================}
 procedure TFormPassingSimulator.AppendLog(APassingNumber, AShortId: Integer;
-  const AChipId: string; APassingTime: TDateTime; ASignal: Integer);
+  const AChipId: string; APassingTime: TDateTime; ASignal: Integer;
+  const AChannel: string);
 var
   lItem: TListItem;
 begin
@@ -247,6 +297,72 @@ begin
   lItem.SubItems.Add(AChipId);
   lItem.SubItems.Add(FormatDateTime('hh:nn:ss.zzz', APassingTime));
   lItem.SubItems.Add(ASignal.ToString);
+  lItem.SubItems.Add(AChannel);
+end;
+
+{==============================================================================}
+function TFormPassingSimulator.BuildPassing(AShortId: Integer; const AChipId: string;
+  ATime: TDateTime; ASignal, AHits: Integer): TPassing;
+begin
+  Result := Default(TPassing);
+  Result.PassingNumber := FNextPassingNumber;
+  Result.ChipId := AChipId;
+  Result.PassingTime := ATime;
+  Result.SignalStrength := ASignal;
+  Result.Hits := AHits;
+  Result.Flags := 0;
+  Result.Sport := sSportsIdCycling;
+  Result.Voltage := 0;
+  Result.Temperature := 0;
+  Result.TxId := AShortId;
+  Result.RaceId := -1;
+  Result.LapIndex := -1;
+  Result.CompetitorId := -1;
+  if UseP3Loopback then
+    Result.DecoderId := cSimulatorP3DecoderId
+  else
+    Result.DecoderId := 'STSIM';
+end;
+
+{==============================================================================}
+function TFormPassingSimulator.EnsureP3Loopback: Boolean;
+var
+  lDecoder: TDecoder;
+  lEngine: TDecoderEngine;
+begin
+  Result := False;
+  try
+    FFakeDecoder.Start;
+  except
+    on E: Exception do
+    begin
+      SmartTimingTools.ShowDialog(
+        cMessagesSimulatorP3ConnectFailed + #13#10 + E.Message,
+        cMessagesSimulatorCaption, [tcbOk], tcbOk);
+      Exit;
+    end;
+  end;
+
+  lEngine := TDecoderEngine.GetSingleton;
+  if not (lEngine.Connected and SameText(lEngine.ActiveDecoder.Address, '127.0.0.1')
+    and SameText(lEngine.ActiveDecoder.DecoderManufacturer, cDecoderManufacturerMyLaps)) then
+  begin
+    lDecoder := Default(TDecoder);
+    lDecoder.DecoderId := cSimulatorP3DecoderId;
+    lDecoder.DecoderManufacturer := cDecoderManufacturerMyLaps;
+    lDecoder.Address := '127.0.0.1';
+    lDecoder.FirmwareVersion := 'SIM';
+    lDecoder.DecoderType := 'FakeP3';
+    lEngine.ActiveDecoder := lDecoder;
+  end;
+
+  if not FFakeDecoder.WaitForClient(3000) then
+  begin
+    SmartTimingTools.ShowDialog(cMessagesSimulatorP3ConnectFailed,
+      cMessagesSimulatorCaption, [tcbOk], tcbOk);
+    Exit;
+  end;
+  Result := True;
 end;
 
 {==============================================================================}
@@ -258,6 +374,7 @@ var
   lSignal: Integer;
   lHits: Integer;
   lTime: TDateTime;
+  lChannel: string;
 begin
   if not TryResolveShortId(lShortId, lChipId) then
     Exit;
@@ -270,21 +387,32 @@ begin
   if not TryStrToInt(Trim(EditHits.Text), lHits) then
     lHits := 90;
 
-  lPassing.PassingNumber := FNextPassingNumber;
-  lPassing.ChipId := lChipId;
-  lPassing.PassingTime := lTime;
-  lPassing.SignalStrength := lSignal;
-  lPassing.Hits := lHits;
-  lPassing.Flags := 0;
-  lPassing.Sport := sSportsIdCycling;
-  lPassing.Voltage := 0;
-  lPassing.Temperature := 0;
-  lPassing.DecoderId := 'STSIM';
-  lPassing.TxId := lShortId;
-  lPassing.RaceId := -1;
+  lPassing := BuildPassing(lShortId, lChipId, lTime, lSignal, lHits);
 
-  TDecoderEngine.GetSingleton.SendSimulatedPassing(lPassing);
-  AppendLog(lPassing.PassingNumber, lShortId, lChipId, lPassing.PassingTime, lSignal);
+  if UseP3Loopback then
+  begin
+    if not EnsureP3Loopback then
+      Exit;
+    try
+      FFakeDecoder.SendPassing(lPassing);
+    except
+      on E: Exception do
+      begin
+        SmartTimingTools.ShowDialog(
+          cMessagesSimulatorP3ConnectFailed + #13#10 + E.Message,
+          cMessagesSimulatorCaption, [tcbOk], tcbOk);
+        Exit;
+      end;
+    end;
+    lChannel := 'P3';
+  end
+  else
+  begin
+    TDecoderEngine.GetSingleton.SendSimulatedPassing(lPassing);
+    lChannel := 'InProc';
+  end;
+
+  AppendLog(lPassing.PassingNumber, lShortId, lChipId, lPassing.PassingTime, lSignal, lChannel);
   Inc(FNextPassingNumber);
   SetTimeEdit(IncMilliSecond(lTime, 500));
 

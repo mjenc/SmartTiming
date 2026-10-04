@@ -60,6 +60,7 @@ type
   protected
     FBoundPortMin: Integer;
     FBoundPortMax: Integer;
+    procedure UnblockIO; override;
 
   public
     constructor Create(ADecoder: TDecoder; AOnStatus: TDecoderStatusReceivedEvent; AOnPassing: TDecoderPassingReceivedEvent); reintroduce;
@@ -199,7 +200,7 @@ begin
     lMinutes * 60 +
     lSeconds;
   lTotalSecondsWithMs := lTotalSeconds * 1000 + lMs;
-  result := IntToHex(lTotalSecondsWithMs * 1000);
+  result := IntToHex(lTotalSecondsWithMs * 1000, 16);
 end;
 
 {==============================================================================}
@@ -561,21 +562,40 @@ var
   lCRC: Word;
   s: string;
   i: integer;
+  lChip: string;
 begin
-  result := '8E025A000000000001000104';
+  (* DecoderId must be XX-XX-XX-XX (11 chars), matching ParseRecordTypePassing. *)
+  if Length(APassing.DecoderId) < 11 then
+    raise Exception.CreateFmt('GetPassingPhrase: DecoderId "%s" must be XX-XX-XX-XX',
+      [APassing.DecoderId]);
+
+  result := '8E0200000000000001000104';
 
   s := IntToHex(APassing.PassingNumber, 8);
   for i := 4 downto 1 do
   begin
-    result := result + s[i*2-1];
-    result := result + s[i*2];
+    result := result + s[i * 2 - 1];
+    result := result + s[i * 2];
   end;
 
-  result := result + '0408' + EncodePassingTime(APassing.PassingTime);
-  result := result + '0502' + IntToHex(APassing.SignalStrength, 4);
-  result := result + '0602' + IntToHex(APassing.Hits, 4);
-  result := result + '0802' + IntToHex(APassing.Flags, 4);
-  result := result + '0A';
+  lChip := APassing.ChipId;
+  result := result + '0A' + IntToHex(Length(lChip), 2);
+  for i := 1 to Length(lChip) do
+    result := result + IntToHex(Ord(lChip[i]), 2);
+
+  (* RTC_TIME: 8 bytes little-endian on the wire. *)
+  s := EncodePassingTime(APassing.PassingTime);
+  result := result + '0408';
+  for i := 8 downto 1 do
+    result := result + Copy(s, i * 2 - 1, 2);
+
+  s := IntToHex(APassing.SignalStrength, 4);
+  result := result + '0502' + s[3] + s[4] + s[1] + s[2];
+  s := IntToHex(APassing.Hits, 4);
+  result := result + '0602' + s[3] + s[4] + s[1] + s[2];
+  s := IntToHex(APassing.Flags, 4);
+  result := result + '0802' + s[3] + s[4] + s[1] + s[2];
+
   result := result + '8104';
   result := result + APassing.DecoderId[1] + APassing.DecoderId[2];
   result := result + APassing.DecoderId[4] + APassing.DecoderId[5];
@@ -583,7 +603,8 @@ begin
   result := result + APassing.DecoderId[10] + APassing.DecoderId[11];
   result := result + '8F';
 
-  s := IntToHex(Length(result), 4);
+  (* Length field = byte count of the framed message (little-endian). *)
+  s := IntToHex(Length(result) div 2, 4);
   result[3] := s[3];
   result[4] := s[4];
   result[5] := s[1];
@@ -695,6 +716,17 @@ destructor TMyLapsP3Listener.Destroy;
 begin
   FreeAndNil(FTcpClient);
   inherited Destroy;
+end;
+
+{==============================================================================}
+procedure TMyLapsP3Listener.UnblockIO;
+begin
+  try
+    if (FTcpClient <> nil) and FTcpClient.Connected then
+      FTcpClient.Disconnect;
+  except
+    // ignore disconnect races while stopping
+  end;
 end;
 
 {==============================================================================}
