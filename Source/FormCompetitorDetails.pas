@@ -63,7 +63,7 @@ implementation
 
 uses
   SmartTiming.Consts, SmartTiming.Tools, SmartTiming.TransponderAssignment,
-  SmartTiming.Controller;
+  SmartTiming.Controller, FormMain;
 
 {==============================================================================}
 constructor TFormCompetitorDetails.Create(AOwner: TComponent; ADataSource: TDataSource; AEventId: integer; AIsInsert: boolean);
@@ -185,33 +185,45 @@ procedure TFormCompetitorDetails.ButtonOKClick(Sender: TObject);
 var
   lTxId: string;
   lCompetitorId: Integer;
+  lCDS: TClientDataSet;
 begin
   ModalResult := mrNone;
 
-  if FIsInsert then
-    FDataSource.DataSet.FieldByName('COMPETITORID').Value := MainDataModule.GetMaxCompetitorId + 1;
+  lCDS := TClientDataSet(FDataSource.DataSet);
+  lCDS.DisableControls;
+  try
+    if not (lCDS.State in [dsEdit, dsInsert]) then
+      lCDS.Edit;
+    lCDS.UpdateRecord;
 
-  lTxId := Trim(DBEditTxId.EditText);
-  if lTxId <> '' then
-  begin
-    if not TTransponderMappingStore.GetSingleton.ConvertToValidChipId(lTxId) then
+    if FIsInsert then
+      lCDS.FieldByName('COMPETITORID').Value := MainDataModule.GetMaxCompetitorId + 1;
+
+    lTxId := Trim(DBEditTxId.EditText);
+    if lTxId <> '' then
     begin
-      ShowMessage('Keine gültige Transponder ID.');
-      Exit;
+      if not TTransponderMappingStore.GetSingleton.ConvertToValidChipId(lTxId) then
+      begin
+        ShowMessage('Keine gültige Transponder ID.');
+        Exit;
+      end;
+      lTxId := NormalizeChipId(lTxId);
     end;
-    lTxId := NormalizeChipId(lTxId);
+    DBEditTxId.EditText := lTxId;
+    lCDS.FieldByName('CHIPID').AsString := lTxId;
+
+    (* FormMain owns the competitors CDS/provider used by this dialog. *)
+    if GFormMain <> nil then
+      MainDataModule.PostAndApplyClientDataSet(lCDS, 'COMPETITORID',
+        GFormMain.SQLDataSetCompetitors)
+    else
+      MainDataModule.PostAndApplyClientDataSet(lCDS, 'COMPETITORID',
+        MainDataModule.SQLDataSetCompetitors);
+  finally
+    lCDS.EnableControls;
   end;
-  DBEditTxId.EditText := lTxId;
-  FDataSource.DataSet.FieldByName('CHIPID').AsString := lTxId;
 
-  (* Ensure PK is marked for DataSetProvider (upWhereKeyOnly / poAutoRefresh). *)
-  with FDataSource.DataSet.FieldByName('COMPETITORID') do
-    ProviderFlags := ProviderFlags + [pfInKey];
-
-  FDataSource.DataSet.Post;
-  TClientDataSet(FDataSource.DataSet).ApplyUpdates(0);
-
-  lCompetitorId := FDataSource.DataSet.FieldByName('COMPETITORID').AsInteger;
+  lCompetitorId := lCDS.FieldByName('COMPETITORID').AsInteger;
   if not SyncChipAssignments(lCompetitorId, lTxId) then
     Exit;
 

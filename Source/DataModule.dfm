@@ -29,6 +29,7 @@ object MainDataModule: TMainDataModule
     Top = 70
   end
   object DataSourceCompetitors: TDataSource
+    AutoEdit = False
     Left = 250
     Top = 269
   end
@@ -73,6 +74,7 @@ object MainDataModule: TMainDataModule
     Top = 354
   end
   object DataSourceRaces: TDataSource
+    AutoEdit = False
     DataSet = ClientDataSetRaces
     Left = 60
     Top = 403

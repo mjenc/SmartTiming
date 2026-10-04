@@ -345,29 +345,34 @@ begin
   MainDataModule.ClientDataSetCompetitors.Active := true;
   MainDataModule.EnsureProviderKeyField(MainDataModule.ClientDataSetCompetitors, 'COMPETITORID');
 
-  for i := 1 to FFileLines.Count - 1 do
-  begin
-    if FFileLines[i].Trim.IsEmpty then
-      Continue;
-    MainDataModule.ClientDataSetCompetitors.Append;
-    MainDataModule.ClientDataSetCompetitors.FieldByName('COMPETITORID').Value := lCompetitorId + i;
-    FillValue('CLASS', cFieldTitleClass, GetStringValueFromFileLines, 'Unbekannt');
-    FillValue('BIB', cFieldTitleBib, GetIntegerValueFromFileLines, -1);
-    FillValue('FIRSTNAME', cFieldTitleFirstName, GetStringValueFromFileLines, null);
-    FillValue('LASTNAME', cFieldTitleLastName, GetStringValueFromFileLines, null);
-    FillValue('CLUB', cFieldTitleClub, GetStringValueFromFileLines, null);
-    FillValue('TEAM', cFieldTitleTeam, GetStringValueFromFileLines, null);
-    FillValue('NATIONALITY', cFieldTitleNationality, GetStringValueFromFileLines, null);
-    FillValue('UCIID', cFieldTitleUCIID, GetStringValueFromFileLines, null);
-    FillValue('STARTTIME',cFieldTitleStarttime, GetStarttimeValueFromFileLines, 0);
-    FillValue('CHIPID', cFieldTitleTransponder, GetChipIdValueFromFileLines, -1);
-    FillValue('HANDICAPFACTOR', cFieldTitleHandicapFactor, GetIntegerValueFromFileLines, 100);
-    MainDataModule.ClientDataSetCompetitors.Post;
-    LabelProgress.Caption := Format('%d von %d importiert', [i, FFileLines.Count]);
-    ProgressBar.StepIt;
+  MainDataModule.ClientDataSetCompetitors.DisableControls;
+  try
+    for i := 1 to FFileLines.Count - 1 do
+    begin
+      if FFileLines[i].Trim.IsEmpty then
+        Continue;
+      MainDataModule.ClientDataSetCompetitors.Append;
+      MainDataModule.ClientDataSetCompetitors.FieldByName('COMPETITORID').Value := lCompetitorId + i;
+      FillValue('CLASS', cFieldTitleClass, GetStringValueFromFileLines, 'Unbekannt');
+      FillValue('BIB', cFieldTitleBib, GetIntegerValueFromFileLines, -1);
+      FillValue('FIRSTNAME', cFieldTitleFirstName, GetStringValueFromFileLines, null);
+      FillValue('LASTNAME', cFieldTitleLastName, GetStringValueFromFileLines, null);
+      FillValue('CLUB', cFieldTitleClub, GetStringValueFromFileLines, null);
+      FillValue('TEAM', cFieldTitleTeam, GetStringValueFromFileLines, null);
+      FillValue('NATIONALITY', cFieldTitleNationality, GetStringValueFromFileLines, null);
+      FillValue('UCIID', cFieldTitleUCIID, GetStringValueFromFileLines, null);
+      FillValue('STARTTIME',cFieldTitleStarttime, GetStarttimeValueFromFileLines, 0);
+      FillValue('CHIPID', cFieldTitleTransponder, GetChipIdValueFromFileLines, -1);
+      FillValue('HANDICAPFACTOR', cFieldTitleHandicapFactor, GetIntegerValueFromFileLines, 100);
+      MainDataModule.ClientDataSetCompetitors.Post;
+      LabelProgress.Caption := Format('%d von %d importiert', [i, FFileLines.Count]);
+      ProgressBar.StepIt;
+    end;
+    MainDataModule.PostAndApplyClientDataSet(MainDataModule.ClientDataSetCompetitors,
+      'COMPETITORID', MainDataModule.SQLDataSetCompetitors);
+  finally
+    MainDataModule.ClientDataSetCompetitors.EnableControls;
   end;
-  MainDataModule.EnsureProviderKeyField(MainDataModule.ClientDataSetCompetitors, 'COMPETITORID');
-  MainDataModule.ClientDataSetCompetitors.ApplyUpdates(0);
 end;
 
 {==============================================================================}

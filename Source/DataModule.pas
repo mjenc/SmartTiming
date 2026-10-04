@@ -51,6 +51,10 @@ type
     procedure FillReadOnlyDataSetForSQL(const ASQL: string; var ADataSet: TSQLDataSet);
     function OpenReadOnlyQuery(const ASQL: string): TSQLDataSet;
     procedure RefreshRacesDataSet(AEventId: integer);
+    (* Post pending edit/insert and ApplyUpdates. Uses DisableControls so bound
+       UI controls cannot re-enter dsEdit before ApplyUpdates (SNeedPost). *)
+    procedure PostAndApplyClientDataSet(ADataSet: TClientDataSet;
+      const AKeyFieldName: string = ''; AProviderDataSet: TDataSet = nil);
 
     function GetMaxRaceId(AEventId: integer): integer;
     function GetMaxCompetitorId: integer;
@@ -426,6 +430,35 @@ begin
   (* Key must be on SQLDataSet before CDS fetches the packet (upWhereKeyOnly). *)
   EnsureProviderKeyField(SQLDataSetRaces, 'RACEID');
   ClientDataSetRaces.Active := True;
+end;
+
+{==============================================================================}
+procedure TMainDataModule.PostAndApplyClientDataSet(ADataSet: TClientDataSet;
+  const AKeyFieldName: string; AProviderDataSet: TDataSet);
+begin
+  if (ADataSet = nil) or not ADataSet.Active then
+    Exit;
+
+  ADataSet.DisableControls;
+  try
+    if ADataSet.State in [dsEdit, dsInsert] then
+    begin
+      ADataSet.UpdateRecord;
+      if AKeyFieldName <> '' then
+      begin
+        EnsureProviderKeyField(ADataSet, AKeyFieldName);
+        if (AProviderDataSet <> nil) and AProviderDataSet.Active then
+          EnsureProviderKeyField(AProviderDataSet, AKeyFieldName);
+      end;
+      if ADataSet.State in [dsEdit, dsInsert] then
+        ADataSet.Post;
+    end;
+
+    if ADataSet.ChangeCount > 0 then
+      ADataSet.ApplyUpdates(0);
+  finally
+    ADataSet.EnableControls;
+  end;
 end;
 
 {==============================================================================}

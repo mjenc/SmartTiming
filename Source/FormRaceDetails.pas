@@ -250,36 +250,43 @@ end;
 procedure TFormRaceDetails.ButtonOKClick(Sender: TObject);
 var
   lDateTime: TDatetime;
+  lCDS: TClientDataSet;
 begin
   if ComboBoxRaceType.ItemIndex >= 0 then
     SaveLastUsedRaceType(TRaceType(
       Integer(ComboBoxRaceType.Items.Objects[ComboBoxRaceType.ItemIndex])));
 
-  if FIsInsert then
-  begin
-    FDataSource.DataSet.FieldByName('EVENTID').Value := FEventId;
-    FDataSource.DataSet.FieldByName('RACEID').Value := MainDataModule.GetMaxRaceId(FEventId) + 1;
+  lCDS := TClientDataSet(FDataSource.DataSet);
+  lCDS.DisableControls;
+  try
+    if not (lCDS.State in [dsEdit, dsInsert]) then
+      lCDS.Edit;
+    lCDS.UpdateRecord;
+
+    if FIsInsert then
+    begin
+      lCDS.FieldByName('EVENTID').Value := FEventId;
+      lCDS.FieldByName('RACEID').Value := MainDataModule.GetMaxRaceId(FEventId) + 1;
+    end;
+    lCDS.FieldByName('STARTTIME').Value := GetStartDatetime;
+    if ComboBoxRaceType.ItemIndex >= 0 then
+      lCDS.FieldByName('RACETYPE').Value :=
+        Integer(ComboBoxRaceType.Items.Objects[ComboBoxRaceType.ItemIndex])
+    else
+      lCDS.FieldByName('RACETYPE').Value := Ord(rtCircuit);
+    if CBFirstPassingCounts.Checked then
+      lCDS.FieldByName('FIRSTPASSINGISLAP').Value := 1
+    else
+      lCDS.FieldByName('FIRSTPASSINGISLAP').Value := 0;
+
+    lDateTime := StrToTime('00:' + EditMinLapDuration.Text);
+    lCDS.FieldByName('MINLAPDURATION').Value := SecondOfTheDay(lDateTime);
+    lCDS.FieldByName('STATUS').Value := FStatus;
+
+    MainDataModule.PostAndApplyClientDataSet(lCDS, 'RACEID', MainDataModule.SQLDataSetRaces);
+  finally
+    lCDS.EnableControls;
   end;
-  FDataSource.DataSet.FieldByName('STARTTIME').Value := GetStartDatetime;
-  if ComboBoxRaceType.ItemIndex >= 0 then
-    FDataSource.DataSet.FieldByName('RACETYPE').Value :=
-      Integer(ComboBoxRaceType.Items.Objects[ComboBoxRaceType.ItemIndex])
-  else
-    FDataSource.DataSet.FieldByName('RACETYPE').Value := Ord(rtCircuit);
-  if CBFirstPassingCounts.Checked then
-    FDataSource.DataSet.FieldByName('FIRSTPASSINGISLAP').Value := 1
-  else
-    FDataSource.DataSet.FieldByName('FIRSTPASSINGISLAP').Value := 0;
-
-  lDateTime := StrToTime('00:' + EditMinLapDuration.Text);
-  FDataSource.DataSet.FieldByName('MINLAPDURATION').Value := SecondOfTheDay(lDatetime);
-  FDataSource.DataSet.FieldByName('STATUS').Value := FStatus;
-
-  with FDataSource.DataSet.FieldByName('RACEID') do
-    ProviderFlags := ProviderFlags + [pfInKey];
-
-  FDataSource.DataSet.Post;
-  TClientDataSet(FDataSource.DataSet).ApplyUpdates(-1);
 
   GSmartTimingController.LoadRaces;
   GFormMain.RefreshRacesListBox;

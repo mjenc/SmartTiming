@@ -284,12 +284,12 @@ end;
 {==============================================================================}
 procedure TFormMain.ClientDataSetRacesBeforeRefresh(DataSet: TDataSet);
 begin
-  If DataSet = nil Then
+  if (DataSet = nil) or not (DataSet is TClientDataSet) then
     Abort;
-  If TClientDataSet(DataSet).Active = False Then
+  if not TClientDataSet(DataSet).Active then
     Abort;
-  If TClientDataSet(DataSet).ChangeCount > 0 Then
-    TClientDataSet(DataSet).ApplyUpdates(-1);
+  (* Same CDS save path as race/competitor details — Post before ApplyUpdates. *)
+  MainDataModule.PostAndApplyClientDataSet(TClientDataSet(DataSet));
 end;
 
 {==============================================================================}
