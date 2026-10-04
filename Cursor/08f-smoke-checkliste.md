@@ -65,6 +65,6 @@
 
 | Datum | Tester | Automatisierte Tests | Manuelle Checkliste | Bemerkung |
 |-------|--------|----------------------|---------------------|-----------|
-| | | OK / FAIL | OK / FAIL | |
+| 2026-10-04 | Operator | OK | OK | A–F ohne offenen Blocker |
 
-**Definition of Done:** Automatisierte Tests OK **und** A–F ohne offenen Blocker einmal durchgelaufen.
+**Definition of Done:** Automatisierte Tests OK **und** A–F ohne offenen Blocker einmal durchgelaufen. — **erreicht** (2026-10-04)

@@ -23,7 +23,7 @@ Neben den Fachlücken gibt es Schema-Unebenheiten (`PASSINGS.CHIPID` als INTEGER
 | **8c Cache** | `UpdatePassing` inkl. Status; `FillPassingListForRaceId` respektiert `OnlyActive` — **erledigt** (atomarer Cache-Update Zeit+Status; OnlyActive war bereits korrekt) |
 | **8d Bugs** | `LoadRaces`-Prune prüfen/fixen; TTT in UI sperren, bis Plan 1 TTT liefert — **erledigt** |
 | **8e Teams** | Entweder TTT an `TEAMS`/`TEAMMEMBERS` anbinden oder Menü/Typ deaktivieren — **erledigt (Sperre):** TTT nicht in `GetSupportedRaceTypes`; Factory/`CanCreateRaceEngine` bleibt für Alt-Daten; TEAMS-Anbindung später |
-| **8f Tests** | Checkliste/Smoke: Parallelrennen, Chip-Konflikt, MinLap, Manual Passing — **dokumentiert** in [08f-smoke-checkliste.md](08f-smoke-checkliste.md); einmal manuell grün machen |
+| **8f Tests** | Checkliste/Smoke: Parallelrennen, Chip-Konflikt, MinLap, Manual Passing — **erledigt** (2026-10-04, siehe [08f-smoke-checkliste.md](08f-smoke-checkliste.md)) |
 
 ## Schritte
 
@@ -31,7 +31,7 @@ Neben den Fachlücken gibt es Schema-Unebenheiten (`PASSINGS.CHIPID` als INTEGER
 2. **Früh:** 8a Schema nur in `CreateSchema.sql` (neue DBs).
 3. **Mit Plan 3/4:** 8c Cache-Konsistenz für Status/Zeit. — **erledigt**
 4. **Iterativ:** 8b PassingService-Extraktion. — **erledigt** (`Ingest` + Restore/Update/Remove)
-5. **Vor Multi-Disziplin-Rollout:** 8e klären, 8f Checkliste einmal grün. — **8e erledigt (Sperre); 8f Checkliste liegt vor**
+5. **Vor Multi-Disziplin-Rollout:** 8e klären, 8f Checkliste einmal grün. — **erledigt**
 
 ## Abhängigkeiten
 
@@ -43,7 +43,7 @@ Neben den Fachlücken gibt es Schema-Unebenheiten (`PASSINGS.CHIPID` als INTEGER
 
 - Bekannte Inkonsistenzen (CHIPID-Typ, Cache-Status, LoadRaces) sind behoben oder dokumentiert. — **erledigt**
 - TTT ist nicht „scheinbar wählbar“ ohne Engine. — **erledigt** (UI-Sperre; Skeleton nur für Alt-Daten)
-- Checkliste Parallelbetrieb + No-Duplicate-Chip ist dokumentiert und einmal erfolgreich durchgelaufen. — **dokumentiert**; Operator-Lauf noch offen (siehe 08f)
+- Checkliste Parallelbetrieb + No-Duplicate-Chip ist dokumentiert und einmal erfolgreich durchgelaufen. — **erledigt** (2026-10-04)
 
 ## Risiken
 
