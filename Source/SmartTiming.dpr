@@ -56,37 +56,58 @@ const
 var
   lStylename: string;
   lResult: Integer;
+  lMutex: THandle;
 
 begin
-  LogOnInfo(cLogger, ['Startup SmartTiming']);
-
-  Application.Initialize;
-  Application.MainFormOnTaskbar := True;
-
-  lStylename := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'Theme');
-  if (lStylename <> '') then
+  SetLastError(0);
+  lMutex := CreateMutex(nil, False, PChar(cSingleInstanceMutexName));
+  if lMutex = 0 then
   begin
-    LogOnDebug(cLogger, ['Setting style: ' + lStylename]);
-    TStyleManager.SetStyle(lStylename);
+    MessageBox(0, PChar(cMessagesAlreadyRunning), PChar(cMessagesAlreadyRunningTitle),
+      MB_OK or MB_ICONERROR);
+    Exit;
+  end;
+  if GetLastError = ERROR_ALREADY_EXISTS then
+  begin
+    CloseHandle(lMutex);
+    MessageBox(0, PChar(cMessagesAlreadyRunning), PChar(cMessagesAlreadyRunningTitle),
+      MB_OK or MB_ICONINFORMATION);
+    Exit;
   end;
 
-  Application.CreateForm(TMainDataModule, MainDataModule);
-  FormAppLauncher := TFormAppLauncher.Create(nil);
   try
-    lResult := FormAppLauncher.ShowModal;
-    if (lResult = mrCancel) then
+    LogOnInfo(cLogger, ['Startup SmartTiming']);
+
+    Application.Initialize;
+    Application.MainFormOnTaskbar := True;
+
+    lStylename := SmartTimingTools.RegistryReadString(HKEY_CURRENT_USER, cRegKeyPath + '\Settings', 'Theme');
+    if (lStylename <> '') then
     begin
-      LogOnInfo(cLogger, ['Shutdown SmartTiming', 'Launcher was cancelled.']);
-      Exit;
+      LogOnDebug(cLogger, ['Setting style: ' + lStylename]);
+      TStyleManager.SetStyle(lStylename);
     end;
+
+    Application.CreateForm(TMainDataModule, MainDataModule);
+    FormAppLauncher := TFormAppLauncher.Create(nil);
+    try
+      lResult := FormAppLauncher.ShowModal;
+      if (lResult = mrCancel) then
+      begin
+        LogOnInfo(cLogger, ['Shutdown SmartTiming', 'Launcher was cancelled.']);
+        Exit;
+      end;
+    finally
+      FreeAndNil(FormAppLauncher);
+    end;
+
+    GSmartTimingController := nil;
+    GSmartTimingController := TSmartTimingController.Create;
+    Application.CreateForm(TFormMain, GFormMain);
+    GSmartTimingController.LoadEventData(MainDataModule.DatabasePathAndName);
+
+    Application.Run;
   finally
-    FreeAndNil(FormAppLauncher);
+    CloseHandle(lMutex);
   end;
-
-  GSmartTimingController := nil;
-  GSmartTimingController := TSmartTimingController.Create;
-  Application.CreateForm(TFormMain, GFormMain);
-  GSmartTimingController.LoadEventData(MainDataModule.DatabasePathAndName);
-
-  Application.Run;
 end.

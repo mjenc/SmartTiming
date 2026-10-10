@@ -86,7 +86,7 @@ type
 implementation
 
 uses
-  SmartTiming.Consts, SmartTiming.Tools;
+  SmartTiming.Consts, SmartTiming.Tools, Tools.Logger;
 
 const
 
@@ -806,6 +806,23 @@ end;
 
 {==============================================================================}
 constructor TMyLapsDecoderFinder.Create(AOnDecoderFound: TDecoderFoundEvent);
+const
+  cLogger = 'DecoderInterface.MyLaps.Finder';
+
+  procedure ReportBindFailure(const AError: Exception);
+  begin
+    try
+      if FUdpServer <> nil then
+        FUdpServer.Active := False;
+    except
+    end;
+    LogOnError(cLogger, ['UDP bind failed', cMyLapsDefaultFinderPort.ToString,
+      AError.ClassName, AError.Message]);
+    SmartTimingTools.ShowDialog(
+      Format(cMessagesSocketBindFailedUdpFinder, [cMyLapsDefaultFinderPort, AError.Message]),
+      cMessagesSocketBindFailedTitle);
+  end;
+
 begin
   FOnDecoderFound := AOnDecoderFound;
   FParser := TMyLapsP3MessageParser.Create;
@@ -814,7 +831,12 @@ begin
   FUdpServer.DefaultPort := cMyLapsDefaultFinderPort;
   FUdpServer.BroadcastEnabled := true;
   FUdpServer.OnUDPRead := OnUdpRead;
-  FUdpServer.Active := true;
+  try
+    FUdpServer.Active := True;
+  except
+    on E: Exception do
+      ReportBindFailure(E);
+  end;
 end;
 
 {==============================================================================}
@@ -858,6 +880,9 @@ var
   ReqBuf: TIdBytes;
   lSubnetMasks: TStringList;
 begin
+  if (FUdpServer = nil) or not FUdpServer.Active then
+    Exit;
+
   sReq := FParser.GetDecoderSearchPhrase;
   setlength(ReqBuf, trunc(length(sReq)/2));
   for i:=0 to length(ReqBuf) - 1 do
@@ -876,7 +901,7 @@ begin
       except
         on E: Exception do
         begin
-          ShowMessage(E.Message);
+          LogOnError('DecoderInterface.MyLaps.Finder', ['UDP send failed', E.ClassName, E.Message]);
           Exit;
         end;
       end;

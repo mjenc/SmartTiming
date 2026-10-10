@@ -37,7 +37,8 @@ type
 implementation
 
 uses
-  SmartTiming.Controller, RaceEngine.Custom, Tools.Logger;
+  SmartTiming.Consts, SmartTiming.Controller, SmartTiming.Tools,
+  RaceEngine.Custom, Tools.Logger;
 
 const
   cLogger = 'SmartTiming.WebService';
@@ -84,27 +85,49 @@ end;
 {******************************************************************************}
 function TSmartTimingServlet.GetRunningState: boolean;
 begin
-  result := FHTTPServer.Active;
+  Result := (FHTTPServer <> nil) and FHTTPServer.Active;
 end;
 
 {******************************************************************************}
 function TSmartTimingServlet.GetCurrentHTTPPort: integer;
 begin
-  result := FHTTPServer.DefaultPort;
+  if FHTTPServer <> nil then
+    Result := FHTTPServer.DefaultPort
+  else
+    Result := FHTTPPort;
 end;
 
 {******************************************************************************}
 procedure TSmartTimingServlet.StartService(AHTTPPort: integer);
 begin
-  LogOnDebug(cLogger, ['StartService']);
-  FHTTPServer.Active := true;
+  LogOnDebug(cLogger, ['StartService', AHTTPPort.ToString]);
+  if FHTTPServer = nil then
+    InitHttpServer;
+  FHTTPPort := AHTTPPort;
+  FHTTPServer.DefaultPort := AHTTPPort;
+  try
+    FHTTPServer.Active := True;
+  except
+    on E: Exception do
+    begin
+      try
+        FHTTPServer.Active := False;
+      except
+      end;
+      LogOnError(cLogger, ['TCP bind failed', AHTTPPort.ToString, E.ClassName, E.Message]);
+      SmartTimingTools.ShowDialog(
+        Format(cMessagesSocketBindFailedHttp, [AHTTPPort, E.Message]),
+        cMessagesSocketBindFailedTitle);
+    end;
+  end;
 end;
 
 {******************************************************************************}
 procedure TSmartTimingServlet.StopService;
 begin
   LogOnDebug(cLogger, ['StopService']);
-  FHTTPServer.Active := false;
+  if FHTTPServer <> nil then
+    FHTTPServer.Active := False;
 end;
 
 {******************************************************************************}

@@ -255,6 +255,22 @@ resourcestring
     'Port belegt (echter Decoder) oder Firewall?';
   (* Wire DecoderId for P3 phrases; must stay XX-XX-XX-XX. *)
   cSimulatorP3DecoderId = '40-24-04-00';
+  cMessagesAlreadyRunning =
+    'SmartTiming läuft bereits.'#13#10#13#10 +
+    'Es kann nur eine Instanz gleichzeitig gestartet werden.';
+  cMessagesAlreadyRunningTitle = 'SmartTiming';
+  cSingleInstanceMutexName = 'Local\MJ.SmartTiming.SingleInstance';
+  cMessagesSocketBindFailedTitle = 'Netzwerkport belegt';
+  cMessagesSocketBindFailedUdpFinder =
+    'Die MyLaps-Decoder-Suche konnte UDP-Port %d nicht öffnen.'#13#10#13#10 +
+    'Vermutlich läuft Orbits oder eine andere Timing-Software, die denselben Port nutzt.'#13#10 +
+    'SmartTiming startet ohne automatische Decoder-Suche weiter.'#13#10#13#10 +
+    'Technisch: %s';
+  cMessagesSocketBindFailedHttp =
+    'Der Ranking-WebService konnte TCP-Port %d nicht öffnen.'#13#10#13#10 +
+    'Möglicherweise läuft bereits eine andere SmartTiming-Instanz oder ein anderer Dienst auf diesem Port.'#13#10 +
+    'SmartTiming startet ohne lokalen WebService weiter (Ranking-Viewer / HTTP).'#13#10#13#10 +
+    'Technisch: %s';
 
 type
   TRaceType = (rtUnknown, rtCircuit, rtCriterium, rtIndividualTimeTrial, rtTeamTimeTrial);
