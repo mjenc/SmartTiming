@@ -81,7 +81,7 @@ Für Tests (Chip-Zuordnung, Unassigned, parallele Läufe) fehlt ein zuverlässig
 - Unbekannte Kurznummer → Dialog/Hinweis, keine Passage.
 - Ohne Mapping → Hinweis zum Import, kein Crash.
 - Passage durchläuft denselben Controller-Pfad wie ein Decoder-Hit (Persistenz + Resolve).
-- *(Phase B)* App verbindet gegen lokalen Fake-Decoder (`127.0.0.1:5403`); gesendete P3-Passage kommt als normaler Listener-Hit an. — manuell smoke-testen
+- *(Phase B)* App verbindet gegen lokalen Fake-Decoder (`127.0.0.1:5403`); gesendete P3-Passage kommt als normaler Listener-Hit an. — **OK** (2026-10-05)
 
 ## Risiken
 

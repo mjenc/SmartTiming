@@ -23,6 +23,8 @@ Pläne zur Weiterentwicklung von SmartTiming (Mehrdisziplinen, parallele Läufe,
 | 8 | [08-architektur-qualitaet.md](08-architektur-qualitaet.md) | Architektur- & Qualitätsthemen | Mittel |
 | 8f | [08f-smoke-checkliste.md](08f-smoke-checkliste.md) | Smoke-Checkliste Parallelbetrieb (zu Plan 8) | Mittel |
 | 9 | [09-mylaps-decoder-simulator.md](09-mylaps-decoder-simulator.md) | MyLaps-Decoder-Simulator (Test) | Mittel |
+| 10 | [10-mylaps-passing-reread.md](10-mylaps-passing-reread.md) | MyLaps P3: RESEND, STATUS, GET_TIME, ERROR, VERSION, PING | Mittel |
+| 11 | [11-veranstalter-lieferung-radnet-setup.md](11-veranstalter-lieferung-radnet-setup.md) | Lieferschein, rad-net-Versand, Installer | Mittel |
 
 ## Empfohlene Gesamt-Reihenfolge
 
@@ -31,4 +33,6 @@ Pläne zur Weiterentwicklung von SmartTiming (Mehrdisziplinen, parallele Läufe,
 3. Plan 4 + Plan 3 (Plausibilität + Protokoll)  
 4. Plan 5 + Plan 6 (Manual + Korrektur-UI)  
 5. Plan 1 + Plan 7 (Engines + Ranking-API)  
-6. Plan 9 (Decoder-Simulator für Tests; Phase A früh nach Plan 2 sinnvoll)
+6. Plan 9 (Decoder-Simulator für Tests; Phase A früh nach Plan 2 sinnvoll)  
+7. Plan 10 (P3 Decoder-Protokoll: Status/Zeit/Fehler → RESEND; nach Plan 9)  
+8. Plan 11 (Lieferschein / rad-net / Installer — nach stabilem Export, Vorlage bzw. rad-net-Spezifikation)
